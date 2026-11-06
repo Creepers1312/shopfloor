@@ -5,6 +5,7 @@
   <symbol id="i-dashboard" viewBox="0 0 24 24"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/></symbol>
   <symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="m9 15 2 2 4-4"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.6 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-track" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/><circle cx="19" cy="8" r="1.2"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5"/><path d="M9.5 2.5h5"/><path d="M12 2.5V6"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
   <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
@@ -31,6 +32,7 @@
       <button class="tab" role="tab" data-view="dashboard" aria-selected="true" aria-label="Dashboard"><svg class="ico" aria-hidden="true"><use href="#i-dashboard"/></svg><span class="tab-label">Dashboard</span></button>
       <button class="tab" role="tab" data-view="board" aria-selected="false" aria-label="SQIDP-Board"><svg class="ico" aria-hidden="true"><use href="#i-board"/></svg><span class="tab-label">SQIDP-Board</span></button>
       <button class="tab" role="tab" data-view="actions" aria-selected="false" aria-label="Abweichungen und Maßnahmen"><svg class="ico" aria-hidden="true"><use href="#i-alert"/></svg><span class="tab-label">Maßnahmen</span><span class="tab-badge" id="actionsBadge" hidden></span></button>
+      <button class="tab" role="tab" data-view="tracking" aria-selected="false" aria-label="Abweichungs-Tracking"><svg class="ico" aria-hidden="true"><use href="#i-track"/></svg><span class="tab-label">Abweichungs-Tracking</span></button>
       <button class="tab" role="tab" data-view="huddle" aria-selected="false" aria-label="Daily Huddle"><svg class="ico" aria-hidden="true"><use href="#i-timer"/></svg><span class="tab-label">Daily Huddle</span></button>
       <button class="tab" role="tab" data-view="report" aria-selected="false" aria-label="Tagesbericht"><svg class="ico" aria-hidden="true"><use href="#i-report"/></svg><span class="tab-label">Tagesbericht</span></button>
       <button class="tab" role="tab" data-view="doku" aria-selected="false" aria-label="Anwenderdoku"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><span class="tab-label">Anwenderdoku</span></button>
@@ -491,7 +493,13 @@ details.whys summary::marker { color: var(--accent); }
 .timer-sub.low { color: var(--warn-text); }
 .timer-sub.done { color: var(--crit-text); }
 .timer-btns { display: flex; gap: 12px; justify-content: center; }
-.timer-btns .btn { padding: 12px 28px; font-size: 15px; }
+.timer-btns .btn { padding: 12px 24px; font-size: 15px; }
+.timer-btns { flex-wrap: wrap; }
+.huddle-end-btn {
+  display: block; width: 100%; max-width: 360px; margin: 18px auto 0; padding: 14px 20px;
+  font-size: 16px; font-weight: 600; letter-spacing: .04em;
+}
+.huddle-end-info { text-align: center; margin-top: 8px; }
 .huddle-col { display: flex; flex-direction: column; gap: 16px; }
 .agenda { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
 .agenda-item {
@@ -1585,6 +1593,63 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 /* Huddle-Kalender: ruhigere Füllung */
 .huddle-cal-day.full { background: color-mix(in srgb, var(--good) 30%, var(--surface)); color: var(--ink); }
 .huddle-cal-day.partial { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); color: var(--ink); }
+
+/* ============ Abweichungs-Tracking ============ */
+.trk-filters { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.trk-filter-line { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.trk-filter-line.is-off { opacity: .45; }
+.trk-filter-lbl { flex: none; width: 92px; padding-top: 6px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.trk-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.trk-sub-wrap { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.trk-sub-groups { display: flex; flex-direction: column; gap: 8px; }
+.trk-chip {
+  appearance: none; cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 500;
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 99px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
+}
+.trk-chip:hover { color: var(--ink); border-color: var(--ink-2); }
+.trk-chip.on { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); color: var(--ink); }
+.trk-chip:not(.on) .trk-chip-dot { opacity: .35; }
+.trk-chip:not(.on) > span:not(.trk-chip-n):not(.trk-chip-dot) { text-decoration: line-through; }
+.trk-chip:focus-visible, .trk-group-lbl:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.trk-chip-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+.trk-chip-n { font-variant-numeric: tabular-nums; font-size: 11px; color: var(--muted); background: var(--surface-2); border-radius: 99px; padding: 0 6px; }
+.trk-group-lbl {
+  appearance: none; border: none; background: none; cursor: pointer; font: inherit;
+  font-size: 12px; font-weight: 600; color: var(--ink-2); padding: 4px 4px 4px 0; min-width: 76px; text-align: left;
+}
+.trk-group-lbl:hover { color: var(--accent); }
+.trk-filter-actions { display: flex; justify-content: flex-end; }
+.trk-src-seg button { padding: 5px 11px; font-size: 12.5px; }
+.trk-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.trk-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; }
+@media (max-width: 900px) { .trk-cols { grid-template-columns: 1fr; } }
+.trk-table-wrap { overflow-x: auto; margin-top: 10px; }
+.trk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.trk-table th { text-align: left; font-size: 12px; font-weight: 500; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.trk-table td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.trk-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.trk-table .nowrap { white-space: nowrap; }
+.trk-table tr.trk-total td { font-weight: 600; border-bottom: none; border-top: 1px solid var(--line); }
+.trk-list { min-width: 760px; }
+.trk-row { cursor: pointer; }
+.trk-row:hover td { background: var(--surface-2); }
+.trk-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.trk-art { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.trk-art-txt { display: flex; flex-direction: column; gap: 4px; min-width: 120px; flex: 1; }
+.sq-letter.trk-letter { width: 22px; height: 22px; font-size: 11.5px; border-radius: 6px; }
+.trk-title { font-weight: 500; }
+.trk-detail { font-size: 12px; color: var(--muted); margin-top: 2px; max-width: 70ch; }
+.trk-none { color: var(--muted); font-size: 12px; }
+.trk-bar { height: 6px; border-radius: 3px; background: var(--line-soft); overflow: hidden; }
+.trk-bar > span { display: block; height: 100%; border-radius: 3px; }
+.trk-catbars { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.trk-catbar { display: flex; align-items: center; gap: 10px; }
+.trk-catbar.is-off { opacity: .4; }
+.trk-catbar-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.trk-catbar-name { font-size: 12.5px; color: var(--ink-2); }
+.trk-catbar-val { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; min-width: 64px; text-align: right; }
+@media (max-width: 560px) { .trk-filter-lbl { width: 100%; padding-top: 0; } }
 </style>
 <main>
 <!-- Ansicht: dashboard -->
@@ -1605,6 +1670,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     <div class="period-nav-row">
       <div class="period-seg" id="dashPeriodSeg" role="radiogroup" aria-label="Zeitraum">
         <button type="button" data-mode="day">Tag</button>
+        <button type="button" data-mode="week">Arbeitswoche</button>
         <button type="button" data-mode="month" class="active">Monat</button>
         <button type="button" data-mode="year">Jahr</button>
         <button type="button" data-mode="range">Zeitraum</button>
@@ -1619,6 +1685,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <label class="range-field">Bis <input type="date" id="dashRangeToInput"></label>
       </div>
       <button class="btn sm" id="dashResetPeriod">Aktueller Monat</button>
+      <button class="btn sm" id="dashCurWeek" data-cur-week title="Laufende Arbeitswoche (Montag bis Sonntag) einstellen">Aktuelle Arbeitswoche</button>
       <span class="pill neutral" id="dashArchivePill" hidden>Archiv</span>
     </div>
     <p class="mini-hint" id="dashCoverageText"></p>
@@ -1709,6 +1776,82 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </div>
 </section>
 
+<!-- Ansicht: tracking -->
+<section class="view" id="view-tracking" role="tabpanel">
+  <div class="view-head">
+    <div>
+      <div class="eyebrow">Auswertung · SQIDP</div>
+      <h1>Abweichungs-Tracking</h1>
+      <p>Alle Abweichungen im gewählten Zeitraum — aus den Tageskennzahlen erkannte, geplante Ausfälle und von Hand erfasste. Kategorien und Arten lassen sich ein- und ausschalten, die Summen folgen dem Filter.</p>
+    </div>
+    <div class="head-actions">
+      <button class="btn" id="trkCsvBtn" title="Gefilterte Abweichungen als CSV für Excel exportieren">CSV-Export</button>
+      <button class="btn primary" id="trkNewDev">+ Abweichung erfassen</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom: 16px;">
+    <div class="period-nav-row">
+      <div class="period-seg" id="trkPeriodSeg" role="radiogroup" aria-label="Zeitraum">
+        <button type="button" data-mode="day">Tag</button>
+        <button type="button" data-mode="week">Arbeitswoche</button>
+        <button type="button" data-mode="month">Monat</button>
+        <button type="button" data-mode="year">Jahr</button>
+        <button type="button" data-mode="range">Zeitraum</button>
+      </div>
+      <div class="period-controls" id="trkPeriodControls">
+        <button class="btn sm icon-btn" id="trkPrevPeriod" aria-label="Vorheriger Zeitraum">◀</button>
+        <span class="month-label" id="trkPeriodLabel"></span>
+        <button class="btn sm icon-btn" id="trkNextPeriod" aria-label="Nächster Zeitraum">▶</button>
+      </div>
+      <div class="period-range-inputs" id="trkRangeInputs" hidden>
+        <label class="range-field">Von <input type="date" id="trkRangeFromInput"></label>
+        <label class="range-field">Bis <input type="date" id="trkRangeToInput"></label>
+      </div>
+      <button class="btn sm" id="trkResetPeriod"></button>
+      <button class="btn sm" id="trkCurWeek" data-cur-week title="Laufende Arbeitswoche (Montag bis Sonntag) einstellen">Aktuelle Arbeitswoche</button>
+    </div>
+    <p class="mini-hint" id="trkPeriodHint"></p>
+    <div class="trk-filters">
+      <div class="trk-filter-line">
+        <span class="trk-filter-lbl">Kategorie</span>
+        <div class="trk-chips" id="trkCatChips"></div>
+      </div>
+      <div class="trk-filter-line">
+        <span class="trk-filter-lbl">Quelle</span>
+        <div class="period-seg trk-src-seg" id="trkSrcSeg" role="radiogroup" aria-label="Quelle">
+          <button type="button" data-src="" class="active">Alle</button>
+          <button type="button" data-src="auto">Aus Kennzahlen</button>
+          <button type="button" data-src="plan">Geplante Ausfälle</button>
+          <button type="button" data-src="manual">Von Hand erfasst</button>
+        </div>
+      </div>
+      <div class="trk-sub-groups" id="trkSubGroups"></div>
+      <div class="trk-filter-actions">
+        <button type="button" class="btn sm ghost" id="trkAllOn">Alle Filter einschalten</button>
+      </div>
+    </div>
+  </div>
+  <div class="trk-stats" id="trkStats"></div>
+  <div class="trk-cols">
+    <div class="card">
+      <div class="settings-title">Summen je Art</div>
+      <p class="settings-sub">Anzahl, betroffene Tage und Summe der Menge über den eingestellten Zeitraum.</p>
+      <div class="trk-table-wrap"><table class="trk-table" id="trkSumTable"></table></div>
+    </div>
+    <div class="card">
+      <div class="settings-title">Verteilung nach Kategorie</div>
+      <p class="settings-sub">Anteil der gefilterten Abweichungen je SQIDP-Kategorie.</p>
+      <div class="trk-catbars" id="trkCatBars"></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top: 16px;">
+    <div class="settings-title">Alle Abweichungen im Zeitraum</div>
+    <p class="settings-sub" id="trkListSub"></p>
+    <div class="trk-table-wrap"><table class="trk-table trk-list" id="trkList"></table></div>
+    <p class="mini-hint" id="trkListMore" hidden></p>
+  </div>
+</section>
+
 <!-- Ansicht: huddle -->
 <section class="view" id="view-huddle" role="tabpanel">
   <div class="view-head">
@@ -1758,8 +1901,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         </div>
         <div class="timer-btns">
           <button class="btn primary" id="timerToggle">Start</button>
+          <button class="btn" id="timerPause" disabled>Pause</button>
           <button class="btn" id="timerReset">Zurücksetzen</button>
         </div>
+        <button class="btn danger-solid huddle-end-btn" id="huddleEndBtn" title="Huddle offiziell beenden und zur Monatsübersicht im Dashboard wechseln">Huddle ENDE</button>
+        <p class="mini-hint huddle-end-info" id="huddleEndInfo" hidden></p>
       </div>
       <div class="huddle-col">
         <div class="card">
@@ -2173,6 +2319,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           </select>
         </div>
         <div class="field">
+          <label for="fSub">Art der Abweichung</label>
+          <select id="fSub"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
           <label for="fPhase">PDCA-Phase</label>
           <select id="fPhase">
             <option value="plan">Plan</option>
@@ -2182,16 +2334,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
             <option value="done">Abgeschlossen</option>
           </select>
         </div>
-      </div>
-      <div class="field-row">
-        <div class="field">
-          <label for="fOwner">Verantwortlich</label>
-          <input id="fOwner" placeholder="Name">
-        </div>
         <div class="field">
           <label for="fDue">Fällig am</label>
           <input id="fDue" type="date">
         </div>
+      </div>
+      <div class="field">
+        <label for="fOwner">Verantwortlich</label>
+        <input id="fOwner" placeholder="Name">
       </div>
       <div class="field">
         <label for="fDesc">Begründung / Beschreibung (Pflicht)</label>
@@ -2312,9 +2462,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
             <input id="dfProduziert" type="number" min="0" step="0.01" inputmode="decimal">
           </div>
           <div class="field">
+            <label for="dfNacharbeit">Mit Nacharbeit verwendbar (t)
+              <button type="button" class="help-q" tabindex="0" aria-label="Erklärung"
+                title="Menge, die im ersten Durchlauf nicht in Ordnung war, nach Nacharbeit aber verwendbar ist — gut und kein Ausschuss, zählt aber nicht zum First Pass Yield. Angabe in Tonnen.">?</button>
+            </label>
+            <input id="dfNacharbeit" type="number" min="0" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
             <label for="dfAusschuss">Ausschuss (t)
               <button type="button" class="help-q" tabindex="0" aria-label="Erklärung"
-                title="Fehlerhafte/verworfene Menge an diesem Tag in Tonnen. Sollte ≤ Produzierte Menge sein. Basis von Qualität und First Pass Yield: (Produzierte Menge − Ausschuss) ÷ Produzierte Menge.">?</button>
+                title="Nicht verwendbare Menge an diesem Tag in Tonnen — geht zurück als Absandung / Kreislaufmaterial. Mindert Qualität und First Pass Yield.">?</button>
             </label>
             <input id="dfAusschuss" type="number" min="0" step="0.01" inputmode="decimal">
           </div>
@@ -2562,6 +2719,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     <div class="period-nav-row">
       <div class="period-seg" id="detailPeriodSeg" role="radiogroup" aria-label="Zeitraum">
         <button type="button" data-mode="day">Tag</button>
+        <button type="button" data-mode="week">Arbeitswoche</button>
         <button type="button" data-mode="month">Monat</button>
         <button type="button" data-mode="year">Jahr</button>
         <button type="button" data-mode="range">Zeitraum</button>
@@ -2576,6 +2734,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <label class="range-field">Bis <input type="date" id="detailRangeToInput"></label>
       </div>
       <button class="btn sm" id="detailResetPeriod"></button>
+      <button class="btn sm" id="detailCurWeek" data-cur-week title="Laufende Arbeitswoche (Montag bis Sonntag) einstellen">Aktuelle Arbeitswoche</button>
     </div>
     <p class="mini-hint" id="detailRangeHint"></p>
   </div>
@@ -2832,6 +2991,7 @@ window.SFM = (function () {
   // der Tageswerte im Agenda-Fenster.
   function mengeDeviates(plan, prod) { return plan != null && prod != null && Math.abs(prod - plan) > MENGE_TOLERANZ; }
   function scrapDeviates(scrap) { return scrap != null && scrap > 0; }
+  function reworkDeviates(rework) { return rework != null && rework > 0; }
   function inventoryDeviates(inv, lim) { return inv != null && lim != null && inv > lim; }
   function ordersDeviate(due, onTime) { return due != null && onTime != null && onTime < due; }
   function outageDeviates(hours) { return hours != null && hours > 0; } // jede ungeplante Ausfallzeit
@@ -2855,8 +3015,13 @@ window.SFM = (function () {
         out.push({ key: "menge", title: "Produzierte Menge " + (diff < 0 ? "unter" : "über") + " Plan (" + (diff < 0 ? "−" : "+") + fmtNum(Math.abs(diff), 2) + " t)",
           detail: "Geplant " + fmtNum(plan, 2) + " t, produziert " + fmtNum(prod, 2) + " t" + (plan > 0 ? " (" + fmtNum(prod / plan * 100, 1) + " % der Planmenge)." : ".") });
       }
+      var rework = numOrNull(rec.nacharbeit);
+      if (reworkDeviates(rework)) {
+        out.push({ key: "rework", title: "Nacharbeit " + fmtNum(rework, 2) + " t (kein First Pass Yield)",
+          detail: (prod ? "Das sind " + fmtNum(rework / prod * 100, 1) + " % der produzierten Menge — verwendbar, aber nicht im ersten Durchlauf gut." : "Nacharbeit an diesem Tag erfasst.") });
+      }
       if (scrapDeviates(scrap)) {
-        out.push({ key: "scrap", title: "Ausschuss " + fmtNum(scrap, 2) + " t",
+        out.push({ key: "scrap", title: "Ausschuss " + fmtNum(scrap, 2) + " t (Absandung / Kreislaufmaterial)",
           detail: prod ? "Das sind " + fmtNum(scrap / prod * 100, 1) + " % der produzierten Menge von " + fmtNum(prod, 2) + " t." : "Ausschuss an diesem Tag erfasst." });
       }
       return out;
@@ -2895,6 +3060,42 @@ window.SFM = (function () {
       return out;
     } }
   };
+
+  /* ---------- 5. Arten von Abweichungen (Unterkategorien) ---------- */
+  // Jede Abweichung gehört zu einer Kategorie (SQIDP) und einer Art. Erkannte Abweichungen
+  // bekommen die Art aus ihrem Regelschlüssel, von Hand erfasste wählen sie im Dialog.
+  // group: Überschrift der Filtergruppe; auto: nur automatisch vergeben (nicht im Dialog wählbar).
+  var DEV_SUBS = {
+    S: [{ k: "near", label: "Beinahe-Unfall" }, { k: "rep", label: "Meldepflichtig" },
+        { k: "nonrep", label: "Nicht meldepflichtig" }, { k: "other", label: "Sonstige" }],
+    Q: [{ k: "menge", label: "Menge ungleich Plan" }, { k: "rework", label: "Nacharbeit (kein FPY)" },
+        { k: "scrap", label: "Ausschuss (Absandung / Kreislauf)" }, { k: "other", label: "Sonstige" }],
+    C: [{ k: "inv", label: "Über Grenzwert" }, { k: "other", label: "Sonstige" }],
+    D: [{ k: "otd", label: "Termintreue / Lieferverzug" }, { k: "other", label: "Sonstige" }],
+    P: [{ k: "U_pers", group: "Ungeplant", label: "Personell" }, { k: "U_orga", group: "Ungeplant", label: "Organisatorisch" },
+        { k: "U_tech", group: "Ungeplant", label: "Technisch" }, { k: "U_ruest", group: "Ungeplant", label: "Rüsten / Handhabung" },
+        { k: "U_total", group: "Ungeplant", label: "Nicht aufgeteilt", auto: true },
+        { k: "G_pers", group: "Geplant", label: "Personell" }, { k: "G_orga", group: "Geplant", label: "Organisatorisch" },
+        { k: "G_tech", group: "Geplant", label: "Technisch" }, { k: "G_ruest", group: "Geplant", label: "Rüsten / Handhabung" },
+        { k: "other", label: "Sonstige" }]
+  };
+  function subDef(cat, k) { return (DEV_SUBS[cat] || []).filter(function (x) { return x.k === k; })[0] || null; }
+  function subLabel(cat, k) {
+    var d = subDef(cat, k);
+    return d ? (d.group ? d.group + " – " + d.label : d.label) : "Sonstige";
+  }
+  // Regelschlüssel einer erkannten Abweichung → Art (z. B. "out-tech" → "U_tech")
+  function findingSub(cat, key) {
+    var k = String(key || "");
+    if (k.indexOf("out-") === 0) k = k === "out-total" ? "U_total" : "U_" + k.slice(4);
+    return subDef(cat, k) ? k : "other";
+  }
+  // Art einer von Hand erfassten Abweichung (ältere Einträge: aus der Verknüpfung abgeleitet)
+  function devSub(dev) {
+    if (dev.sub && subDef(dev.cat, dev.sub)) return dev.sub;
+    if (dev.src && String(dev.src).indexOf("auto:") === 0) return findingSub(dev.cat, dev.src.slice(5));
+    return "other";
+  }
 
   /* ---------- Konstanten ---------- */
   // Kategorien, Phasen, Agenda, Ausfallarten, Sicherheitszustände und Abweichungsregeln
@@ -3011,6 +3212,7 @@ window.SFM = (function () {
     { key: "personalausfall", label: "Personen Ausfallzeit Ungeplant", unit: "h", min: 0, max: 24, step: 0.1 },
     { key: "geplant", label: "Geplante Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "produziert", label: "Produzierte Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
+    { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", min: 0, max: 100000, step: 0.01, optional: true },
     { key: "ausschuss", label: "Ausschuss", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "faktoriert", label: "Faktorierte Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "inventory", label: "Inventory", unit: "t", min: 0, max: 100000, step: 0.01 },
@@ -3101,7 +3303,21 @@ window.SFM = (function () {
     if (v == null || l == null || q == null) return null;
     return v * l * q / 10000;
   }
-  function fpyValue(rec) { return oeeQuality(rec); }
+  // First Pass Yield = Gutmenge im ersten Durchlauf ÷ Produzierte Menge. Nacharbeit ist zwar
+  // verwendbar (kein Ausschuss, zählt daher zur Qualität), aber kein First Pass Yield.
+  // Fehlt der Nacharbeitswert (ältere Datensätze), zählt er als 0.
+  function fpyValue(rec) {
+    var prod = rec ? numOrNull(rec.produziert) : null, ausschuss = rec ? numOrNull(rec.ausschuss) : null;
+    if (prod == null || ausschuss == null || prod <= 0) return null;
+    var rework = numOrNull(rec.nacharbeit) || 0;
+    return Math.max(0, Math.min(100, (prod - ausschuss - rework) / prod * 100));
+  }
+  // Gutmenge im ersten Durchlauf (t)
+  function firstPassGood(rec) {
+    var prod = rec ? numOrNull(rec.produziert) : null, ausschuss = rec ? numOrNull(rec.ausschuss) : null;
+    if (prod == null || ausschuss == null) return null;
+    return Math.max(0, Math.round((prod - ausschuss - (numOrNull(rec.nacharbeit) || 0)) * 100) / 100);
+  }
   function otdValue(rec) {
     var f = rec ? numOrNull(rec.auftraegeFaellig) : null, p = rec ? numOrNull(rec.auftraegePuenktlich) : null;
     if (f == null || p == null || f <= 0) return null;
@@ -3117,7 +3333,8 @@ window.SFM = (function () {
   function isDailyComplete(iso) {
     var rec = dailyRecord(iso);
     if (!rec) return false;
-    return DAILY_FIELDS.every(function (f) { return numOrNull(rec[f.key]) != null; });
+    // optionale Felder (Nacharbeit) fehlen in älteren Datensätzen — sie machen einen Tag nicht unvollständig
+    return DAILY_FIELDS.every(function (f) { return f.optional || numOrNull(rec[f.key]) != null; });
   }
   function isDailyPartial(iso) {
     var rec = dailyRecord(iso);
@@ -3170,22 +3387,29 @@ window.SFM = (function () {
   }
   // Quotenkennzahlen werden über einen Zeitraum aus den Summen der Zähler und Nenner gebildet
   // (nicht als Mittel der Tagesquoten) — ein Tag mit großer Menge zählt so entsprechend mehr.
-  //   Leistung = Σ produziert ÷ Σ geplant            Qualität/FPY = (Σ produziert − Σ Ausschuss) ÷ Σ produziert
+  //   Leistung = Σ produziert ÷ Σ geplant            Qualität = (Σ produziert − Σ Ausschuss) ÷ Σ produziert
+  //   FPY = (Σ produziert − Σ Ausschuss − Σ Nacharbeit) ÷ Σ produziert
   //   Termintreue = Σ pünktliche Aufträge ÷ Σ fällige Aufträge
   // Es zählen nur Tage, an denen beide Werte erfasst sind. Liefert null ohne verwertbare Tage.
   var RATIO_PARTS = {
-    leist: ["produziert", null, "geplant"],
-    qual: ["produziert", "ausschuss", "produziert"],
-    fpy: ["produziert", "ausschuss", "produziert"],
-    otd: ["auftraegePuenktlich", null, "auftraegeFaellig"]
+    // [Zähler, abzuziehende Felder (Pflicht), Nenner, abzuziehende Felder (optional, leer = 0)]
+    leist: ["produziert", [], "geplant"],
+    qual: ["produziert", ["ausschuss"], "produziert"],
+    fpy: ["produziert", ["ausschuss"], "produziert", ["nacharbeit"]],
+    otd: ["auftraegePuenktlich", [], "auftraegeFaellig"]
   };
   function periodRatio(kind, fromIso, toIso) {
     var p = RATIO_PARTS[kind], num = 0, den = 0, to = dateOnly(toIso);
     for (var dt = dateOnly(fromIso); dt <= to; dt.setDate(dt.getDate() + 1)) {
       var rec = dailyRecord(isoOf(dt));
       if (!rec) continue;
-      var a = numOrNull(rec[p[0]]), minus = p[1] ? numOrNull(rec[p[1]]) : 0, d = numOrNull(rec[p[2]]);
+      var a = numOrNull(rec[p[0]]), d = numOrNull(rec[p[2]]), minus = 0;
+      for (var mi = 0; mi < p[1].length && minus != null; mi++) {
+        var mv = numOrNull(rec[p[1][mi]]);
+        minus = mv == null ? null : minus + mv;
+      }
       if (a == null || minus == null || d == null || d <= 0) continue;
+      (p[3] || []).forEach(function (k) { minus += numOrNull(rec[k]) || 0; });
       num += a - minus; den += d;
     }
     if (den <= 0) return null;
@@ -3240,6 +3464,9 @@ window.SFM = (function () {
     var scrapDraw = rng();
     var scrapRate = badDay ? 0.04 + scrapDraw * 0.05 : (scrapDraw < 0.12 ? 0.005 + scrapDraw * 0.15 : 0);
     var ausschuss = produziert * scrapRate;
+    // Nacharbeit: an gut jedem vierten Tag ein kleiner Anteil, an schwachen Tagen mehr
+    var reworkF = Math.abs(Math.sin(scrapDraw * 53.1 + geplant));
+    var nacharbeit = badDay ? produziert * (0.01 + reworkF * 0.03) : (reworkF < 0.28 ? produziert * (0.002 + reworkF * 0.03) : 0);
     var faktoriert = produziert * (0.96 + rng() * 0.08);
     var auftraegeFaellig = 16 + Math.round(rng() * 14);
     var otdDraw = rng();
@@ -3268,6 +3495,7 @@ window.SFM = (function () {
       geplant: Math.round(geplant * 100) / 100,
       produziert: perfRate === 1 ? Math.round(geplant * 100) / 100 : Math.round(produziert * 100) / 100,
       ausschuss: Math.round(ausschuss * 100) / 100,
+      nacharbeit: Math.round(nacharbeit * 100) / 100,
       faktoriert: Math.round(faktoriert * 100) / 100,
       inventory: Math.round(inventory * 100) / 100,
       inventoryGrenzwert: Math.round(inventoryGrenzwert * 100) / 100,
@@ -3305,20 +3533,21 @@ window.SFM = (function () {
   }
   // Passende, bereits abgeschlossene Abweichungen für rote Board-Zellen der Testdaten
   var DEMO_POOL = {
-    S: [["Rutschgefahr nach Kühlmittelaustritt", "Boden sofort gereinigt und gesperrt, Auffangwanne an der Presse ergänzt.", "T. Brandt"],
-        ["Beinahe-Unfall am Gabelstaplerweg", "Fahrweg neu markiert, Staplerfahrer unterwiesen.", "T. Brandt"]],
-    C: [["Inventory über Grenzwert — Lagerplatz knapp", "Überbestand umgelagert, Bestellmenge für das Rohmaterial reduziert.", "M. Klein"],
-        ["Halbfertigware staut sich vor der Endkontrolle", "Pufferzone neu geordnet, Prüfkapazität in der Spätschicht erhöht.", "S. Hoffmann"]],
-    Q: [["Maßabweichung an Bauteil 4711", "100-%-Prüfung aktiviert, Werkzeug getauscht, Messprotokoll ergänzt.", "A. Weber"],
-        ["Oberflächenfehler an Charge 2284", "Charge gesperrt, Reinigungsintervall der Form verkürzt.", "A. Weber"]],
-    D: [["Lieferverzug Rohmaterial", "Spediteur kontaktiert, Teillieferung vorgezogen, Kunde informiert.", "M. Klein"],
-        ["Rüstzeit Presse 3 deutlich überschritten", "Rüstwagen neu bestückt, Rüstablauf mit dem Team abgestimmt.", "M. Klein"]],
-    P: [["Personalengpass durch Krankmeldungen", "Springer aus der Nachbarlinie eingesetzt, Schichtplan angepasst.", "S. Hoffmann"],
-        ["Linie M2 lief mit reduzierter Besetzung", "Aufgaben priorisiert, Einarbeitung eines Aushilfs-Mitarbeiters gestartet.", "S. Hoffmann"]]
+    S: [["Rutschgefahr nach Kühlmittelaustritt", "Boden sofort gereinigt und gesperrt, Auffangwanne an der Presse ergänzt.", "T. Brandt", "other"],
+        ["Beinahe-Unfall am Gabelstaplerweg", "Fahrweg neu markiert, Staplerfahrer unterwiesen.", "T. Brandt", "near"]],
+    C: [["Inventory über Grenzwert — Lagerplatz knapp", "Überbestand umgelagert, Bestellmenge für das Rohmaterial reduziert.", "M. Klein", "inv"],
+        ["Halbfertigware staut sich vor der Endkontrolle", "Pufferzone neu geordnet, Prüfkapazität in der Spätschicht erhöht.", "S. Hoffmann", "other"]],
+    Q: [["Maßabweichung an Bauteil 4711", "100-%-Prüfung aktiviert, Werkzeug getauscht, Messprotokoll ergänzt.", "A. Weber", "scrap"],
+        ["Oberflächenfehler an Charge 2284", "Charge gesperrt, nachgeschliffen und freigegeben, Reinigungsintervall der Form verkürzt.", "A. Weber", "rework"]],
+    D: [["Lieferverzug Rohmaterial", "Spediteur kontaktiert, Teillieferung vorgezogen, Kunde informiert.", "M. Klein", "otd"],
+        ["Rüstzeit Presse 3 deutlich überschritten", "Rüstwagen neu bestückt, Rüstablauf mit dem Team abgestimmt.", "M. Klein", "otd"]],
+    P: [["Personalengpass durch Krankmeldungen", "Springer aus der Nachbarlinie eingesetzt, Schichtplan angepasst.", "S. Hoffmann", "U_pers"],
+        ["Linie M2 lief mit reduzierter Besetzung", "Aufgaben priorisiert, Einarbeitung eines Aushilfs-Mitarbeiters gestartet.", "S. Hoffmann", "U_pers"]]
   };
   // Begründungen zu erkannten Abweichungen (Schlüssel = Regelschlüssel aus 05-rules.js)
   var DEMO_REASONS = {
     menge: ["Rohmaterial verspätet angeliefert, Schicht später gestartet.", "Anlage lief wegen Qualitätsprüfung mit gedrosselter Geschwindigkeit."],
+    rework: ["Oberflächenfehler nachgeschliffen, Teile anschließend freigegeben.", "Maßabweichung durch Nachbearbeitung korrigiert."],
     scrap: ["Maßabweichung durch Werkzeugverschleiß, Teile aussortiert.", "Oberflächenfehler an einer Charge, Ausschuss vom Prüfer gesperrt."],
     inv: ["Versand wurde verschoben, Lager vorübergehend überfüllt.", "Zusätzliche Fertigware wegen Kundenabruf-Verschiebung eingelagert."],
     otd: ["Spedition verspätet, Teillieferung am Folgetag nachgeholt.", "Auftrag wartete auf Freigabe der Qualitätsprüfung."],
@@ -3380,7 +3609,7 @@ window.SFM = (function () {
         if (board[c.key][day] === "nok" && !hasDev) {
           var pick = DEMO_POOL[c.key][Math.floor(gen() * DEMO_POOL[c.key].length)];
           state.deviations.push({
-            id: "dev-" + (state.seq++), title: pick[0], cat: c.key, owner: pick[2],
+            id: "dev-" + (state.seq++), title: pick[0], cat: c.key, sub: pick[3] || "other", owner: pick[2],
             due: iso, created: iso, phase: "done", desc: pick[1], whys: ["", "", "", "", ""]
           });
         }
@@ -3425,19 +3654,19 @@ window.SFM = (function () {
     var deviations = [
       // Noch offene Maßnahmen (aktuell)
       {
-        id: "dev-1", title: "Ausschuss Bauteil 4711 erhöht — Maßabweichung Bohrung", cat: "Q",
+        id: "dev-1", title: "Ausschuss Bauteil 4711 erhöht — Maßabweichung Bohrung", cat: "Q", sub: "scrap",
         owner: "A. Weber", due: iso(1), created: iso(0), phase: "do",
         desc: "First Pass Yield gestern unter Ziel. Sofortmaßnahme: 100-%-Prüfung aktiviert.",
         whys: ["Bohrungsdurchmesser außerhalb Toleranz", "Werkzeugverschleiß früher als geplant", "Standzeit-Intervall zu lang angesetzt", "Erfahrungswert aus altem Material übernommen", "Kein Review der Wartungsintervalle bei Materialwechsel"]
       },
       {
-        id: "dev-2", title: "Lieferverzug Auftrag 20388 — Rüstzeit Presse 3 zu lang", cat: "D",
+        id: "dev-2", title: "Lieferverzug Auftrag 20388 — Rüstzeit Presse 3 zu lang", cat: "D", sub: "otd",
         owner: "M. Klein", due: iso(2), created: iso(0), phase: "plan",
         desc: "Termintreue-Ziel verfehlt. Rüstvorgang dauerte 45 min statt 20 min.",
         whys: ["Rüstwerkzeug nicht am Platz", "Vorheriges Team hat es nicht zurückgelegt", "", "", ""]
       },
       {
-        id: "dev-3", title: "Stolperstelle an Linie M2 beseitigen — Kabelkanal", cat: "S",
+        id: "dev-3", title: "Stolperstelle an Linie M2 beseitigen — Kabelkanal", cat: "S", sub: "near",
         owner: "T. Brandt", due: iso(-1), created: iso(-1), phase: "check",
         desc: "Beinahe-Unfall gemeldet. Kabelbrücke provisorisch verlegt, feste Lösung prüfen.",
         whys: ["", "", "", "", ""]
@@ -3455,7 +3684,7 @@ window.SFM = (function () {
         desc: "Temperaturregelung neu kalibriert, Verbrauch wieder im Zielkorridor.", whys: ["", "", "", "", ""]
       },
       {
-        id: "dev-6", title: "Lieferverzug Rohmaterial Aluminiumbarren", cat: "D",
+        id: "dev-6", title: "Lieferverzug Rohmaterial Aluminiumbarren", cat: "D", sub: "otd",
         owner: "M. Klein", due: onDate(2, 12), phase: "done",
         desc: "Zweitlieferant angebunden, Sicherheitsbestand erhöht.", whys: ["", "", "", "", ""]
       },
@@ -3465,12 +3694,12 @@ window.SFM = (function () {
         desc: "Abdeckung mit Sicherheitsschalter nachgerüstet und abgenommen.", whys: ["", "", "", "", ""]
       },
       {
-        id: "dev-8", title: "Personalengpass Frühschicht durch Krankheitswelle", cat: "P",
+        id: "dev-8", title: "Personalengpass Frühschicht durch Krankheitswelle", cat: "P", sub: "U_pers",
         owner: "S. Hoffmann", due: onDate(4, 15), phase: "done",
         desc: "Springer-Pool erweitert, Schichtplan für Engpässe angepasst.", whys: ["", "", "", "", ""]
       },
       {
-        id: "dev-9", title: "Ausschuss durch falsche Losgröße im ERP", cat: "Q",
+        id: "dev-9", title: "Ausschuss durch falsche Losgröße im ERP", cat: "Q", sub: "scrap",
         owner: "A. Weber", due: onDate(5, 27), phase: "done",
         desc: "Losgrößen-Stammdaten korrigiert, Plausibilitätsprüfung ergänzt.", whys: ["", "", "", "", ""]
       },
@@ -3496,7 +3725,7 @@ window.SFM = (function () {
           if (has) return;
           var pick = POOL[c.key][Math.floor(gen() * POOL[c.key].length)];
           deviations.push({
-            id: "dev-" + (nextId++), title: pick[0], cat: c.key, owner: pick[2],
+            id: "dev-" + (nextId++), title: pick[0], cat: c.key, sub: pick[3] || "other", owner: pick[2],
             due: iso, created: iso, phase: "done", desc: pick[1], whys: ["", "", "", "", ""]
           });
         });
@@ -3808,8 +4037,24 @@ window.SFM = (function () {
   // dem gewählten Modus/Zeitraum. Sicherheit (Tage unfallfrei) und Offene Maßnahmen bleiben
   // bewusst live und unabhängig vom gewählten Zeitraum (siehe renderMiniTiles). Unabhängig
   // von der Monatsnavigation auf dem SQIDP-Board (viewY/viewM) bzw. im Huddle-Kalender (hcY/hcM).
-  var dashMode = "month"; // "day" | "month" | "year" | "range"
+  var dashMode = "month"; // "day" | "week" | "month" | "year" | "range"
   var dashDayIso = isoOf(new Date(Y, M, TODAY_D));
+  // Arbeitswoche: Montag bis Sonntag; gespeichert wird der Montag der Woche
+  function mondayOf(d) {
+    var r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    r.setDate(r.getDate() - (r.getDay() + 6) % 7);
+    return r;
+  }
+  function currentWeekStartIso() { return isoOf(mondayOf(new Date(Y, M, TODAY_D))); }
+  // Kalenderwoche nach ISO 8601 (Woche mit dem ersten Donnerstag des Jahres = KW 1)
+  function isoWeekNo(d) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    t.setDate(t.getDate() + 3 - (t.getDay() + 6) % 7);
+    var w1 = new Date(t.getFullYear(), 0, 4);
+    return 1 + Math.round(((t - w1) / 86400000 - 3 + (w1.getDay() + 6) % 7) / 7);
+  }
+  function weekEndIso(startIso) { var e = dateOnly(startIso); e.setDate(e.getDate() + 6); return isoOf(e); }
+  var dashWeekStart = currentWeekStartIso();
   var dashY = Y, dashM = M;
   var dashYearY = Y;
   var dashRangeFrom = isoOf(new Date(Y, M, TODAY_D - 6));
@@ -3819,6 +4064,7 @@ window.SFM = (function () {
   // Zeitraum-Grenzen für den gewählten Modus, ohne Begrenzung auf "heute"
   function dashPeriodNominalBounds() {
     if (dashMode === "day") return { from: dashDayIso, to: dashDayIso };
+    if (dashMode === "week") return { from: dashWeekStart, to: weekEndIso(dashWeekStart) };
     if (dashMode === "year") return { from: dashYearY + "-01-01", to: dashYearY + "-12-31" };
     if (dashMode === "range") return { from: dashRangeFrom, to: dashRangeTo };
     var lastDay = new Date(dashY, dashM + 1, 0).getDate();
@@ -3836,6 +4082,7 @@ window.SFM = (function () {
   function dashIsCurrentPeriod() {
     var todayIso = isoOf(new Date(Y, M, TODAY_D));
     if (dashMode === "day") return dashDayIso === todayIso;
+    if (dashMode === "week") return dashWeekStart === currentWeekStartIso();
     if (dashMode === "year") return dashYearY === Y;
     if (dashMode === "range") return dashRangeTo >= todayIso;
     return dashY === Y && dashM === M;
@@ -3846,6 +4093,10 @@ window.SFM = (function () {
       var d = dateOnly(dashDayIso); d.setDate(d.getDate() - 1);
       var iso = isoOf(d);
       return { from: iso, to: iso };
+    }
+    if (dashMode === "week") {
+      var pw = dateOnly(dashWeekStart); pw.setDate(pw.getDate() - 7);
+      return { from: isoOf(pw), to: weekEndIso(isoOf(pw)) };
     }
     if (dashMode === "year") return { from: (dashYearY - 1) + "-01-01", to: (dashYearY - 1) + "-12-31" };
     if (dashMode === "range") {
@@ -3861,19 +4112,23 @@ window.SFM = (function () {
     return { from: py + "-" + pad2(pm + 1) + "-01", to: py + "-" + pad2(pm + 1) + "-" + pad2(lastDay) };
   }
   function prevPeriodLabel() {
-    return dashMode === "day" ? "Vortag" : dashMode === "year" ? "Vorjahr" : dashMode === "range" ? "vorheriger Zeitraum" : "Vormonat";
+    return dashMode === "day" ? "Vortag" : dashMode === "week" ? "Vorwoche" : dashMode === "year" ? "Vorjahr" : dashMode === "range" ? "vorheriger Zeitraum" : "Vormonat";
   }
   function dashPeriodNoun() {
-    return dashMode === "day" ? "an diesem Tag" : dashMode === "year" ? "in diesem Jahr" : dashMode === "range" ? "in diesem Zeitraum" : "in diesem Monat";
+    return dashMode === "day" ? "an diesem Tag" : dashMode === "week" ? "in dieser Arbeitswoche" : dashMode === "year" ? "in diesem Jahr" : dashMode === "range" ? "in diesem Zeitraum" : "in diesem Monat";
   }
   function dashPeriodLabel() {
     if (dashMode === "day") return fmtDate(dashDayIso);
+    if (dashMode === "week") return weekLabel(dashWeekStart);
     if (dashMode === "year") return String(dashYearY);
     if (dashMode === "range") return fmtDate(dashRangeFrom) + " – " + fmtDate(dashRangeTo);
     return MONTH_NAMES[dashM] + " " + dashY;
   }
+  function weekLabel(startIso) {
+    return "KW " + isoWeekNo(dateOnly(startIso)) + " · " + fmtDateShort(startIso) + " – " + fmtDate(weekEndIso(startIso));
+  }
   function dashResetLabel() {
-    return dashMode === "day" ? "Heute" : dashMode === "year" ? "Dieses Jahr" : dashMode === "range" ? "Letzte 7 Tage" : "Aktueller Monat";
+    return dashMode === "day" ? "Heute" : dashMode === "week" ? "Aktuelle Arbeitswoche" : dashMode === "year" ? "Dieses Jahr" : dashMode === "range" ? "Letzte 7 Tage" : "Aktueller Monat";
   }
   function dashCoverageText() {
     var b = dashPeriodBounds(), nominal = dashPeriodNominalBounds();
@@ -3883,6 +4138,7 @@ window.SFM = (function () {
       if (dailyRecord(isoOf(dt))) entered++;
     }
     var label = dashMode === "day" ? dashPeriodLabel()
+      : dashMode === "week" ? (dashIsCurrentPeriod() ? "Laufende Arbeitswoche" : "KW " + isoWeekNo(dateOnly(dashWeekStart)))
       : dashMode === "year" ? (dashIsCurrentPeriod() ? "Laufendes Jahr" : "Jahr " + dashYearY)
       : dashMode === "range" ? "Gewählter Zeitraum"
       : (dashIsCurrentPeriod() ? "Laufender Monat" : MONTH_NAMES[dashM] + " " + dashY);
@@ -3904,6 +4160,8 @@ window.SFM = (function () {
       $("#dashNextPeriod").disabled = dashIsCurrentPeriod();
     }
     $("#dashResetPeriod").textContent = dashResetLabel();
+    $("#dashResetPeriod").hidden = dashMode === "week";
+    syncCurWeekButtons();
     $("#dashArchivePill").hidden = dashIsCurrentPeriod();
     $("#dashCoverageText").textContent = dashCoverageText();
   }
@@ -3924,6 +4182,15 @@ window.SFM = (function () {
       $("#detailNextPeriod").disabled = dashIsCurrentPeriod();
     }
     $("#detailResetPeriod").textContent = dashResetLabel();
+    $("#detailResetPeriod").hidden = dashMode === "week";
+  }
+  // „Aktuelle Arbeitswoche“ ist hervorgehoben, solange genau diese Woche eingestellt ist
+  function syncCurWeekButtons() {
+    var on = dashMode === "week" && dashWeekStart === currentWeekStartIso();
+    document.querySelectorAll("[data-cur-week]").forEach(function (b) {
+      b.classList.toggle("primary", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   }
   // Beim Wechsel des Zeitraums aktualisiert sich das gesamte Dashboard: Monatsbilanz, KPI-Kacheln
   // (OEE/FPY/Termintreue inkl. Verlauf), OEE-Komponenten und die kleinen Kennzahlenkacheln — sowie,
@@ -3934,6 +4201,7 @@ window.SFM = (function () {
     renderDashGrid();
     syncDetailPeriodUi();
     if (detailActive) renderDetailDashboard();
+    renderTracking();
   }
   function setDashMode(mode) {
     if (mode === dashMode) return;
@@ -3943,6 +4211,8 @@ window.SFM = (function () {
   function shiftDashPeriod(dir) {
     if (dashMode === "day") {
       var d = dateOnly(dashDayIso); d.setDate(d.getDate() + dir); dashDayIso = isoOf(d);
+    } else if (dashMode === "week") {
+      var w = dateOnly(dashWeekStart); w.setDate(w.getDate() + 7 * dir); dashWeekStart = isoOf(w);
     } else if (dashMode === "year") {
       dashYearY += dir;
     } else if (dashMode === "range") {
@@ -3958,8 +4228,19 @@ window.SFM = (function () {
   }
   function resetDashPeriod() {
     var t = new Date(Y, M, TODAY_D);
-    dashDayIso = isoOf(t); dashY = Y; dashM = M; dashYearY = Y;
+    dashDayIso = isoOf(t); dashY = Y; dashM = M; dashYearY = Y; dashWeekStart = currentWeekStartIso();
     dashRangeFrom = isoOf(new Date(Y, M, TODAY_D - 6)); dashRangeTo = isoOf(t);
+    renderDashboardForPeriod();
+  }
+  // Springt – egal welcher Wochentag gerade ist – auf die laufende Arbeitswoche (Mo–So)
+  function setCurrentWeek() {
+    dashMode = "week";
+    dashWeekStart = currentWeekStartIso();
+    renderDashboardForPeriod();
+  }
+  // Wechsel zur Monatsübersicht des laufenden Monats (z. B. nach „Huddle ENDE“)
+  function showCurrentMonth() {
+    dashMode = "month"; dashY = Y; dashM = M;
     renderDashboardForPeriod();
   }
   function setDashRangeFrom(v) {
@@ -3984,6 +4265,7 @@ window.SFM = (function () {
   $("#dashNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
   $("#detailNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
   $("#dashResetPeriod").addEventListener("click", resetDashPeriod);
+  document.querySelectorAll("[data-cur-week]").forEach(function (b) { b.addEventListener("click", setCurrentWeek); });
   $("#detailResetPeriod").addEventListener("click", resetDashPeriod);
   $("#dashRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
   $("#detailRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
@@ -4150,6 +4432,7 @@ window.SFM = (function () {
     { key: "personalausfall", label: "Personen Ausfallzeit Ungeplant", unit: "h", digits: 1, agg: "sum" },
     { key: "geplant", label: "Geplante Menge", unit: "t", digits: 2, agg: "sum" },
     { key: "produziert", label: "Produzierte Menge", unit: "t", digits: 2, agg: "sum" },
+    { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", digits: 2, agg: "sum" },
     { key: "ausschuss", label: "Ausschuss", unit: "t", digits: 2, agg: "sum" },
     { key: "faktoriert", label: "Faktorierte Menge", unit: "t", digits: 2, agg: "sum" },
     { key: "inventory", label: "Inventory", unit: "t", digits: 2, agg: "last" },
@@ -4296,6 +4579,13 @@ window.SFM = (function () {
       // als zweites, kleineres Panel mit eigener Achse in derselben Karte, x-Position identisch
       // ausgerichtet (kein zweites Zeitraumfenster, keine „duale Achse" in einem Chart).
       secondary: { key: "ausschuss", label: "Ausschuss", color: "var(--accent)", unit: "t" }
+    },
+    {
+      id: "qualitaet-mengen", title: "Nacharbeit & Ausschuss — was fehlt zum First Pass Yield?", unit: "t",
+      fields: [
+        { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", color: "var(--cat-q)" },
+        { key: "ausschuss", label: "Ausschuss (Absandung / Kreislauf)", color: "var(--cat-s)" }
+      ]
     },
     {
       id: "inventory", title: "Inventory", unit: "t",
@@ -5503,6 +5793,25 @@ window.SFM = (function () {
       list.appendChild(row);
     }
   }
+  // Auswahlliste „Art der Abweichung“ passend zur Kategorie
+  function fillSubSelect(cat, selected) {
+    var sel = $("#fSub");
+    sel.innerHTML = "";
+    var groups = {};
+    (DEV_SUBS[cat] || []).forEach(function (d) {
+      if (d.auto && d.k !== selected) return;
+      var opt = el("option", null, d.label);
+      opt.value = d.k;
+      var host = sel;
+      if (d.group) {
+        if (!groups[d.group]) { groups[d.group] = document.createElement("optgroup"); groups[d.group].label = d.group; sel.appendChild(groups[d.group]); }
+        host = groups[d.group];
+      }
+      host.appendChild(opt);
+    });
+    sel.value = subDef(cat, selected) ? selected : "other";
+  }
+  $("#fCat").addEventListener("change", function () { fillSubSelect(this.value, $("#fSub").value); });
   function openDialog(dev, presets) {
     editingId = dev ? dev.id : null;
     pendingDevCreated = dev ? null : ((presets && presets.created) || TODAY_ISO);
@@ -5511,12 +5820,14 @@ window.SFM = (function () {
     $("#dlgTitle").textContent = dev ? (editable ? "Abweichung bearbeiten" : "Abweichung — nur Lesen") : "Neue Abweichung";
     $("#fTitle").value = dev ? dev.title : ((presets && presets.title) || "");
     $("#fCat").value = dev ? dev.cat : (presets && presets.cat) || "Q";
+    fillSubSelect($("#fCat").value, dev ? devSub(dev)
+      : (presets && presets.sub) || (presets && presets.src && presets.src.indexOf("auto:") === 0 ? findingSub($("#fCat").value, presets.src.slice(5)) : "other"));
     $("#fPhase").value = dev ? dev.phase : "plan";
     $("#fOwner").value = dev ? (dev.owner || "") : (currentUser ? currentUser.name : "");
     $("#fDue").value = dev ? (dev.due || "") : (presets && presets.due) || "";
     $("#fDesc").value = dev ? (dev.desc || "") : ((presets && presets.desc) || "");
     buildWhys(dev ? dev.whys : null);
-    ["fTitle", "fCat", "fPhase", "fOwner", "fDue", "fDesc"].forEach(function (id) {
+    ["fTitle", "fCat", "fSub", "fPhase", "fOwner", "fDue", "fDesc"].forEach(function (id) {
       document.getElementById(id).disabled = !editable;
     });
     document.querySelectorAll("#whyList input").forEach(function (i) { i.disabled = !editable; });
@@ -5530,6 +5841,7 @@ window.SFM = (function () {
     var data = {
       title: $("#fTitle").value.trim(),
       cat: $("#fCat").value,
+      sub: $("#fSub").value || "other",
       phase: $("#fPhase").value,
       owner: $("#fOwner").value.trim(),
       due: $("#fDue").value,
@@ -5574,6 +5886,344 @@ window.SFM = (function () {
   $("#newDevBtn").addEventListener("click", function () { openDialog(null); });
   $("#newDevFromBoard").addEventListener("click", function () { openDialog(null); });
 
+  /* ---------- Abweichungs-Tracking ---------- */
+  // Sammelt alle Abweichungen eines Zeitraums aus drei Quellen:
+  //   auto   — aus den Tageskennzahlen erkannte Abweichungen (FINDING_RULES), inkl. verknüpfter Maßnahme
+  //   plan   — geplante Produktionsausfälle je Art (keine Abweichung im Sinne der Regeln, aber auswertbar)
+  //   manual — von Hand erfasste Abweichungen ohne Verknüpfung zu einer erkannten
+  // Der Zeitraum ist derselbe wie im Dashboard (gemeinsamer Zustand).
+  var TRK_SRC_LABEL = { auto: "Aus Kennzahlen", plan: "Geplanter Ausfall", manual: "Von Hand erfasst" };
+  var trkCatOff = {};   // Kategorie → true = ausgeblendet
+  var trkSubOff = {};   // "Kat:Art" → true = ausgeblendet
+  var trkSrc = "";      // "" = alle Quellen
+  var TRK_LIST_MAX = 300;
+  function trkQty(cat, key, rec) {
+    if (!rec) return null;
+    var n = function (k) { return numOrNull(rec[k]); };
+    if (cat === "Q" && key === "menge") return { v: Math.round((n("produziert") - n("geplant")) * 100) / 100, u: "t" };
+    if (cat === "Q" && key === "rework") return { v: n("nacharbeit"), u: "t" };
+    if (cat === "Q" && key === "scrap") return { v: n("ausschuss"), u: "t" };
+    if (cat === "C" && key === "inv") return { v: Math.round((n("inventory") - n("inventoryGrenzwert")) * 100) / 100, u: "t" };
+    if (cat === "D" && key === "otd") return { v: n("auftraegeFaellig") - n("auftraegePuenktlich"), u: "Stk." };
+    if (cat === "P" && key === "out-total") return { v: n("ausfall"), u: "h" };
+    if (cat === "P" && key.indexOf("out-") === 0) return { v: n(outageKey("U", key.slice(4))), u: "h" };
+    return null;
+  }
+  function trackingEntries(fromIso, toIso) {
+    var byDay = {};
+    state.deviations.forEach(function (d) {
+      var iso = d.created || d.due;
+      if (!iso || iso < fromIso || iso > toIso) return;
+      (byDay[iso] = byDay[iso] || []).push(d);
+    });
+    var out = [], used = {};
+    var to = dateOnly(toIso);
+    for (var dt = dateOnly(fromIso); dt <= to; dt.setDate(dt.getDate() + 1)) {
+      var iso = isoOf(dt), rec = dailyRecord(iso), devs = byDay[iso] || [];
+      CATS.forEach(function (c) {
+        agendaFindings(c.key, iso).forEach(function (f) {
+          var dev = devs.filter(function (d) { return d.cat === c.key && d.src === "auto:" + f.key; })[0] || null;
+          if (dev) used[dev.id] = true;
+          out.push({ iso: iso, cat: c.key, sub: findingSub(c.key, f.key), src: "auto", fkey: f.key,
+            title: f.title, detail: getReason(iso, c.key, f.key) || f.detail, dev: dev, qty: trkQty(c.key, f.key, rec) });
+        });
+      });
+      if (rec && outageHasSubs(rec, "G")) {
+        OUTAGE_KINDS.forEach(function (o) {
+          var h = numOrNull(rec[outageKey("G", o.k)]);
+          if (h == null || h <= 0) return;
+          out.push({ iso: iso, cat: "P", sub: "G_" + o.k, src: "plan", title: o.label + ": " + fmtNum(h, 1) + " h geplant",
+            detail: "Geplanter Stillstand — verkürzt die geplante Produktionszeit, mindert die Verfügbarkeit nicht.", dev: null, qty: { v: h, u: "h" } });
+        });
+      }
+      devs.forEach(function (d) {
+        if (used[d.id]) return;
+        out.push({ iso: iso, cat: d.cat, sub: devSub(d), src: "manual", title: d.title, detail: d.desc || "", dev: d, qty: null });
+      });
+    }
+    return out;
+  }
+  function trkVisible(e) {
+    return !trkCatOff[e.cat] && !trkSubOff[e.cat + ":" + e.sub] && (!trkSrc || e.src === trkSrc);
+  }
+  function trkFmtQty(q) {
+    if (!q || q.v == null) return "–";
+    return fmtNum(q.v, unitDigits(q.u)) + " " + q.u;
+  }
+  function syncTrkPeriodUi() {
+    document.querySelectorAll("#trkPeriodSeg button").forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.mode === dashMode);
+    });
+    $("#trkPeriodControls").hidden = dashMode === "range";
+    $("#trkRangeInputs").hidden = dashMode !== "range";
+    if (dashMode === "range") {
+      $("#trkRangeFromInput").value = dashRangeFrom;
+      $("#trkRangeToInput").value = dashRangeTo;
+    } else {
+      $("#trkPeriodLabel").textContent = dashPeriodLabel();
+      $("#trkNextPeriod").disabled = dashIsCurrentPeriod();
+    }
+    $("#trkResetPeriod").textContent = dashResetLabel();
+    $("#trkResetPeriod").hidden = dashMode === "week";
+    syncCurWeekButtons();
+  }
+  function trkChip(label, on, color, count, onClick, title) {
+    var b = el("button", "trk-chip" + (on ? " on" : ""));
+    b.type = "button";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    if (color) { var dot = el("span", "trk-chip-dot"); dot.style.background = color; b.appendChild(dot); }
+    b.appendChild(el("span", null, label));
+    if (count != null) b.appendChild(el("span", "trk-chip-n", String(count)));
+    if (title) b.title = title;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function renderTracking() {
+    if (!$("#view-tracking").classList.contains("active")) return;
+    syncTrkPeriodUi();
+    var b = dashPeriodBounds();
+    var all = trackingEntries(b.from, b.to);
+    var srcOk = function (e) { return !trkSrc || e.src === trkSrc; };
+    $("#trkPeriodHint").textContent = "Ausgewertet: " + fmtDate(b.from) + (b.from !== b.to ? " – " + fmtDate(b.to) : "") +
+      " · " + all.length + (all.length === 1 ? " Eintrag" : " Einträge") + " insgesamt";
+
+    // Kategorie-Chips (Zahl = Einträge der Kategorie bei gewählter Quelle und Art-Filter)
+    var catHost = $("#trkCatChips"); catHost.innerHTML = "";
+    CATS.forEach(function (c) {
+      var n = all.filter(function (e) { return e.cat === c.key && srcOk(e) && !trkSubOff[e.cat + ":" + e.sub]; }).length;
+      catHost.appendChild(trkChip(letterOf(c.key) + " — " + c.name, !trkCatOff[c.key], catColor(c.key), n, function () {
+        trkCatOff[c.key] = !trkCatOff[c.key]; renderTracking();
+      }, "Kategorie ein-/ausblenden"));
+    });
+    // Art-Chips je Kategorie (P getrennt nach Geplant / Ungeplant)
+    var subHost = $("#trkSubGroups"); subHost.innerHTML = "";
+    CATS.forEach(function (c) {
+      var line = el("div", "trk-filter-line" + (trkCatOff[c.key] ? " is-off" : ""));
+      line.appendChild(el("span", "trk-filter-lbl", letterOf(c.key) + " — Art"));
+      var wrap = el("div", "trk-sub-wrap");
+      var groupHosts = {};
+      DEV_SUBS[c.key].forEach(function (d) {
+        var n = all.filter(function (e) { return e.cat === c.key && e.sub === d.k && srcOk(e); }).length;
+        if (d.auto && !n) return;
+        if (d.group) {
+          if (!groupHosts[d.group]) {
+            var g = el("div", "trk-chips trk-sub-group");
+            var gl = el("button", "trk-group-lbl", d.group);
+            gl.type = "button";
+            gl.title = "Alle Arten „" + d.group + "“ ein- bzw. ausschalten";
+            (function (grp) {
+              gl.addEventListener("click", function () {
+                var keys = DEV_SUBS[c.key].filter(function (x) { return x.group === grp; }).map(function (x) { return c.key + ":" + x.k; });
+                var anyOn = keys.some(function (k) { return !trkSubOff[k]; });
+                keys.forEach(function (k) { trkSubOff[k] = anyOn; });
+                renderTracking();
+              });
+            })(d.group);
+            g.appendChild(gl);
+            wrap.appendChild(g);
+            groupHosts[d.group] = g;
+          }
+        } else if (!groupHosts._plain) {
+          groupHosts._plain = el("div", "trk-chips");
+          wrap.appendChild(groupHosts._plain);
+        }
+        var host = d.group ? groupHosts[d.group] : groupHosts._plain;
+        var key = c.key + ":" + d.k;
+        host.appendChild(trkChip(d.label, !trkSubOff[key], null, n, function () {
+          trkSubOff[key] = !trkSubOff[key]; renderTracking();
+        }));
+      });
+      line.appendChild(wrap);
+      subHost.appendChild(line);
+    });
+    document.querySelectorAll("#trkSrcSeg button").forEach(function (btn) { btn.classList.toggle("active", btn.dataset.src === trkSrc); });
+
+    var list = all.filter(trkVisible);
+    // Kennzahlen-Kacheln
+    var sumQty = function (pred, unit) {
+      var v = 0, any = false;
+      list.forEach(function (e) { if (pred(e) && e.qty && e.qty.v != null && e.qty.u === unit) { v += e.qty.v; any = true; } });
+      return any ? Math.round(v * 100) / 100 : null;
+    };
+    var days = {}; list.forEach(function (e) { days[e.iso] = true; });
+    var withDev = list.filter(function (e) { return e.dev; }).length;
+    var open = list.filter(function (e) { return e.dev && e.dev.phase !== "done"; }).length;
+    var stats = [
+      ["Abweichungen", String(list.length), "im Zeitraum, nach Filter"],
+      ["Betroffene Tage", String(Object.keys(days).length), "Tage mit mindestens einem Eintrag"],
+      ["Ungeplante Ausfallzeit", fmtQ(sumQty(function (e) { return e.cat === "P" && e.sub.indexOf("U_") === 0; }, "h"), "h", 1), "Σ Personell, Organisatorisch, Technisch, Rüsten"],
+      ["Geplante Ausfallzeit", fmtQ(sumQty(function (e) { return e.cat === "P" && e.sub.indexOf("G_") === 0; }, "h"), "h", 1), "Σ geplanter Stillstände"],
+      ["Nacharbeit", fmtQ(sumQty(function (e) { return e.cat === "Q" && e.sub === "rework"; }, "t"), "t", 2), "verwendbar, kein First Pass Yield"],
+      ["Ausschuss", fmtQ(sumQty(function (e) { return e.cat === "Q" && e.sub === "scrap"; }, "t"), "t", 2), "Absandung / Kreislaufmaterial"],
+      ["Mit Maßnahme", withDev + " / " + list.length, open + " davon offen"]
+    ];
+    var sh = $("#trkStats"); sh.innerHTML = "";
+    stats.forEach(function (st) {
+      var t = el("div", "card mini-tile");
+      t.appendChild(el("div", "mini-value", st[1]));
+      t.appendChild(el("div", "mini-label", st[0]));
+      t.title = st[2];
+      sh.appendChild(t);
+    });
+
+    // Summen je Art
+    var groups = [];
+    CATS.forEach(function (c) {
+      DEV_SUBS[c.key].forEach(function (d) {
+        var es = list.filter(function (e) { return e.cat === c.key && e.sub === d.k; });
+        if (!es.length) return;
+        var gd = {}; es.forEach(function (e) { gd[e.iso] = true; });
+        var unit = null, sum = 0, anyQ = false;
+        es.forEach(function (e) { if (e.qty && e.qty.v != null) { unit = e.qty.u; sum += e.qty.v; anyQ = true; } });
+        groups.push({ cat: c.key, sub: d.k, n: es.length, days: Object.keys(gd).length, sum: anyQ ? Math.round(sum * 100) / 100 : null, unit: unit,
+          withDev: es.filter(function (e) { return e.dev; }).length });
+      });
+    });
+    var maxN = groups.reduce(function (m, g) { return Math.max(m, g.n); }, 0);
+    var tbl = $("#trkSumTable"); tbl.innerHTML = "";
+    if (!groups.length) {
+      tbl.appendChild(trkEmptyRow(5, "Keine Abweichungen für die gewählten Filter im Zeitraum."));
+    } else {
+      tbl.appendChild(trkHeadRow(["Art", "Anzahl", "Tage", "Summe", "Mit Maßnahme"], [0, 1, 1, 1, 1]));
+      var tb = document.createElement("tbody");
+      var catTotals = {};
+      groups.forEach(function (g) {
+        var tr = document.createElement("tr");
+        var td0 = document.createElement("td");
+        var lw = el("div", "trk-art");
+        var lt = el("span", "sq-letter trk-letter", letterOf(g.cat)); lt.style.background = catColor(g.cat);
+        lw.appendChild(lt);
+        var lbox = el("div", "trk-art-txt");
+        lbox.appendChild(el("span", null, subLabel(g.cat, g.sub)));
+        var bar = el("div", "trk-bar"); var fill = el("span"); fill.style.width = (maxN ? g.n / maxN * 100 : 0) + "%"; fill.style.background = catColor(g.cat);
+        bar.appendChild(fill); lbox.appendChild(bar);
+        lw.appendChild(lbox); td0.appendChild(lw); tr.appendChild(td0);
+        [String(g.n), String(g.days), g.sum == null ? "–" : fmtNum(g.sum, unitDigits(g.unit)) + " " + g.unit, g.withDev + " / " + g.n].forEach(function (v) {
+          tr.appendChild(el("td", "num", v));
+        });
+        tb.appendChild(tr);
+        catTotals[g.cat] = (catTotals[g.cat] || 0) + g.n;
+      });
+      var trT = el("tr", "trk-total");
+      trT.appendChild(el("td", null, "Summe"));
+      trT.appendChild(el("td", "num", String(list.length)));
+      trT.appendChild(el("td", "num", String(Object.keys(days).length)));
+      trT.appendChild(el("td", "num", "–"));
+      trT.appendChild(el("td", "num", withDev + " / " + list.length));
+      tb.appendChild(trT);
+      tbl.appendChild(tb);
+    }
+
+    // Verteilung nach Kategorie
+    var cb = $("#trkCatBars"); cb.innerHTML = "";
+    CATS.forEach(function (c) {
+      var n = list.filter(function (e) { return e.cat === c.key; }).length;
+      var row = el("div", "trk-catbar" + (trkCatOff[c.key] ? " is-off" : ""));
+      var lt = el("span", "sq-letter trk-letter", letterOf(c.key)); lt.style.background = catColor(c.key);
+      row.appendChild(lt);
+      var mid = el("div", "trk-catbar-mid");
+      mid.appendChild(el("div", "trk-catbar-name", c.name));
+      var bar = el("div", "trk-bar"); var fill = el("span");
+      fill.style.width = (list.length ? n / list.length * 100 : 0) + "%"; fill.style.background = catColor(c.key);
+      bar.appendChild(fill); mid.appendChild(bar);
+      row.appendChild(mid);
+      row.appendChild(el("span", "trk-catbar-val", n + (list.length ? " · " + fmtNum(n / list.length * 100, 0) + " %" : "")));
+      cb.appendChild(row);
+    });
+
+    // Liste
+    var sorted = list.slice().sort(function (a, z) { return a.iso < z.iso ? 1 : a.iso > z.iso ? -1 : CATS.indexOf(catOf(a.cat)) - CATS.indexOf(catOf(z.cat)); });
+    $("#trkListSub").textContent = sorted.length
+      ? "Neueste zuerst. Klick auf eine Zeile öffnet die Maßnahme" + (can("edit") ? " bzw. legt eine an." : ".")
+      : "";
+    var lt2 = $("#trkList"); lt2.innerHTML = "";
+    if (!sorted.length) {
+      lt2.appendChild(trkEmptyRow(6, "Keine Abweichungen für die gewählten Filter im Zeitraum."));
+    } else {
+      lt2.appendChild(trkHeadRow(["Datum", "Art", "Abweichung", "Menge", "Quelle", "Maßnahme"], [0, 0, 0, 1, 0, 0]));
+      var tb2 = document.createElement("tbody");
+      sorted.slice(0, TRK_LIST_MAX).forEach(function (e) {
+        var tr = el("tr", "trk-row");
+        tr.tabIndex = 0;
+        tr.appendChild(el("td", "nowrap", fmtDate(e.iso)));
+        var tdA = document.createElement("td");
+        var aw = el("div", "trk-art");
+        var lt = el("span", "sq-letter trk-letter", letterOf(e.cat)); lt.style.background = catColor(e.cat);
+        aw.appendChild(lt); aw.appendChild(el("span", null, subLabel(e.cat, e.sub)));
+        tdA.appendChild(aw); tr.appendChild(tdA);
+        var tdT = document.createElement("td");
+        tdT.appendChild(el("div", "trk-title", e.title));
+        if (e.detail) tdT.appendChild(el("div", "trk-detail", e.detail));
+        tr.appendChild(tdT);
+        tr.appendChild(el("td", "num nowrap", trkFmtQty(e.qty)));
+        tr.appendChild(el("td", "nowrap", TRK_SRC_LABEL[e.src]));
+        var tdM = el("td", "nowrap");
+        if (e.dev) {
+          var pill = el("span", "pill " + (e.dev.phase === "done" ? "ok" : isOverdue(e.dev) ? "crit" : "neutral"), phaseName(e.dev.phase));
+          tdM.appendChild(pill);
+        } else tdM.appendChild(el("span", "trk-none", e.src === "plan" ? "—" : "keine"));
+        tr.appendChild(tdM);
+        var open = function () { trkOpen(e); };
+        tr.addEventListener("click", open);
+        tr.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } });
+        tb2.appendChild(tr);
+      });
+      lt2.appendChild(tb2);
+    }
+    var more = $("#trkListMore");
+    more.hidden = sorted.length <= TRK_LIST_MAX;
+    if (!more.hidden) more.textContent = "Angezeigt werden die neuesten " + TRK_LIST_MAX + " von " + sorted.length + " Einträgen — der CSV-Export enthält alle.";
+  }
+  function fmtQ(v, unit, digits) { return v == null ? "–" : fmtNum(v, digits) + " " + unit; }
+  function trkHeadRow(labels, numCols) {
+    var th = document.createElement("thead"), tr = document.createElement("tr");
+    labels.forEach(function (l, i) { tr.appendChild(el("th", numCols[i] ? "num" : null, l)); });
+    th.appendChild(tr);
+    return th;
+  }
+  function trkEmptyRow(cols, text) {
+    var tb = document.createElement("tbody"), tr = document.createElement("tr");
+    var td = el("td", "empty-hint", text); td.colSpan = cols;
+    tr.appendChild(td); tb.appendChild(tr);
+    return tb;
+  }
+  function trkOpen(e) {
+    if (e.dev) { openDialog(e.dev); return; }
+    if (!can("edit") || e.src === "plan") {
+      if (e.src === "plan") toast("Geplanter Ausfall — keine Maßnahme nötig");
+      return;
+    }
+    openDialog(null, { cat: e.cat, sub: e.sub, title: e.title, desc: e.detail, created: e.iso, due: "", src: "auto:" + e.fkey });
+  }
+  function exportTrackingCsv() {
+    var b = dashPeriodBounds();
+    var list = trackingEntries(b.from, b.to).filter(trkVisible)
+      .sort(function (a, z) { return a.iso < z.iso ? -1 : a.iso > z.iso ? 1 : 0; });
+    if (!list.length) { toast("Keine Abweichungen für die gewählten Filter"); return; }
+    var rows = [["Datum", "Kategorie", "Art", "Abweichung", "Beschreibung / Begründung", "Menge", "Einheit", "Quelle", "Maßnahme (PDCA)", "Verantwortlich", "Fällig"]];
+    list.forEach(function (e) {
+      rows.push([fmtDate(e.iso), letterOf(e.cat) + " — " + catOf(e.cat).name, subLabel(e.cat, e.sub), e.title, e.detail || "",
+        e.qty && e.qty.v != null ? fmtNum(e.qty.v, unitDigits(e.qty.u)) : "", e.qty ? e.qty.u : "", TRK_SRC_LABEL[e.src],
+        e.dev ? phaseName(e.dev.phase) : "", e.dev ? (e.dev.owner || "") : "", e.dev && e.dev.due ? fmtDate(e.dev.due) : ""]);
+    });
+    csvDownload(rows, "abweichungen-" + b.from + "_" + b.to + ".csv");
+    toast("Abweichungen exportiert — " + list.length + " Einträge");
+  }
+  document.querySelectorAll("#trkPeriodSeg button").forEach(function (b) {
+    b.addEventListener("click", function () { setDashMode(b.dataset.mode); });
+  });
+  $("#trkPrevPeriod").addEventListener("click", function () { shiftDashPeriod(-1); });
+  $("#trkNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
+  $("#trkResetPeriod").addEventListener("click", resetDashPeriod);
+  $("#trkRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
+  $("#trkRangeToInput").addEventListener("change", function () { setDashRangeTo(this.value); });
+  document.querySelectorAll("#trkSrcSeg button").forEach(function (b) {
+    b.addEventListener("click", function () { trkSrc = b.dataset.src; renderTracking(); });
+  });
+  $("#trkAllOn").addEventListener("click", function () { trkCatOff = {}; trkSubOff = {}; trkSrc = ""; renderTracking(); });
+  $("#trkCsvBtn").addEventListener("click", exportTrackingCsv);
+  $("#trkNewDev").addEventListener("click", function () { openDialog(null); });
+
   /* ---------- Huddle ---------- */
   var timerLeft = HUDDLE_SECONDS, timerId = null, timerStarted = false;
   var ARC_LEN = 2 * Math.PI * 150;
@@ -5590,9 +6240,13 @@ window.SFM = (function () {
     sub.textContent = st === "done" ? "Zeit abgelaufen" : st === "run" ? "Läuft" : st === "low" ? "Läuft — Endspurt" : st === "paused" ? "Pausiert" : "Bereit";
     arc.setAttribute("stroke-dashoffset", String(ARC_LEN * (1 - (HUDDLE_SECONDS ? timerLeft / HUDDLE_SECONDS : 0))));
     arc.setAttribute("stroke", st === "done" ? "var(--crit)" : st === "low" ? "var(--warn)" : "var(--accent)");
-    $("#timerToggle").textContent = timerId ? "Pause" : (!timerStarted || timerLeft <= 0) ? "Start" : "Fortsetzen";
-    // Dieselbe Uhr läuft in den Popups des geführten Huddles mit
-    var clock = $("#timerDisplay").textContent, btnText = $("#timerToggle").textContent;
+    // Start/Fortsetzen und Pause sind getrennte Knöpfe — der jeweils nicht passende ist gesperrt
+    $("#timerToggle").textContent = (!timerStarted || timerLeft <= 0) ? "Start" : "Fortsetzen";
+    $("#timerToggle").disabled = !!timerId;
+    $("#timerPause").disabled = !timerId;
+    // Dieselbe Uhr läuft in den Popups des geführten Huddles mit (dort ein Umschaltknopf)
+    var clock = $("#timerDisplay").textContent;
+    var btnText = timerId ? "Pause" : (!timerStarted || timerLeft <= 0) ? "Start" : "Fortsetzen";
     document.querySelectorAll("[data-wz-timer]").forEach(function (t) {
       t.textContent = clock;
       t.className = "wz-timer" + (st === "done" ? " done" : st === "low" ? " low" : st === "run" ? " run" : "");
@@ -5600,13 +6254,14 @@ window.SFM = (function () {
     document.querySelectorAll("[data-wz-timer-btn]").forEach(function (b) { b.textContent = btnText; });
   }
   document.querySelectorAll("[data-wz-timer-btn]").forEach(function (b) {
-    b.addEventListener("click", function () { $("#timerToggle").click(); });
+    b.addEventListener("click", function () { if (timerId) pauseTimer(); else startTimer(); });
   });
   function stopTimer() {
     if (timerId) { clearInterval(timerId); timerId = null; }
   }
-  $("#timerToggle").addEventListener("click", function () {
-    if (timerId) { stopTimer(); renderTimer(); return; }
+  function pauseTimer() { if (timerId) { stopTimer(); renderTimer(); } }
+  function startTimer() {
+    if (timerId) return;
     if (!timerStarted || timerLeft <= 0) timerLeft = HUDDLE_SECONDS;
     timerStarted = true;
     timerId = setInterval(function () {
@@ -5615,9 +6270,47 @@ window.SFM = (function () {
       renderTimer();
     }, 1000);
     renderTimer();
-  });
+  }
+  $("#timerToggle").addEventListener("click", startTimer);
+  $("#timerPause").addEventListener("click", pauseTimer);
   $("#timerReset").addEventListener("click", function () {
     stopTimer(); timerStarted = false; timerLeft = HUDDLE_SECONDS; renderTimer();
+  });
+  // „Huddle ENDE“: beendet den Huddle des gewählten Tages offiziell — Uhr stoppen, Ende mit
+  // Uhrzeit und Dauer im Huddle-Protokoll vermerken, dann zur Monatsübersicht im Dashboard.
+  function fmtClock(sec) { sec = Math.max(0, Math.round(sec)); return pad2(Math.floor(sec / 60)) + ":" + pad2(sec % 60); }
+  function renderHuddleEndInfo() {
+    var h = huddleEntry(selectedHuddleIso), info = $("#huddleEndInfo");
+    info.hidden = !(h && h.endedAt);
+    if (h && h.endedAt) {
+      var d = new Date(h.endedAt);
+      info.textContent = "Huddle für diesen Tag beendet am " + fmtDate(isoOf(d)) + " um " + pad2(d.getHours()) + ":" + pad2(d.getMinutes()) + " Uhr" +
+        (h.endedBy ? " von " + h.endedBy : "") + (h.durationSec != null ? " · Dauer " + fmtClock(h.durationSec) : "");
+    }
+  }
+  function finishHuddle() {
+    var iso = selectedHuddleIso;
+    var used = timerStarted ? HUDDLE_SECONDS - timerLeft : null;
+    stopTimer(); timerStarted = false; timerLeft = HUDDLE_SECONDS; renderTimer();
+    if (can("edit")) {
+      if (!state.huddleLog[iso]) state.huddleLog[iso] = { checked: [] };
+      var h = state.huddleLog[iso];
+      h.endedAt = new Date().toISOString();
+      h.endedBy = currentUser ? currentUser.name : "";
+      h.durationSec = used;
+      save();
+    }
+    showHuddleStage("pick");
+    switchView("dashboard");
+    showCurrentMonth();
+    renderAll();
+    toast("Huddle vom " + fmtDate(iso) + " beendet" + (used != null ? " · Dauer " + fmtClock(used) : ""));
+  }
+  $("#huddleEndBtn").addEventListener("click", function () {
+    if (huddleChecklistComplete(selectedHuddleIso)) { finishHuddle(); return; }
+    appConfirm("Huddle beenden?",
+      "Noch nicht alle Agenda-Punkte sind als besprochen abgehakt. Den Huddle trotzdem beenden?",
+      "Huddle ENDE", true, finishHuddle);
   });
 
   function parseIso(iso) { var p = iso.split("-"); return { y: +p[0], m: +p[1] - 1, d: +p[2] }; }
@@ -5641,7 +6334,7 @@ window.SFM = (function () {
   function selectHuddleDay(iso) {
     if (iso > TODAY_ISO) return; // keine Eingaben für die Zukunft
     selectedHuddleIso = iso;
-    renderAgenda(); renderHuddleCalendar();
+    renderAgenda(); renderHuddleCalendar(); renderHuddleEndInfo();
     showHuddleStage("session");
     openDailyDialog(selectedHuddleIso); // erst jetzt beginnt der eigentliche Huddle mit dem Kennzahlen-Popup
   }
@@ -5737,7 +6430,9 @@ window.SFM = (function () {
     if (catKey === "Q") {
       var pl = numOrNull(rec.geplant), pr = numOrNull(rec.produziert), sc = numOrNull(rec.ausschuss);
       rows.push(["Geplante Menge", n2(rec.geplant, "t")], ["Produzierte Menge", n2(rec.produziert, "t"), mengeDeviates(pl, pr)],
-        ["Ausschuss", n2(rec.ausschuss, "t"), scrapDeviates(sc)]);
+        ["Gutmenge 1. Durchlauf", n2(firstPassGood(rec), "t")],
+        ["Mit Nacharbeit verwendbar", n2(rec.nacharbeit, "t"), reworkDeviates(numOrNull(rec.nacharbeit))],
+        ["Ausschuss (Absandung / Kreislauf)", n2(rec.ausschuss, "t"), scrapDeviates(sc)]);
     } else if (catKey === "C") {
       var inv = numOrNull(rec.inventory), lim = numOrNull(rec.inventoryGrenzwert);
       rows.push(["Inventory", n2(rec.inventory, "t"), inventoryDeviates(inv, lim)], ["Inventory-Grenzwert", n2(rec.inventoryGrenzwert, "t")]);
@@ -5922,7 +6617,8 @@ window.SFM = (function () {
     if (cat === "Q") return [{ fields: [
       { key: "geplant", label: "Geplante Menge", unit: "t", step: "0.01" },
       { key: "produziert", label: "Produzierte Menge", unit: "t", step: "0.01", flag: function (r) { return mengeDeviates(n(r, "geplant"), n(r, "produziert")); } },
-      { key: "ausschuss", label: "Ausschuss", unit: "t", step: "0.01", flag: function (r) { return scrapDeviates(n(r, "ausschuss")); } }] }];
+      { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", step: "0.01", flag: function (r) { return reworkDeviates(n(r, "nacharbeit")); } },
+      { key: "ausschuss", label: "Ausschuss (Absandung / Kreislauf)", unit: "t", step: "0.01", flag: function (r) { return scrapDeviates(n(r, "ausschuss")); } }] }];
     if (cat === "C") return [{ fields: [
       { key: "inventory", label: "Inventory", unit: "t", step: "0.01", flag: function (r) { return inventoryDeviates(n(r, "inventory"), n(r, "inventoryGrenzwert")); } },
       { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", unit: "t", step: "0.01" }] }];
@@ -5942,7 +6638,7 @@ window.SFM = (function () {
   function agendaDerived(cat, rec) {
     var m = rec ? metricsFor(selectedHuddleIso) : {}, rows = [];
     var pct = function (v) { return v == null ? "–" : fmtNum(v, 1) + " %"; };
-    if (cat === "Q") rows.push(["Leistung", pct(m.leist)], ["Qualität", pct(m.qual)]);
+    if (cat === "Q") rows.push(["Leistung", pct(m.leist)], ["Qualität", pct(m.qual)], ["First Pass Yield", pct(m.fpy)]);
     else if (cat === "D") rows.push(["Termintreue", pct(m.otd)]);
     else if (cat === "P") {
       var u = outageTotal(rec, "U"), g = outageTotal(rec, "G");
@@ -6269,7 +6965,7 @@ window.SFM = (function () {
   var editingDailyIso = null;
   var DAILY_INPUT_IDS = {
     geplant: "dfGeplant",
-    produziert: "dfProduziert", ausschuss: "dfAusschuss", faktoriert: "dfFaktoriert",
+    produziert: "dfProduziert", nacharbeit: "dfNacharbeit", ausschuss: "dfAusschuss", faktoriert: "dfFaktoriert",
     inventory: "dfInventory", inventoryGrenzwert: "dfInventoryGrenzwert",
     auftraegeFaellig: "dfFaellig", auftraegePuenktlich: "dfPuenktlich"
   };
@@ -6387,9 +7083,10 @@ window.SFM = (function () {
         "= (Schichtstunden − Geplante Ausfälle − Ungeplante Ausfälle) ÷ (Schichtstunden − Geplante Ausfälle) × 100. Aktuelle Schichtstunden: " +
         fmtNum(settings.shiftHours, settings.shiftHours % 1 ? 1 : 0) + " h (änderbar unter Einstellungen → Stammdaten)."],
       ["Leistung", oeePerformance(rec), "= Produzierte Menge ÷ Geplante Menge × 100"],
-      ["Qualität", oeeQuality(rec), "= (Produzierte Menge − Ausschuss) ÷ Produzierte Menge × 100"],
+      ["Gutmenge 1. Durchlauf", firstPassGood(rec), "= Produzierte Menge − Mit Nacharbeit verwendbar − Ausschuss", "t"],
+      ["Qualität", oeeQuality(rec), "= (Produzierte Menge − Ausschuss) ÷ Produzierte Menge × 100. Nacharbeit ist verwendbar und mindert die Qualität nicht."],
       ["OEE", oeeOverall(rec), "= Verfügbarkeit × Leistung × Qualität ÷ 10.000 (alle drei Faktoren in %)"],
-      ["First Pass Yield", fpyValue(rec), "= identisch zur Qualität: (Produzierte Menge − Ausschuss) ÷ Produzierte Menge × 100"],
+      ["First Pass Yield", fpyValue(rec), "= Gutmenge im ersten Durchlauf ÷ Produzierte Menge × 100 = (Produzierte Menge − Nacharbeit − Ausschuss) ÷ Produzierte Menge × 100"],
       ["Termintreue", otdValue(rec), "= Aufträge pünktlich geliefert ÷ Aufträge fällig × 100"]
     ].forEach(function (p) {
       var item = el("div", "daily-preview-item");
@@ -6502,6 +7199,7 @@ window.SFM = (function () {
     window.scrollTo({ top: 0 });
     if (name === "board" && isCurrentView()) requestAnimationFrame(scrollBoardToToday);
     if (name === "settings") renderSettingsPanes();
+    if (name === "tracking") renderTracking();
     // Jeder Huddle beginnt mit der Kalenderansicht — erst nach Tageswahl kommt Timer/Agenda samt Popup
     if (name === "huddle") { showHuddleStage("pick"); hcY = Y; hcM = M; renderHuddleCalendar(); }
   }
@@ -6839,7 +7537,7 @@ window.SFM = (function () {
       "Datum", "Ungeplante Produktionsausfälle (h)", "Geplante Produktionsausfälle (h)", "Personen Ausfallzeit Ungeplant (h)",
       "Ungeplant: Personen (h)", "Ungeplant: Technisch (h)", "Ungeplant: Organisatorisch (h)", "Ungeplant: Rüst-/Handhabungszeiten (h)",
       "Geplant: Personen (h)", "Geplant: Technisch (h)", "Geplant: Organisatorisch (h)", "Geplant: Rüst-/Handhabungszeiten (h)",
-      "Geplante Menge (t)", "Produzierte Menge (t)", "Ausschuss (t)", "Faktorierte Menge (t)",
+      "Geplante Menge (t)", "Produzierte Menge (t)", "Mit Nacharbeit verwendbar (t)", "Ausschuss (t)", "Faktorierte Menge (t)",
       "Inventory (t)", "Inventory-Grenzwert (t)",
       "Aufträge fällig", "Aufträge pünktlich geliefert",
       "Verfügbarkeit (%)", "Leistung (%)", "Qualität (%)", "OEE (%)", "First Pass Yield (%)", "Termintreue (%)",
@@ -6860,6 +7558,7 @@ window.SFM = (function () {
         outageCell(rec, "G", "pers"), outageCell(rec, "G", "tech"), outageCell(rec, "G", "orga"), outageCell(rec, "G", "ruest"),
         rec.geplant != null ? fmtNum(numOrNull(rec.geplant), 2) : "",
         rec.produziert != null ? fmtNum(numOrNull(rec.produziert), 2) : "",
+        rec.nacharbeit != null ? fmtNum(numOrNull(rec.nacharbeit), 2) : "",
         rec.ausschuss != null ? fmtNum(numOrNull(rec.ausschuss), 2) : "",
         rec.faktoriert != null ? fmtNum(numOrNull(rec.faktoriert), 2) : "",
         rec.inventory != null ? fmtNum(numOrNull(rec.inventory), 2) : "",
@@ -7440,8 +8139,13 @@ window.SFM = (function () {
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe)."],
       ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Kennzahl-Kacheln und Diagramme. Ein Diagramm zeigt einen Wert oder mehrere Werte mit gleicher Einheit."],
       ["Entfernen", "Das ✕ im Kopfbalken entfernt ein Widget; „Rückgängig“ im Hinweis stellt es wieder her."]] },
+    { title: "Abweichungs-Tracking", intro: "Der Reiter „Abweichungs-Tracking“ zeigt alle Abweichungen eines Zeitraums: aus den Tageskennzahlen erkannte, geplante Ausfälle und von Hand erfasste.", tip: "Der Zeitraum ist derselbe wie im Dashboard. „Aktuelle Arbeitswoche“ stellt immer die laufende Woche von Montag bis Sonntag ein.", steps: [
+      ["Zeitraum", "Tag, Arbeitswoche, Monat, Jahr oder ein frei definierter Zeitraum — mit ◀ ▶ blättern."],
+      ["Filter", "Kategorien (S, Q, I, D, P), Arten (z. B. S: Meldepflichtig / Nicht meldepflichtig, P: Geplant bzw. Ungeplant – Personell, Organisatorisch, Technisch) und Quelle lassen sich ein- und ausschalten. Ein Klick auf „Geplant“ oder „Ungeplant“ schaltet die ganze Gruppe."],
+      ["Summen", "Kacheln und die Tabelle „Summen je Art“ zählen Abweichungen und betroffene Tage und summieren Ausfallstunden, Nacharbeit und Ausschuss über den Zeitraum — immer passend zum Filter."],
+      ["Maßnahmen", "Ein Klick auf eine Zeile öffnet die verknüpfte Maßnahme oder legt eine neue an. Der CSV-Export enthält alle gefilterten Einträge."]] },
     { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung. Die Regeln stehen gebündelt im Quelltext (src/js/app/05-rules.js) und in docs/abweichungsregeln.md.", steps: [
-      ["Q – Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan) und jeder Ausschuss größer als 0."],
+      ["Q – Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan), jede Nacharbeit und jeder Ausschuss größer als 0."],
       ["I – Inventory", "Inventory größer als der Inventory-Grenzwert."],
       ["D – Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
       ["P – Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) mit mehr als 0 Stunden ist eine eigene Abweichung."],
@@ -7449,7 +8153,8 @@ window.SFM = (function () {
     { title: "Kennzahlen & Formeln", intro: "Alle Kennzahlen entstehen aus den Tageswerten der Huddle-Erfassung.", tip: "Die Schichtlänge (Standard 24 h) und die Zielwerte stehen unter Einstellungen → Stammdaten.", steps: [
       ["Verfügbarkeit", "(Schicht − geplante Ausfälle − ungeplante Ausfälle) ÷ (Schicht − geplante Ausfälle). Alle vier Ausfallarten zählen mit."],
       ["Technische Anlagenverfügbarkeit", "(Schicht − geplant technisch − ungeplant technisch) ÷ (Schicht − geplant technisch). Personen-, organisatorische und Rüstzeiten bleiben außen vor."],
-      ["Leistung, Qualität, OEE", "Leistung = produziert ÷ geplant, Qualität = (produziert − Ausschuss) ÷ produziert, OEE = Verfügbarkeit × Leistung × Qualität. First-Pass-Yield entspricht der Qualität, Termintreue = pünktlich ÷ fällig."],
+      ["Leistung, Qualität, OEE", "Leistung = produziert ÷ geplant, Qualität = (produziert − Ausschuss) ÷ produziert, OEE = Verfügbarkeit × Leistung × Qualität. Termintreue = pünktlich ÷ fällig."],
+      ["First Pass Yield, Nacharbeit, Ausschuss", "Die produzierte Menge teilt sich in drei Teile: Gutmenge im ersten Durchlauf (First Pass Yield), mit Nacharbeit verwendbar (gut, kein Ausschuss, aber kein First Pass Yield) und Ausschuss (geht zurück als Absandung / Kreislaufmaterial). First Pass Yield = (produziert − Nacharbeit − Ausschuss) ÷ produziert; die Qualität der OEE zählt Nacharbeit als verwendbar."],
       ["Zeitraum im Dashboard", "Bei Monat, Jahr und Zeitraum werden Ausfallzeiten und Mengen (geplant, produziert, Ausschuss, faktoriert) summiert. Inventory zeigt den jüngsten Stand. Leistung, Qualität und Termintreue werden aus den Summen gebildet, Verfügbarkeit und OEE als Mittel der Tageswerte."]] },
     { title: "Methodik (SQIDP & PDCA)", intro: "Shopfloor Management ist eine Lean-Führungsmethode: Abweichungen am Ort der Wertschöpfung erkennen, strukturiert lösen, Prozesse kontinuierlich verbessern.", tip: "Bewährt: maximal fünf bis sieben Kennzahlen, Commitment der Führung und eine offene Fehlerkultur. Fachliche Grundlage: symestic.com — „Shopfloor Management“.", steps: [
       ["Führung am Gemba", "Regelmäßige Präsenz in der Fertigung — digitale Daten ersetzen den Gemba Walk nicht, sie bereiten ihn vor."],
@@ -8132,7 +8837,7 @@ window.SFM = (function () {
 
   function renderAll() {
     renderDashboardStats(); renderDashGrid(); renderBoard(); renderKanban(); renderAgenda();
-    renderHuddleCalendar(); renderReport(); renderUsers(); updateBadges();
+    renderHuddleCalendar(); renderReport(); renderUsers(); updateBadges(); renderTracking();
     if (detailActive) renderDetailDashboard();
   }
   applySettings();
