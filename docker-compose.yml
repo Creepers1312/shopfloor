@@ -1,0 +1,76 @@
+# Shopfloor Board — drei getrennte Container:
+#   web  Nginx: liefert die Oberfläche aus, reicht /api weiter (einziger veröffentlichter Port)
+#   api  Node.js: Anmeldung, Daten, Sicherungen
+#   db   PostgreSQL: nur im internen Netz "backend" erreichbar, kein Port nach außen
+#
+# Konfiguration über .env — am einfachsten mit ./deploy.sh anlegen.
+
+name: ${COMPOSE_PROJECT_NAME:-shopfloor}
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-shopfloor}
+      POSTGRES_USER: ${DB_USER:-shopfloor}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt - bitte ./deploy.sh ausführen}
+      TZ: ${TZ:-Europe/Berlin}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  api:
+    build: ./backend
+    image: ${COMPOSE_PROJECT_NAME:-shopfloor}-api:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-shopfloor}
+      DB_USER: ${DB_USER:-shopfloor}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt - bitte ./deploy.sh ausführen}
+      TZ: ${TZ:-Europe/Berlin}
+      ALLOW_REGISTER: ${ALLOW_REGISTER:-false}
+      ALLOW_DEMO: ${ALLOW_DEMO:-false}
+      SESSION_DAYS: ${SESSION_DAYS:-14}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_TIME: ${BACKUP_TIME:-02:00}
+      BACKUP_KEEP: ${BACKUP_KEEP:-14}
+    volumes:
+      - ${BACKUP_PATH:-./backups}:/backups
+    networks:
+      - backend
+      - frontend
+
+  web:
+    build: ./frontend
+    image: ${COMPOSE_PROJECT_NAME:-shopfloor}-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:80"
+    networks:
+      - frontend
+
+networks:
+  backend:
+    internal: true      # kein Zugang nach außen, nur api <-> db
+  frontend: {}
+
+volumes:
+  db-data:

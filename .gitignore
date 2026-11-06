@@ -1,0 +1,14 @@
+# Lokale Konfiguration und Laufzeitdaten
+.env
+.env.bak
+.env.tmp
+backups/
+logs/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# System
+.DS_Store
+Thumbs.db

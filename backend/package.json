@@ -1,0 +1,17 @@
+{
+  "name": "shopfloor-api",
+  "version": "1.0.0",
+  "description": "API und Datenbank-Anbindung für das Shopfloor Board",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

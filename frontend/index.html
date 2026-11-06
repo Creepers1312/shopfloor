@@ -6995,7 +6995,7 @@ window.SFM = (function () {
       box.appendChild(dbStat("Sicherung", "Manuell über „Datensicherung“ im Dashboard"));
       var note = el("div", "db-note",
         "Diese Ansicht läuft ohne Server: Board, Maßnahmen, Konten und Einstellungen liegen ausschließlich im Speicher dieses Browsers. "
-        + "Für die gemeinsame Nutzung mit Datenbank das Projekt shopfloor-board mit start.ps1 starten und das Board unter der dort angezeigten Adresse öffnen.");
+        + "Für die gemeinsame Nutzung mit Datenbank auf dem Server im Projektordner ./deploy.sh ausführen und das Board unter der dort angezeigten Adresse öffnen.");
       note.id = "dbLocalNote";
       box.parentNode.appendChild(note);
       return;
@@ -7427,7 +7427,7 @@ window.SFM = (function () {
       ["Bearbeiten", "Pflegt zusätzlich Board-Status, Abweichungen und die Huddle-Agenda."],
       ["Administrator", "Verwaltet darüber hinaus Stammdaten, E-Mail-Versand, Benutzer und darf löschen und wiederherstellen."]] },
     { title: "Datenbank & Sicherung", intro: "Läuft das Board über den Server im Docker-Container, liegen Board, Maßnahmen, Konten und Einstellungen in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand.", tip: "Ob Datenbank oder nur Browser: Einstellungen → Datenbank & Sicherung zeigt es oben unter „Speicherort“. In der Kopfzeile meldet ein kleines Feld jeden Speichervorgang.", steps: [
-      ["Starten", "Im Projektordner shopfloor-board die Datei start.ps1 ausführen. Fehlt die Datenbank noch, wird sie beim ersten Start angelegt; danach startet nur, was gerade nicht läuft."],
+      ["Starten", "Auf dem Server im Projektordner ./deploy.sh ausführen. Das Skript fragt die Einstellungen ab, legt beim ersten Start die Datenbank und das erste Administrator-Konto an und startet die Container."],
       ["Automatisch sichern", "Schalter „Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Der Server legt die Sicherung selbstständig an — dafür muss der Container laufen, nicht der Browser."],
       ["Wiederherstellen", "In der Liste „Vorhandene Sicherungen“ auf Wiederherstellen — nach Rückfrage wird der Datenbankinhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."],
       ["Ablegen", "Die Dateien liegen im Ordner backups des Projekts. Für den Ernstfall regelmäßig auf ein Netzlaufwerk oder eine andere Maschine kopieren."]] },
