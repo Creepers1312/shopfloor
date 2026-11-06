@@ -2938,8 +2938,9 @@ window.SFM = (function () {
        2. Ausfallarten und Sicherheitszustände
        3. Schwellwerte und Standard-Ziele
        4. Abweichungsregeln je Kategorie (FINDING_RULES)
+       5. Arten von Abweichungen (DEV_SUBS)
      Die Regeln sind reine Funktionen über den Tageswerten; Anzeige und
-     Speicherung liegen in den anderen Modulen. Siehe docs/abweichungsregeln.md.
+     Speicherung liegen in den anderen Abschnitten dieser Datei.
      ===================================================================== */
 
   /* ---------- 1. Kategorien, Phasen, Agenda ---------- */
@@ -3099,7 +3100,7 @@ window.SFM = (function () {
 
   /* ---------- Konstanten ---------- */
   // Kategorien, Phasen, Agenda, Ausfallarten, Sicherheitszustände und Abweichungsregeln
-  // stehen gebündelt in 05-rules.js.
+  // stehen gebündelt im Abschnitt „Zentrale Regeln & Konfiguration“ weiter oben.
   // Klartext zur PDCA-Phase — für Tagesbericht und CSV-Export
   function phaseName(key) {
     if (key === "done") return "Abgeschlossen";
@@ -3544,7 +3545,7 @@ window.SFM = (function () {
     P: [["Personalengpass durch Krankmeldungen", "Springer aus der Nachbarlinie eingesetzt, Schichtplan angepasst.", "S. Hoffmann", "U_pers"],
         ["Linie M2 lief mit reduzierter Besetzung", "Aufgaben priorisiert, Einarbeitung eines Aushilfs-Mitarbeiters gestartet.", "S. Hoffmann", "U_pers"]]
   };
-  // Begründungen zu erkannten Abweichungen (Schlüssel = Regelschlüssel aus 05-rules.js)
+  // Begründungen zu erkannten Abweichungen (Schlüssel = Regelschlüssel aus FINDING_RULES)
   var DEMO_REASONS = {
     menge: ["Rohmaterial verspätet angeliefert, Schicht später gestartet.", "Anlage lief wegen Qualitätsprüfung mit gedrosselter Geschwindigkeit."],
     rework: ["Oberflächenfehler nachgeschliffen, Teile anschließend freigegeben.", "Maßabweichung durch Nachbearbeitung korrigiert."],
@@ -4146,43 +4147,42 @@ window.SFM = (function () {
     return label + " · " + entered + " von " + totalDays + " Tagen erfasst";
   }
 
-  function renderDashboardStats() {
-    document.querySelectorAll("#dashPeriodSeg button").forEach(function (btn) {
+  // Drei Zeitraum-Steuerungen (Dashboard, Detaillierte Auswertung, Abweichungs-Tracking) teilen
+  // sich denselben Zustand. Jede wird über dieselbe Element-Zuordnung angezeigt und verdrahtet.
+  var PERIOD_UIS = [
+    { seg: "dashPeriodSeg", controls: "periodControls", range: "periodRangeInputs", from: "dashRangeFromInput", to: "dashRangeToInput",
+      label: "dashPeriodLabel", prev: "dashPrevPeriod", next: "dashNextPeriod", reset: "dashResetPeriod" },
+    { seg: "detailPeriodSeg", controls: "detailPeriodControls", range: "detailPeriodRangeInputs", from: "detailRangeFromInput", to: "detailRangeToInput",
+      label: "detailPeriodLabelBtn", prev: "detailPrevPeriod", next: "detailNextPeriod", reset: "detailResetPeriod" },
+    { seg: "trkPeriodSeg", controls: "trkPeriodControls", range: "trkRangeInputs", from: "trkRangeFromInput", to: "trkRangeToInput",
+      label: "trkPeriodLabel", prev: "trkPrevPeriod", next: "trkNextPeriod", reset: "trkResetPeriod" }
+  ];
+  function byId(id) { return document.getElementById(id); }
+  function syncPeriodUi(u) {
+    document.querySelectorAll("#" + u.seg + " button").forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.mode === dashMode);
     });
-    $("#periodControls").hidden = dashMode === "range";
-    $("#periodRangeInputs").hidden = dashMode !== "range";
+    byId(u.controls).hidden = dashMode === "range";
+    byId(u.range).hidden = dashMode !== "range";
     if (dashMode === "range") {
-      $("#dashRangeFromInput").value = dashRangeFrom;
-      $("#dashRangeToInput").value = dashRangeTo;
+      byId(u.from).value = dashRangeFrom;
+      byId(u.to).value = dashRangeTo;
     } else {
-      $("#dashPeriodLabel").textContent = dashPeriodLabel();
-      $("#dashNextPeriod").disabled = dashIsCurrentPeriod();
+      byId(u.label).textContent = dashPeriodLabel();
+      byId(u.next).disabled = dashIsCurrentPeriod();
     }
-    $("#dashResetPeriod").textContent = dashResetLabel();
-    $("#dashResetPeriod").hidden = dashMode === "week";
+    // Im Wochenmodus übernimmt der Knopf „Aktuelle Arbeitswoche“ das Zurücksetzen
+    byId(u.reset).textContent = dashResetLabel();
+    byId(u.reset).hidden = dashMode === "week";
+  }
+  function syncPeriodUis() {
+    PERIOD_UIS.forEach(syncPeriodUi);
     syncCurWeekButtons();
+  }
+  function renderDashboardStats() {
+    syncPeriodUis();
     $("#dashArchivePill").hidden = dashIsCurrentPeriod();
     $("#dashCoverageText").textContent = dashCoverageText();
-  }
-  // Dieselbe Zeitraum-Steuerung noch einmal für die Detaillierte Auswertung (eigenes Overlay,
-  // aber gemeinsamer Zustand mit dem Hauptdashboard — ein Wechsel wirkt sich auf beide aus).
-  function syncDetailPeriodUi() {
-    if (!$("#detailPeriodSeg")) return;
-    document.querySelectorAll("#detailPeriodSeg button").forEach(function (btn) {
-      btn.classList.toggle("active", btn.dataset.mode === dashMode);
-    });
-    $("#detailPeriodControls").hidden = dashMode === "range";
-    $("#detailPeriodRangeInputs").hidden = dashMode !== "range";
-    if (dashMode === "range") {
-      $("#detailRangeFromInput").value = dashRangeFrom;
-      $("#detailRangeToInput").value = dashRangeTo;
-    } else {
-      $("#detailPeriodLabelBtn").textContent = dashPeriodLabel();
-      $("#detailNextPeriod").disabled = dashIsCurrentPeriod();
-    }
-    $("#detailResetPeriod").textContent = dashResetLabel();
-    $("#detailResetPeriod").hidden = dashMode === "week";
   }
   // „Aktuelle Arbeitswoche“ ist hervorgehoben, solange genau diese Woche eingestellt ist
   function syncCurWeekButtons() {
@@ -4199,7 +4199,6 @@ window.SFM = (function () {
   function renderDashboardForPeriod() {
     renderDashboardStats();
     renderDashGrid();
-    syncDetailPeriodUi();
     if (detailActive) renderDetailDashboard();
     renderTracking();
   }
@@ -4255,22 +4254,18 @@ window.SFM = (function () {
     if (dashRangeTo < dashRangeFrom) dashRangeFrom = dashRangeTo;
     renderDashboardForPeriod();
   }
-  // Ein Klick auf ein beliebiges der beiden Zeitraum-Steuerungs-Sets (Hauptdashboard oder
-  // Detaillierte Auswertung) verändert denselben gemeinsamen Zustand — beide Sets zusammen verdrahtet.
-  document.querySelectorAll("#dashPeriodSeg button, #detailPeriodSeg button").forEach(function (b) {
-    b.addEventListener("click", function () { setDashMode(b.dataset.mode); });
+  // Jede Zeitraum-Steuerung verändert denselben gemeinsamen Zustand
+  PERIOD_UIS.forEach(function (u) {
+    document.querySelectorAll("#" + u.seg + " button").forEach(function (b) {
+      b.addEventListener("click", function () { setDashMode(b.dataset.mode); });
+    });
+    byId(u.prev).addEventListener("click", function () { shiftDashPeriod(-1); });
+    byId(u.next).addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
+    byId(u.reset).addEventListener("click", resetDashPeriod);
+    byId(u.from).addEventListener("change", function () { setDashRangeFrom(this.value); });
+    byId(u.to).addEventListener("change", function () { setDashRangeTo(this.value); });
   });
-  $("#dashPrevPeriod").addEventListener("click", function () { shiftDashPeriod(-1); });
-  $("#detailPrevPeriod").addEventListener("click", function () { shiftDashPeriod(-1); });
-  $("#dashNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
-  $("#detailNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
-  $("#dashResetPeriod").addEventListener("click", resetDashPeriod);
   document.querySelectorAll("[data-cur-week]").forEach(function (b) { b.addEventListener("click", setCurrentWeek); });
-  $("#detailResetPeriod").addEventListener("click", resetDashPeriod);
-  $("#dashRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
-  $("#detailRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
-  $("#dashRangeToInput").addEventListener("change", function () { setDashRangeTo(this.value); });
-  $("#detailRangeToInput").addEventListener("change", function () { setDashRangeTo(this.value); });
 
   // SVG-Ring für die OEE-Gesamtkennzahl (analog zum Timer-Ring im Huddle)
   function oeeRingSvg(pct) {
@@ -5950,23 +5945,6 @@ window.SFM = (function () {
     if (!q || q.v == null) return "–";
     return fmtNum(q.v, unitDigits(q.u)) + " " + q.u;
   }
-  function syncTrkPeriodUi() {
-    document.querySelectorAll("#trkPeriodSeg button").forEach(function (btn) {
-      btn.classList.toggle("active", btn.dataset.mode === dashMode);
-    });
-    $("#trkPeriodControls").hidden = dashMode === "range";
-    $("#trkRangeInputs").hidden = dashMode !== "range";
-    if (dashMode === "range") {
-      $("#trkRangeFromInput").value = dashRangeFrom;
-      $("#trkRangeToInput").value = dashRangeTo;
-    } else {
-      $("#trkPeriodLabel").textContent = dashPeriodLabel();
-      $("#trkNextPeriod").disabled = dashIsCurrentPeriod();
-    }
-    $("#trkResetPeriod").textContent = dashResetLabel();
-    $("#trkResetPeriod").hidden = dashMode === "week";
-    syncCurWeekButtons();
-  }
   function trkChip(label, on, color, count, onClick, title) {
     var b = el("button", "trk-chip" + (on ? " on" : ""));
     b.type = "button";
@@ -5978,201 +5956,217 @@ window.SFM = (function () {
     b.addEventListener("click", onClick);
     return b;
   }
+  // Kleine Bausteine für die Tracking-Ansicht
+  function trkLetter(cat) {
+    var lt = el("span", "sq-letter trk-letter", letterOf(cat));
+    lt.style.background = catColor(cat);
+    return lt;
+  }
+  function trkBar(pct, color) {
+    var bar = el("div", "trk-bar"), fill = el("span");
+    fill.style.width = pct + "%";
+    fill.style.background = color;
+    bar.appendChild(fill);
+    return bar;
+  }
+  function trkDayCount(list) {
+    var days = {};
+    list.forEach(function (e) { days[e.iso] = true; });
+    return Object.keys(days).length;
+  }
+  // Summe der Mengen (einer Einheit) aller Einträge, die pred erfüllen; null ohne Mengenangabe
+  function trkSumQty(list, pred, unit) {
+    var v = 0, any = false;
+    list.forEach(function (e) {
+      if (pred(e) && e.qty && e.qty.v != null && (!unit || e.qty.u === unit)) { v += e.qty.v; any = true; }
+    });
+    return any ? Math.round(v * 100) / 100 : null;
+  }
+  function trkSrcOk(e) { return !trkSrc || e.src === trkSrc; }
+
   function renderTracking() {
     if (!$("#view-tracking").classList.contains("active")) return;
-    syncTrkPeriodUi();
+    syncPeriodUis();
     var b = dashPeriodBounds();
     var all = trackingEntries(b.from, b.to);
-    var srcOk = function (e) { return !trkSrc || e.src === trkSrc; };
     $("#trkPeriodHint").textContent = "Ausgewertet: " + fmtDate(b.from) + (b.from !== b.to ? " – " + fmtDate(b.to) : "") +
       " · " + all.length + (all.length === 1 ? " Eintrag" : " Einträge") + " insgesamt";
-
-    // Kategorie-Chips (Zahl = Einträge der Kategorie bei gewählter Quelle und Art-Filter)
+    renderTrkFilters(all);
+    var list = all.filter(trkVisible);
+    renderTrkStats(list);
+    renderTrkSums(list);
+    renderTrkCatBars(list);
+    renderTrkList(list);
+  }
+  // Filter-Chips: Zahl = Einträge bei gewählter Quelle (und bei Kategorien zusätzlich Art-Filter)
+  function renderTrkFilters(all) {
     var catHost = $("#trkCatChips"); catHost.innerHTML = "";
     CATS.forEach(function (c) {
-      var n = all.filter(function (e) { return e.cat === c.key && srcOk(e) && !trkSubOff[e.cat + ":" + e.sub]; }).length;
+      var n = all.filter(function (e) { return e.cat === c.key && trkSrcOk(e) && !trkSubOff[e.cat + ":" + e.sub]; }).length;
       catHost.appendChild(trkChip(letterOf(c.key) + " — " + c.name, !trkCatOff[c.key], catColor(c.key), n, function () {
         trkCatOff[c.key] = !trkCatOff[c.key]; renderTracking();
       }, "Kategorie ein-/ausblenden"));
     });
-    // Art-Chips je Kategorie (P getrennt nach Geplant / Ungeplant)
     var subHost = $("#trkSubGroups"); subHost.innerHTML = "";
-    CATS.forEach(function (c) {
-      var line = el("div", "trk-filter-line" + (trkCatOff[c.key] ? " is-off" : ""));
-      line.appendChild(el("span", "trk-filter-lbl", letterOf(c.key) + " — Art"));
-      var wrap = el("div", "trk-sub-wrap");
-      var groupHosts = {};
-      DEV_SUBS[c.key].forEach(function (d) {
-        var n = all.filter(function (e) { return e.cat === c.key && e.sub === d.k && srcOk(e); }).length;
-        if (d.auto && !n) return;
-        if (d.group) {
-          if (!groupHosts[d.group]) {
-            var g = el("div", "trk-chips trk-sub-group");
-            var gl = el("button", "trk-group-lbl", d.group);
-            gl.type = "button";
-            gl.title = "Alle Arten „" + d.group + "“ ein- bzw. ausschalten";
-            (function (grp) {
-              gl.addEventListener("click", function () {
-                var keys = DEV_SUBS[c.key].filter(function (x) { return x.group === grp; }).map(function (x) { return c.key + ":" + x.k; });
-                var anyOn = keys.some(function (k) { return !trkSubOff[k]; });
-                keys.forEach(function (k) { trkSubOff[k] = anyOn; });
-                renderTracking();
-              });
-            })(d.group);
-            g.appendChild(gl);
-            wrap.appendChild(g);
-            groupHosts[d.group] = g;
-          }
-        } else if (!groupHosts._plain) {
-          groupHosts._plain = el("div", "trk-chips");
-          wrap.appendChild(groupHosts._plain);
-        }
-        var host = d.group ? groupHosts[d.group] : groupHosts._plain;
-        var key = c.key + ":" + d.k;
-        host.appendChild(trkChip(d.label, !trkSubOff[key], null, n, function () {
-          trkSubOff[key] = !trkSubOff[key]; renderTracking();
-        }));
-      });
-      line.appendChild(wrap);
-      subHost.appendChild(line);
-    });
+    CATS.forEach(function (c) { subHost.appendChild(trkSubLine(c, all)); });
     document.querySelectorAll("#trkSrcSeg button").forEach(function (btn) { btn.classList.toggle("active", btn.dataset.src === trkSrc); });
-
-    var list = all.filter(trkVisible);
-    // Kennzahlen-Kacheln
-    var sumQty = function (pred, unit) {
-      var v = 0, any = false;
-      list.forEach(function (e) { if (pred(e) && e.qty && e.qty.v != null && e.qty.u === unit) { v += e.qty.v; any = true; } });
-      return any ? Math.round(v * 100) / 100 : null;
-    };
-    var days = {}; list.forEach(function (e) { days[e.iso] = true; });
+  }
+  // Art-Chips einer Kategorie; Arten mit Gruppe (P: Geplant / Ungeplant) stehen je Gruppe in einer Zeile
+  function trkSubLine(c, all) {
+    var line = el("div", "trk-filter-line" + (trkCatOff[c.key] ? " is-off" : ""));
+    line.appendChild(el("span", "trk-filter-lbl", letterOf(c.key) + " — Art"));
+    var wrap = el("div", "trk-sub-wrap"), rows = {};
+    function rowFor(group) {
+      var id = group || "_plain";
+      if (!rows[id]) {
+        rows[id] = el("div", "trk-chips" + (group ? " trk-sub-group" : ""));
+        if (group) rows[id].appendChild(trkGroupToggle(c.key, group));
+        wrap.appendChild(rows[id]);
+      }
+      return rows[id];
+    }
+    DEV_SUBS[c.key].forEach(function (d) {
+      var n = all.filter(function (e) { return e.cat === c.key && e.sub === d.k && trkSrcOk(e); }).length;
+      if (d.auto && !n) return;
+      var key = c.key + ":" + d.k;
+      rowFor(d.group).appendChild(trkChip(d.label, !trkSubOff[key], null, n, function () {
+        trkSubOff[key] = !trkSubOff[key]; renderTracking();
+      }));
+    });
+    line.appendChild(wrap);
+    return line;
+  }
+  // Gruppenschalter: ist eine Art der Gruppe an, gehen alle aus — sonst alle an
+  function trkGroupToggle(cat, group) {
+    var gl = el("button", "trk-group-lbl", group);
+    gl.type = "button";
+    gl.title = "Alle Arten „" + group + "“ ein- bzw. ausschalten";
+    gl.addEventListener("click", function () {
+      var keys = DEV_SUBS[cat].filter(function (x) { return x.group === group; }).map(function (x) { return cat + ":" + x.k; });
+      var anyOn = keys.some(function (k) { return !trkSubOff[k]; });
+      keys.forEach(function (k) { trkSubOff[k] = anyOn; });
+      renderTracking();
+    });
+    return gl;
+  }
+  function renderTrkStats(list) {
     var withDev = list.filter(function (e) { return e.dev; }).length;
     var open = list.filter(function (e) { return e.dev && e.dev.phase !== "done"; }).length;
+    var isP = function (prefix) { return function (e) { return e.cat === "P" && e.sub.indexOf(prefix) === 0; }; };
+    var isQ = function (sub) { return function (e) { return e.cat === "Q" && e.sub === sub; }; };
     var stats = [
       ["Abweichungen", String(list.length), "im Zeitraum, nach Filter"],
-      ["Betroffene Tage", String(Object.keys(days).length), "Tage mit mindestens einem Eintrag"],
-      ["Ungeplante Ausfallzeit", fmtQ(sumQty(function (e) { return e.cat === "P" && e.sub.indexOf("U_") === 0; }, "h"), "h", 1), "Σ Personell, Organisatorisch, Technisch, Rüsten"],
-      ["Geplante Ausfallzeit", fmtQ(sumQty(function (e) { return e.cat === "P" && e.sub.indexOf("G_") === 0; }, "h"), "h", 1), "Σ geplanter Stillstände"],
-      ["Nacharbeit", fmtQ(sumQty(function (e) { return e.cat === "Q" && e.sub === "rework"; }, "t"), "t", 2), "verwendbar, kein First Pass Yield"],
-      ["Ausschuss", fmtQ(sumQty(function (e) { return e.cat === "Q" && e.sub === "scrap"; }, "t"), "t", 2), "Absandung / Kreislaufmaterial"],
+      ["Betroffene Tage", String(trkDayCount(list)), "Tage mit mindestens einem Eintrag"],
+      ["Ungeplante Ausfallzeit", fmtQ(trkSumQty(list, isP("U_"), "h"), "h", 1), "Σ Personell, Organisatorisch, Technisch, Rüsten"],
+      ["Geplante Ausfallzeit", fmtQ(trkSumQty(list, isP("G_"), "h"), "h", 1), "Σ geplanter Stillstände"],
+      ["Nacharbeit", fmtQ(trkSumQty(list, isQ("rework"), "t"), "t", 2), "verwendbar, kein First Pass Yield"],
+      ["Ausschuss", fmtQ(trkSumQty(list, isQ("scrap"), "t"), "t", 2), "Absandung / Kreislaufmaterial"],
       ["Mit Maßnahme", withDev + " / " + list.length, open + " davon offen"]
     ];
-    var sh = $("#trkStats"); sh.innerHTML = "";
+    var host = $("#trkStats"); host.innerHTML = "";
     stats.forEach(function (st) {
       var t = el("div", "card mini-tile");
       t.appendChild(el("div", "mini-value", st[1]));
       t.appendChild(el("div", "mini-label", st[0]));
       t.title = st[2];
-      sh.appendChild(t);
+      host.appendChild(t);
     });
-
-    // Summen je Art
+  }
+  // Tabelle „Summen je Art“: je Art Anzahl, betroffene Tage, Mengensumme und Maßnahmen
+  function renderTrkSums(list) {
     var groups = [];
     CATS.forEach(function (c) {
       DEV_SUBS[c.key].forEach(function (d) {
         var es = list.filter(function (e) { return e.cat === c.key && e.sub === d.k; });
         if (!es.length) return;
-        var gd = {}; es.forEach(function (e) { gd[e.iso] = true; });
-        var unit = null, sum = 0, anyQ = false;
-        es.forEach(function (e) { if (e.qty && e.qty.v != null) { unit = e.qty.u; sum += e.qty.v; anyQ = true; } });
-        groups.push({ cat: c.key, sub: d.k, n: es.length, days: Object.keys(gd).length, sum: anyQ ? Math.round(sum * 100) / 100 : null, unit: unit,
+        var withQty = es.filter(function (e) { return e.qty && e.qty.v != null; })[0];
+        groups.push({ cat: c.key, sub: d.k, n: es.length, days: trkDayCount(es),
+          sum: trkSumQty(es, function () { return true; }), unit: withQty ? withQty.qty.u : null,
           withDev: es.filter(function (e) { return e.dev; }).length });
       });
     });
-    var maxN = groups.reduce(function (m, g) { return Math.max(m, g.n); }, 0);
     var tbl = $("#trkSumTable"); tbl.innerHTML = "";
-    if (!groups.length) {
-      tbl.appendChild(trkEmptyRow(5, "Keine Abweichungen für die gewählten Filter im Zeitraum."));
-    } else {
-      tbl.appendChild(trkHeadRow(["Art", "Anzahl", "Tage", "Summe", "Mit Maßnahme"], [0, 1, 1, 1, 1]));
-      var tb = document.createElement("tbody");
-      var catTotals = {};
-      groups.forEach(function (g) {
-        var tr = document.createElement("tr");
-        var td0 = document.createElement("td");
-        var lw = el("div", "trk-art");
-        var lt = el("span", "sq-letter trk-letter", letterOf(g.cat)); lt.style.background = catColor(g.cat);
-        lw.appendChild(lt);
-        var lbox = el("div", "trk-art-txt");
-        lbox.appendChild(el("span", null, subLabel(g.cat, g.sub)));
-        var bar = el("div", "trk-bar"); var fill = el("span"); fill.style.width = (maxN ? g.n / maxN * 100 : 0) + "%"; fill.style.background = catColor(g.cat);
-        bar.appendChild(fill); lbox.appendChild(bar);
-        lw.appendChild(lbox); td0.appendChild(lw); tr.appendChild(td0);
-        [String(g.n), String(g.days), g.sum == null ? "–" : fmtNum(g.sum, unitDigits(g.unit)) + " " + g.unit, g.withDev + " / " + g.n].forEach(function (v) {
-          tr.appendChild(el("td", "num", v));
-        });
-        tb.appendChild(tr);
-        catTotals[g.cat] = (catTotals[g.cat] || 0) + g.n;
+    if (!groups.length) { tbl.appendChild(trkEmptyRow(5, "Keine Abweichungen für die gewählten Filter im Zeitraum.")); return; }
+    var maxN = groups.reduce(function (m, g) { return Math.max(m, g.n); }, 0);
+    tbl.appendChild(trkHeadRow(["Art", "Anzahl", "Tage", "Summe", "Mit Maßnahme"], [0, 1, 1, 1, 1]));
+    var tb = document.createElement("tbody");
+    groups.forEach(function (g) {
+      var tr = document.createElement("tr"), td0 = document.createElement("td");
+      var art = el("div", "trk-art"), txt = el("div", "trk-art-txt");
+      txt.appendChild(el("span", null, subLabel(g.cat, g.sub)));
+      txt.appendChild(trkBar(g.n / maxN * 100, catColor(g.cat)));
+      art.appendChild(trkLetter(g.cat)); art.appendChild(txt);
+      td0.appendChild(art); tr.appendChild(td0);
+      [String(g.n), String(g.days), g.sum == null ? "–" : fmtNum(g.sum, unitDigits(g.unit)) + " " + g.unit, g.withDev + " / " + g.n].forEach(function (v) {
+        tr.appendChild(el("td", "num", v));
       });
-      var trT = el("tr", "trk-total");
-      trT.appendChild(el("td", null, "Summe"));
-      trT.appendChild(el("td", "num", String(list.length)));
-      trT.appendChild(el("td", "num", String(Object.keys(days).length)));
-      trT.appendChild(el("td", "num", "–"));
-      trT.appendChild(el("td", "num", withDev + " / " + list.length));
-      tb.appendChild(trT);
-      tbl.appendChild(tb);
-    }
-
-    // Verteilung nach Kategorie
-    var cb = $("#trkCatBars"); cb.innerHTML = "";
+      tb.appendChild(tr);
+    });
+    var withDev = list.filter(function (e) { return e.dev; }).length;
+    var total = el("tr", "trk-total");
+    total.appendChild(el("td", null, "Summe"));
+    [String(list.length), String(trkDayCount(list)), "–", withDev + " / " + list.length].forEach(function (v) {
+      total.appendChild(el("td", "num", v));
+    });
+    tb.appendChild(total);
+    tbl.appendChild(tb);
+  }
+  function renderTrkCatBars(list) {
+    var host = $("#trkCatBars"); host.innerHTML = "";
     CATS.forEach(function (c) {
       var n = list.filter(function (e) { return e.cat === c.key; }).length;
+      var pct = list.length ? n / list.length * 100 : 0;
       var row = el("div", "trk-catbar" + (trkCatOff[c.key] ? " is-off" : ""));
-      var lt = el("span", "sq-letter trk-letter", letterOf(c.key)); lt.style.background = catColor(c.key);
-      row.appendChild(lt);
       var mid = el("div", "trk-catbar-mid");
       mid.appendChild(el("div", "trk-catbar-name", c.name));
-      var bar = el("div", "trk-bar"); var fill = el("span");
-      fill.style.width = (list.length ? n / list.length * 100 : 0) + "%"; fill.style.background = catColor(c.key);
-      bar.appendChild(fill); mid.appendChild(bar);
+      mid.appendChild(trkBar(pct, catColor(c.key)));
+      row.appendChild(trkLetter(c.key));
       row.appendChild(mid);
-      row.appendChild(el("span", "trk-catbar-val", n + (list.length ? " · " + fmtNum(n / list.length * 100, 0) + " %" : "")));
-      cb.appendChild(row);
+      row.appendChild(el("span", "trk-catbar-val", n + (list.length ? " · " + fmtNum(pct, 0) + " %" : "")));
+      host.appendChild(row);
     });
-
-    // Liste
-    var sorted = list.slice().sort(function (a, z) { return a.iso < z.iso ? 1 : a.iso > z.iso ? -1 : CATS.indexOf(catOf(a.cat)) - CATS.indexOf(catOf(z.cat)); });
+  }
+  function renderTrkList(list) {
+    var sorted = list.slice().sort(function (a, z) {
+      return a.iso < z.iso ? 1 : a.iso > z.iso ? -1 : CATS.indexOf(catOf(a.cat)) - CATS.indexOf(catOf(z.cat));
+    });
     $("#trkListSub").textContent = sorted.length
       ? "Neueste zuerst. Klick auf eine Zeile öffnet die Maßnahme" + (can("edit") ? " bzw. legt eine an." : ".")
       : "";
-    var lt2 = $("#trkList"); lt2.innerHTML = "";
+    var tbl = $("#trkList"); tbl.innerHTML = "";
     if (!sorted.length) {
-      lt2.appendChild(trkEmptyRow(6, "Keine Abweichungen für die gewählten Filter im Zeitraum."));
+      tbl.appendChild(trkEmptyRow(6, "Keine Abweichungen für die gewählten Filter im Zeitraum."));
     } else {
-      lt2.appendChild(trkHeadRow(["Datum", "Art", "Abweichung", "Menge", "Quelle", "Maßnahme"], [0, 0, 0, 1, 0, 0]));
-      var tb2 = document.createElement("tbody");
-      sorted.slice(0, TRK_LIST_MAX).forEach(function (e) {
-        var tr = el("tr", "trk-row");
-        tr.tabIndex = 0;
-        tr.appendChild(el("td", "nowrap", fmtDate(e.iso)));
-        var tdA = document.createElement("td");
-        var aw = el("div", "trk-art");
-        var lt = el("span", "sq-letter trk-letter", letterOf(e.cat)); lt.style.background = catColor(e.cat);
-        aw.appendChild(lt); aw.appendChild(el("span", null, subLabel(e.cat, e.sub)));
-        tdA.appendChild(aw); tr.appendChild(tdA);
-        var tdT = document.createElement("td");
-        tdT.appendChild(el("div", "trk-title", e.title));
-        if (e.detail) tdT.appendChild(el("div", "trk-detail", e.detail));
-        tr.appendChild(tdT);
-        tr.appendChild(el("td", "num nowrap", trkFmtQty(e.qty)));
-        tr.appendChild(el("td", "nowrap", TRK_SRC_LABEL[e.src]));
-        var tdM = el("td", "nowrap");
-        if (e.dev) {
-          var pill = el("span", "pill " + (e.dev.phase === "done" ? "ok" : isOverdue(e.dev) ? "crit" : "neutral"), phaseName(e.dev.phase));
-          tdM.appendChild(pill);
-        } else tdM.appendChild(el("span", "trk-none", e.src === "plan" ? "—" : "keine"));
-        tr.appendChild(tdM);
-        var open = function () { trkOpen(e); };
-        tr.addEventListener("click", open);
-        tr.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); open(); } });
-        tb2.appendChild(tr);
-      });
-      lt2.appendChild(tb2);
+      tbl.appendChild(trkHeadRow(["Datum", "Art", "Abweichung", "Menge", "Quelle", "Maßnahme"], [0, 0, 0, 1, 0, 0]));
+      var tb = document.createElement("tbody");
+      sorted.slice(0, TRK_LIST_MAX).forEach(function (e) { tb.appendChild(trkListRow(e)); });
+      tbl.appendChild(tb);
     }
     var more = $("#trkListMore");
     more.hidden = sorted.length <= TRK_LIST_MAX;
     if (!more.hidden) more.textContent = "Angezeigt werden die neuesten " + TRK_LIST_MAX + " von " + sorted.length + " Einträgen — der CSV-Export enthält alle.";
+  }
+  function trkListRow(e) {
+    var tr = el("tr", "trk-row");
+    tr.tabIndex = 0;
+    tr.appendChild(el("td", "nowrap", fmtDate(e.iso)));
+    var tdA = document.createElement("td"), art = el("div", "trk-art");
+    art.appendChild(trkLetter(e.cat));
+    art.appendChild(el("span", null, subLabel(e.cat, e.sub)));
+    tdA.appendChild(art); tr.appendChild(tdA);
+    var tdT = document.createElement("td");
+    tdT.appendChild(el("div", "trk-title", e.title));
+    if (e.detail) tdT.appendChild(el("div", "trk-detail", e.detail));
+    tr.appendChild(tdT);
+    tr.appendChild(el("td", "num nowrap", trkFmtQty(e.qty)));
+    tr.appendChild(el("td", "nowrap", TRK_SRC_LABEL[e.src]));
+    var tdM = el("td", "nowrap");
+    if (e.dev) tdM.appendChild(el("span", "pill " + (e.dev.phase === "done" ? "ok" : isOverdue(e.dev) ? "crit" : "neutral"), phaseName(e.dev.phase)));
+    else tdM.appendChild(el("span", "trk-none", e.src === "plan" ? "—" : "keine"));
+    tr.appendChild(tdM);
+    tr.addEventListener("click", function () { trkOpen(e); });
+    tr.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); trkOpen(e); } });
+    return tr;
   }
   function fmtQ(v, unit, digits) { return v == null ? "–" : fmtNum(v, digits) + " " + unit; }
   function trkHeadRow(labels, numCols) {
@@ -6209,14 +6203,6 @@ window.SFM = (function () {
     csvDownload(rows, "abweichungen-" + b.from + "_" + b.to + ".csv");
     toast("Abweichungen exportiert — " + list.length + " Einträge");
   }
-  document.querySelectorAll("#trkPeriodSeg button").forEach(function (b) {
-    b.addEventListener("click", function () { setDashMode(b.dataset.mode); });
-  });
-  $("#trkPrevPeriod").addEventListener("click", function () { shiftDashPeriod(-1); });
-  $("#trkNextPeriod").addEventListener("click", function () { if (!dashIsCurrentPeriod()) shiftDashPeriod(1); });
-  $("#trkResetPeriod").addEventListener("click", resetDashPeriod);
-  $("#trkRangeFromInput").addEventListener("change", function () { setDashRangeFrom(this.value); });
-  $("#trkRangeToInput").addEventListener("change", function () { setDashRangeTo(this.value); });
   document.querySelectorAll("#trkSrcSeg button").forEach(function (b) {
     b.addEventListener("click", function () { trkSrc = b.dataset.src; renderTracking(); });
   });
@@ -6414,7 +6400,7 @@ window.SFM = (function () {
     save(); renderAll();
   }
   // Erkannte Abweichungen eines Agenda-Punkts: werden aus den erfassten Tageswerten abgeleitet
-  // und sind zwingend (keine Doppeleingabe). Die Regeln selbst stehen in 05-rules.js (FINDING_RULES).
+  // und sind zwingend (keine Doppeleingabe). Die Regeln selbst stehen in FINDING_RULES.
   function agendaFindings(catKey, iso) {
     var rule = FINDING_RULES[catKey];
     if (!rule) return [];
@@ -7449,7 +7435,7 @@ window.SFM = (function () {
   function enterDetail() {
     detailActive = true;
     $("#detailScreen").hidden = false;
-    syncDetailPeriodUi();
+    syncPeriodUis();
     renderDetailDashboard();
   }
   function exitDetail() {
@@ -8144,7 +8130,7 @@ window.SFM = (function () {
       ["Filter", "Kategorien (S, Q, I, D, P), Arten (z. B. S: Meldepflichtig / Nicht meldepflichtig, P: Geplant bzw. Ungeplant – Personell, Organisatorisch, Technisch) und Quelle lassen sich ein- und ausschalten. Ein Klick auf „Geplant“ oder „Ungeplant“ schaltet die ganze Gruppe."],
       ["Summen", "Kacheln und die Tabelle „Summen je Art“ zählen Abweichungen und betroffene Tage und summieren Ausfallstunden, Nacharbeit und Ausschuss über den Zeitraum — immer passend zum Filter."],
       ["Maßnahmen", "Ein Klick auf eine Zeile öffnet die verknüpfte Maßnahme oder legt eine neue an. Der CSV-Export enthält alle gefilterten Einträge."]] },
-    { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung. Die Regeln stehen gebündelt im Quelltext (src/js/app/05-rules.js) und in docs/abweichungsregeln.md.", steps: [
+    { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung. Erkannte Abweichungen erscheinen zusätzlich im Reiter „Abweichungs-Tracking“.", steps: [
       ["Q – Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan), jede Nacharbeit und jeder Ausschuss größer als 0."],
       ["I – Inventory", "Inventory größer als der Inventory-Grenzwert."],
       ["D – Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
