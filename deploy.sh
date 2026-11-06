@@ -301,7 +301,7 @@ wait_healthy() {
   info "Warte auf den Start der Container …"
 
   for _ in $(seq 1 60); do
-    if dc exec -T web wget -qO- http://127.0.0.1/api/health 2>/dev/null | grep -q '"mode":"server"'; then
+    if dc exec -T web wget -qO- http://127.0.0.1:8080/api/health 2>/dev/null | grep -q '"mode":"server"'; then
       ok "Board antwortet, Datenbank verbunden."
       return 0
     fi
@@ -399,7 +399,7 @@ case "$COMMAND" in
   update)         detect_compose; [[ -f "$ENV_FILE" ]] || die "Keine $ENV_FILE — zuerst ./deploy.sh ausführen."; do_update ;;
   config)         detect_compose; configure true; info "Übernehmen mit: ./deploy.sh -y" ;;
   status)         detect_compose; load_env_for_run; dc ps
-                  if api_running; then dc exec -T web wget -qO- http://127.0.0.1/api/health 2>/dev/null | sed 's/,"/,\n  "/g'; echo; fi ;;
+                  if api_running; then dc exec -T web wget -qO- http://127.0.0.1:8080/api/health 2>/dev/null | sed 's/,"/,\n  "/g'; echo; fi ;;
   logs)           detect_compose; load_env_for_run; dc logs -f --tail=200 "$@" ;;
   backup)         detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
                   cli backup "${1:-per deploy.sh}" ;;

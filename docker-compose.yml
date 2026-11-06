@@ -7,10 +7,24 @@
 
 name: ${COMPOSE_PROJECT_NAME:-shopfloor}
 
+# Container-Logs begrenzen: je Container höchstens 3 Dateien à 10 MB
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
+    # Obergrenzen, damit ein Container den Server nicht auslastet (bei Bedarf hier anpassen)
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "2"
     environment:
       POSTGRES_DB: ${DB_NAME:-shopfloor}
       POSTGRES_USER: ${DB_USER:-shopfloor}
@@ -31,6 +45,12 @@ services:
     build: ./backend
     image: ${COMPOSE_PROJECT_NAME:-shopfloor}-api:latest
     restart: unless-stopped
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -59,11 +79,17 @@ services:
     build: ./frontend
     image: ${COMPOSE_PROJECT_NAME:-shopfloor}-web:latest
     restart: unless-stopped
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:80"
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
     networks:
       - frontend
 

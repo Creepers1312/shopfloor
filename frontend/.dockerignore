@@ -1,0 +1,4 @@
+# Nur nginx.conf und index.html gehören ins Image
+*
+!nginx.conf
+!index.html

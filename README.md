@@ -115,6 +115,14 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
 
+### Ressourcen und Logs
+
+In `docker-compose.yml` sind Obergrenzen je Container hinterlegt: `db` 1 GB / 2 CPUs, `api` 512 MB / 1 CPU, `web` 128 MB / 0,5 CPU.
+Bei Bedarf dort anpassen und `./deploy.sh -y` ausführen. Container-Logs sind auf 3 Dateien à 10 MB je Container begrenzt.
+
+Der `web`-Container läuft ohne Root-Rechte (`nginx-unprivileged`) und lauscht intern auf Port 8080.
+Nach außen gilt weiterhin `WEB_PORT`.
+
 ## Sicherungen
 
 - Täglich automatisch zur eingestellten Uhrzeit, alte automatische Sicherungen werden nach `BACKUP_KEEP` entfernt.
