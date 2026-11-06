@@ -3,6 +3,19 @@
 Deutsche Web-App für das digitale Shopfloor Management mit SQIDP-Board, Kennzahlen und Huddle.
 Läuft als Docker-Compose-Stack mit PostgreSQL. Alle Geräte einer Linie sehen denselben Stand.
 
+## Funktionen
+
+| Bereich | Inhalt |
+|---------|--------|
+| Dashboard | OEE, First Pass Yield, Termintreue und Tageswerte je Zeitraum (Tag, Arbeitswoche, Monat, Jahr, frei wählbar), eigene Widget-Anordnung je Benutzer, Detaillierte Auswertung mit Diagrammen |
+| SQIDP-Board | Monatsboard Sicherheit, Qualität, Inventory, Lieferung, Produktivität |
+| Maßnahmen | Abweichungen mit Art, PDCA-Phase, Verantwortlichem und 5-Why-Analyse |
+| Abweichungs-Tracking | Alle Abweichungen eines Zeitraums mit Filtern nach Kategorie, Art und Quelle, Summen je Art und CSV-Export |
+| Daily Huddle | Kalender, Timer mit Start, Pause und Zurücksetzen, geführte Agenda, Erfassung der Tageskennzahlen, „Huddle ENDE“ |
+| Tagesbericht | Bericht je Tag, Versand per E-Mail |
+
+Die Produktionsmenge wird in drei Teile erfasst: Gutmenge im ersten Durchlauf (First Pass Yield), mit Nacharbeit verwendbar und Ausschuss (Absandung / Kreislaufmaterial).
+
 ## Aufbau
 
 ```
