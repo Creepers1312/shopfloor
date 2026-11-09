@@ -544,6 +544,7 @@ details.whys summary::marker { color: var(--accent); }
 .ag-reason label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
 .ag-reason textarea { width: 100%; font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; resize: vertical; min-height: 54px; }
 .ag-reason.missing textarea { border-color: var(--crit); }
+.ag-card.is-planned { background: var(--surface-2); }
 .ag-reason.missing label { color: var(--crit-text); }
 .ag-reason textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
 .ag-missing { color: var(--crit-text) !important; font-weight: 600; }
@@ -3062,6 +3063,26 @@ window.SFM = (function () {
     } }
   };
 
+  /* ---------- 4b. Begründungspflicht ohne Abweichung ---------- */
+  // Geplante Stillstände sind keine Abweichung (Board bleibt grün), müssen im Huddle aber
+  // ebenso begründet werden. Schlüssel "plan-<art>" verknüpft die Begründung (state.reasons).
+  var NOTE_RULES = {
+    P: { needsRecord: true, find: function (c) {
+      var out = [], rec = c.rec;
+      if (!outageHasSubs(rec, "G")) {
+        var gt = numOrNull(rec.ausfallGeplant); // ältere Datensätze ohne Aufteilung nach Art
+        if (gt != null && gt > 0) out.push({ key: "plan-total", title: "Geplante Produktionsausfälle: " + fmtNum(gt, 1) + " h", detail: "Nicht nach Art aufgeteilt erfasst." });
+        return out;
+      }
+      OUTAGE_KINDS.forEach(function (o) {
+        var h = numOrNull(rec[outageKey("G", o.k)]);
+        if (h != null && h > 0) out.push({ key: "plan-" + o.k, title: o.label + ": " + fmtNum(h, 1) + " h geplant",
+          detail: "Geplanter Stillstand in der Kategorie „" + o.label + "“ — keine Abweichung, aber begründungspflichtig." });
+      });
+      return out;
+    } }
+  };
+
   /* ---------- 5. Arten von Abweichungen (Unterkategorien) ---------- */
   // Jede Abweichung gehört zu einer Kategorie (SQIDP) und einer Art. Erkannte Abweichungen
   // bekommen die Art aus ihrem Regelschlüssel, von Hand erfasste wählen sie im Dialog.
@@ -3556,7 +3577,12 @@ window.SFM = (function () {
     "out-tech": ["Hydraulikstörung an Presse 3, Ersatzteil musste nachgeliefert werden.", "Sensorfehler an der Anlage, Instandhaltung hat getauscht."],
     "out-orga": ["Wartezeit auf Materialfreigabe durch die Disposition.", "Auftragsunterlagen lagen verspätet vor."],
     "out-ruest": ["Werkzeugwechsel dauerte länger als geplant.", "Rüstwagen unvollständig, Teile mussten nachgeholt werden."],
-    "out-total": ["Störung an der Anlage, Ursache nicht weiter aufgeteilt."]
+    "out-total": ["Störung an der Anlage, Ursache nicht weiter aufgeteilt."],
+    "plan-pers": ["Sicherheitsunterweisung für das gesamte Team.", "Schulung an der neuen Prüfeinrichtung."],
+    "plan-tech": ["Geplante Wartung der Hydraulik an Presse 3.", "Vorbeugende Instandhaltung laut Wartungsplan."],
+    "plan-orga": ["Monatliche Inventur im Pufferlager.", "Grundreinigung der Linie nach Plan."],
+    "plan-ruest": ["Geplanter Produktwechsel laut Auftragsplanung.", "Werkzeugwechsel für den Folgeauftrag."],
+    "plan-total": ["Geplanter Stillstand laut Schichtplan."]
   };
   /* ---------- Testdaten nachfüllen ---------- */
   // Ergänzt fehlende und unvollständige Tageswerte vom 1. Januar bis gestern mit Testdaten.
@@ -3618,7 +3644,7 @@ window.SFM = (function () {
       if (!state.huddleLog[iso]) state.huddleLog[iso] = { checked: AGENDA.map(function (a) { return a.id; }) };
       syncAgendaStatusAll(iso);
       CATS.forEach(function (c) {
-        var found = agendaFindings(c.key, iso);
+        var found = agendaFindings(c.key, iso).concat(agendaNotes(c.key, iso));
         if (iso > lastReasoned) { // die letzten Tage bleiben unbegründet und damit nicht „besprochen“
           var h = state.huddleLog[iso];
           if (found.length && h && h.checked) h.checked = h.checked.filter(function (k) { return k !== c.key; });
@@ -3747,12 +3773,12 @@ window.SFM = (function () {
         if (iso > lastReasoned) { // die letzten Tage bleiben unbegründet und damit nicht „besprochen“
           CATS.forEach(function (c) {
             var h = huddleLog[iso];
-            if (h && h.checked && agendaFindings(c.key, iso).length) h.checked = h.checked.filter(function (k) { return k !== c.key; });
+            if (h && h.checked && agendaFindings(c.key, iso).concat(agendaNotes(c.key, iso)).length) h.checked = h.checked.filter(function (k) { return k !== c.key; });
           });
           return;
         }
         CATS.forEach(function (c) {
-          agendaFindings(c.key, iso).forEach(function (f) {
+          agendaFindings(c.key, iso).concat(agendaNotes(c.key, iso)).forEach(function (f) {
             var pool = REASONS[f.key]; if (!pool) return;
             seeded.reasons[reasonKey(iso, c.key, f.key)] = pool[(+iso.slice(8) + f.key.length) % pool.length];
           });
@@ -5928,7 +5954,7 @@ window.SFM = (function () {
           var h = numOrNull(rec[outageKey("G", o.k)]);
           if (h == null || h <= 0) return;
           out.push({ iso: iso, cat: "P", sub: "G_" + o.k, src: "plan", title: o.label + ": " + fmtNum(h, 1) + " h geplant",
-            detail: "Geplanter Stillstand — verkürzt die geplante Produktionszeit, mindert die Verfügbarkeit nicht.", dev: null, qty: { v: h, u: "h" } });
+            detail: getReason(iso, "P", "plan-" + o.k) || "Geplanter Stillstand — Begründung fehlt.", dev: null, qty: { v: h, u: "h" } });
         });
       }
       devs.forEach(function (d) {
@@ -6408,6 +6434,14 @@ window.SFM = (function () {
     if (!rule.needsRecord || ctx.rec) return rule.find(ctx);
     return [];
   }
+  // Begründungspflichtige Einträge ohne Abweichung (geplante Stillstände)
+  function agendaNotes(catKey, iso) {
+    var rule = NOTE_RULES[catKey];
+    if (!rule) return [];
+    var ctx = { iso: iso, rec: dailyRecord(iso) };
+    if (!rule.needsRecord || ctx.rec) return rule.find(ctx);
+    return [];
+  }
   // Die zum Punkt gehörenden Tageswerte (Anzeige im Agenda-Fenster)
   function agendaValues(catKey, iso) {
     var rec = dailyRecord(iso), m = metricsFor(iso), rows = [];
@@ -6469,7 +6503,12 @@ window.SFM = (function () {
     });
     var extra = devs.filter(function (d) { return !used[d.id]; });
     extra.forEach(function (d) { if (!String(d.desc || "").trim()) missing++; });
-    return { findings: findings, extra: extra, count: findings.length + extra.length, missing: missing };
+    var notes = agendaNotes(catKey, iso);
+    notes.forEach(function (n) {
+      n.reason = getReason(iso, catKey, n.key);
+      if (!n.reason) missing++;
+    });
+    return { findings: findings, extra: extra, notes: notes, count: findings.length + extra.length, missing: missing };
   }
   function agendaChecked(catKey, iso) {
     var h = state.huddleLog[iso];
@@ -6495,7 +6534,7 @@ window.SFM = (function () {
     if (model.count > 0) return { st: "nok", count: model.count, missing: model.missing };
     var p = parseIso(iso);
     var cur = boardDataFor(p.y, p.m)[catKey][p.d] || null;
-    if (cur === "ok" || agendaChecked(catKey, iso) || (catKey === "S" ? !!safetyStateOf(iso) : !!dailyRecord(iso))) return { st: "ok", count: 0, missing: 0 };
+    if (cur === "ok" || agendaChecked(catKey, iso) || (catKey === "S" ? !!safetyStateOf(iso) : !!dailyRecord(iso))) return { st: "ok", count: 0, missing: model.missing };
     return { st: null, count: 0, missing: 0 };
   }
   function toggleAgendaChecked(catKey) {
@@ -6503,7 +6542,7 @@ window.SFM = (function () {
     var mdl = agendaModel(catKey, selectedHuddleIso);
     var already = agendaChecked(catKey, selectedHuddleIso);
     if (!already && mdl.missing > 0) {
-      toast("Erst alle Abweichungen begründen — dann als besprochen markieren");
+      toast("Erst alle Abweichungen und geplanten Stillstände begründen — dann als besprochen markieren");
       if (!agDlg.open) openAgendaDialog(catKey);
       return;
     }
@@ -6709,6 +6748,25 @@ window.SFM = (function () {
 
   // Rechte Spalte des Agenda-Fensters: erkannte Abweichungen mit Begründung/Maßnahme und weitere Abweichungen.
   // Wird bei jeder Werteänderung neu aufgebaut, ohne die Eingabefelder links anzutasten.
+  // Pflichtfeld „Begründung“ zu einer erkannten Abweichung oder einem geplanten Stillstand
+  function agReasonField(iso, item, placeholder) {
+    var rw = el("div", "ag-reason" + (item.reason ? "" : " missing"));
+    var rl = el("label", "", "Begründung (Pflicht)");
+    var ri = el("textarea", "");
+    ri.rows = 2;
+    ri.value = item.reason;
+    ri.placeholder = placeholder;
+    ri.disabled = !can("edit");
+    rl.htmlFor = ri.id = "agReason-" + item.key;
+    ri.addEventListener("input", function () {
+      setReason(iso, agCat, item.key, ri.value);
+      rw.classList.toggle("missing", !ri.value.trim());
+      refreshAgendaDone();
+    });
+    ri.addEventListener("change", function () { renderAgenda(); renderHuddleCalendar(); renderReport(); });
+    rw.appendChild(rl); rw.appendChild(ri);
+    return rw;
+  }
   function fillAgendaRight(right) {
     var iso = selectedHuddleIso, model = agendaModel(agCat, iso), editable = can("edit");
     var stt = agendaStateOf(agCat, iso), rec = dailyRecord(iso);
@@ -6721,22 +6779,7 @@ window.SFM = (function () {
       var card = el("div", "ag-card");
       card.appendChild(el("h3", "", f.title));
       card.appendChild(el("p", "", f.detail));
-      var rw = el("div", "ag-reason" + (f.reason ? "" : " missing"));
-      var rl = el("label", "", "Begründung (Pflicht)");
-      var ri = el("textarea", "");
-      ri.rows = 2;
-      ri.value = f.reason;
-      ri.placeholder = "Warum ist es zu dieser Abweichung gekommen?";
-      ri.disabled = !editable;
-      rl.htmlFor = ri.id = "agReason-" + f.key;
-      ri.addEventListener("input", function () {
-        setReason(iso, agCat, f.key, ri.value);
-        rw.classList.toggle("missing", !ri.value.trim());
-        refreshAgendaDone();
-      });
-      ri.addEventListener("change", function () { renderAgenda(); renderHuddleCalendar(); renderReport(); });
-      rw.appendChild(rl); rw.appendChild(ri);
-      card.appendChild(rw);
+      card.appendChild(agReasonField(iso, f, "Warum ist es zu dieser Abweichung gekommen?"));
       if (f.dev) {
         card.appendChild(agDevMeta(f.dev));
         var row = el("div", "ag-actions");
@@ -6758,6 +6801,17 @@ window.SFM = (function () {
       }
       right.appendChild(card);
     });
+
+    if (model.notes.length) {
+      right.appendChild(el("div", "ag-sec-label", "Geplante Stillstände — Begründung (Pflicht)"));
+      model.notes.forEach(function (n) {
+        var card = el("div", "ag-card is-planned");
+        card.appendChild(el("h3", "", n.title));
+        card.appendChild(el("p", "", n.detail));
+        card.appendChild(agReasonField(iso, n, "Wofür war der Stillstand geplant (z. B. Wartung, Schulung, Inventur)?"));
+        right.appendChild(card);
+      });
+    }
 
     right.appendChild(el("div", "ag-sec-label", "Weitere erfasste Abweichungen"));
     if (!model.extra.length) right.appendChild(el("p", "ag-empty", "Keine weiteren Abweichungen erfasst."));
@@ -6861,7 +6915,7 @@ window.SFM = (function () {
     var btn = $("#agDone");
     btn.textContent = done ? "✓ Besprochen — rückgängig" : "Als besprochen markieren";
     btn.disabled = !done && mdl.missing > 0;
-    btn.title = btn.disabled ? "Erst alle Abweichungen begründen" : "";
+    btn.title = btn.disabled ? "Erst alle Abweichungen und geplanten Stillstände begründen" : "";
     renderWizardSteps($("#agSteps"), agCat, wizardGo);
   }
   function openAgendaDialog(catKey) {
@@ -8130,11 +8184,11 @@ window.SFM = (function () {
       ["Filter", "Kategorien (S, Q, I, D, P), Arten (z. B. S: Meldepflichtig / Nicht meldepflichtig, P: Geplant bzw. Ungeplant – Personell, Organisatorisch, Technisch) und Quelle lassen sich ein- und ausschalten. Ein Klick auf „Geplant“ oder „Ungeplant“ schaltet die ganze Gruppe."],
       ["Summen", "Kacheln und die Tabelle „Summen je Art“ zählen Abweichungen und betroffene Tage und summieren Ausfallstunden, Nacharbeit und Ausschuss über den Zeitraum — immer passend zum Filter."],
       ["Maßnahmen", "Ein Klick auf eine Zeile öffnet die verknüpfte Maßnahme oder legt eine neue an. Der CSV-Export enthält alle gefilterten Einträge."]] },
-    { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung. Erkannte Abweichungen erscheinen zusätzlich im Reiter „Abweichungs-Tracking“.", steps: [
+    { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung, müssen im Huddle unter Produktivität aber ebenfalls begründet werden. Erkannte Abweichungen erscheinen zusätzlich im Reiter „Abweichungs-Tracking“.", steps: [
       ["Q – Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan), jede Nacharbeit und jeder Ausschuss größer als 0."],
       ["I – Inventory", "Inventory größer als der Inventory-Grenzwert."],
       ["D – Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
-      ["P – Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) mit mehr als 0 Stunden ist eine eigene Abweichung."],
+      ["P – Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) mit mehr als 0 Stunden ist eine eigene Abweichung. Geplante Ausfallarten über 0 Stunden sind keine Abweichung, brauchen aber eine Begründung, bevor der Punkt als besprochen gilt."],
       ["S – Sicherheit", "Beinahe-Unfall, Meldepflichtig und Nicht meldepflichtig. „Kein Unfall“ ist keine Abweichung."]] },
     { title: "Kennzahlen & Formeln", intro: "Alle Kennzahlen entstehen aus den Tageswerten der Huddle-Erfassung.", tip: "Die Schichtlänge (Standard 24 h) und die Zielwerte stehen unter Einstellungen → Stammdaten.", steps: [
       ["Verfügbarkeit", "(Schicht − geplante Ausfälle − ungeplante Ausfälle) ÷ (Schicht − geplante Ausfälle). Alle vier Ausfallarten zählen mit."],
@@ -8200,6 +8254,15 @@ window.SFM = (function () {
       lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
     });
     lines.push("");
+    var planList = dayPlannedList(reportIso);
+    if (planList.length) {
+      lines.push("Geplante Stillstände mit Begründung (" + planList.length + "):");
+      planList.forEach(function (x) {
+        lines.push("  [" + letterOf(x.cat) + "] " + x.title);
+        lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
+      });
+      lines.push("");
+    }
     var data = boardDataFor(rp.y, rp.m);
     var rpDays = new Date(rp.y, rp.m + 1, 0).getDate();
     var quotes = CATS.map(function (c) {
@@ -8263,6 +8326,13 @@ window.SFM = (function () {
   var reportIso = TODAY_ISO;
   function reportDayLabel() { return fmtDate(reportIso) + (reportIso === TODAY_ISO ? " (heute)" : ""); }
   // Alle Abweichungen eines Tages mit Begründung (erkannte + von Hand erfasste)
+  function dayPlannedList(iso) {
+    var out = [];
+    CATS.forEach(function (c) {
+      agendaModel(c.key, iso).notes.forEach(function (n) { out.push({ cat: c.key, title: n.title, reason: n.reason }); });
+    });
+    return out;
+  }
   function dayDeviationList(iso) {
     var out = [];
     CATS.forEach(function (c) {
@@ -8384,6 +8454,19 @@ window.SFM = (function () {
       chip.title = catOf(x.cat).name;
       hd.appendChild(chip);
       hd.appendChild(el("span", "", x.title));
+      r.appendChild(hd);
+      r.appendChild(el("div", "rd-reason" + (x.reason ? "" : " missing"), x.reason ? "Begründung: " + x.reason : "Begründung fehlt"));
+      ddv.appendChild(r);
+    });
+    dayPlannedList(reportIso).forEach(function (x) {
+      var r = el("div", "rd-day-row");
+      var hd = el("div", "rd-day-head");
+      var chip = el("span", "cat-chip", letterOf(x.cat));
+      chip.style.background = catColor(x.cat);
+      chip.title = catOf(x.cat).name;
+      hd.appendChild(chip);
+      hd.appendChild(el("span", "", x.title));
+      hd.appendChild(el("span", "pill neutral", "Geplant · keine Abweichung"));
       r.appendChild(hd);
       r.appendChild(el("div", "rd-reason" + (x.reason ? "" : " missing"), x.reason ? "Begründung: " + x.reason : "Begründung fehlt"));
       ddv.appendChild(r);
