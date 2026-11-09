@@ -1,8 +1,9 @@
 "use strict";
 // Konten liegen in einer eigenen Tabelle. Die Oberfläche sieht sie als Liste
 // (Dokument "users") — ohne Passwort-Hashes. Speichert ein Admin die Liste,
-// wird sie hier mit der Tabelle abgeglichen.
-const { normalizeClientHash, hashPassword } = require("./passwords");
+// wird sie hier mit der Tabelle abgeglichen (Name, Rolle, Recht, Sperre, Reihenfolge).
+// Passwörter werden darüber nie gesetzt — nur über POST /api/users bzw. /api/users/password.
+const { hashPassword } = require("./passwords");
 
 const PERMS = ["admin", "editor", "viewer"];
 const KNOWN = new Set(["name", "role", "perm", "disabled", "hash", "lastLogin"]);
@@ -81,37 +82,39 @@ async function syncFromClient(q, list) {
     if (seen.has(key)) throw new HttpError(400, `Der Name „${name}“ kommt doppelt vor.`);
     seen.add(key);
     const extra = {};
-    Object.keys(u).forEach((k) => { if (!KNOWN.has(k)) extra[k] = u[k]; });
-    let clientHash = null;
-    if (u.hash !== undefined && u.hash !== null && u.hash !== "") {
-      clientHash = normalizeClientHash(u.hash);
-      if (!clientHash) throw new HttpError(400, `Ungültiges Passwort-Format für „${name}“.`);
-    }
-    return { name, key, role: cleanRole(u.role), perm: cleanPerm(u.perm), disabled: !!u.disabled, extra, clientHash, position: idx };
+    Object.keys(u).forEach((k) => { if (!KNOWN.has(k) && k !== "password") extra[k] = u[k]; });
+    if (JSON.stringify(extra).length > 4000) throw new HttpError(400, `Zu viele Zusatzdaten für „${name}“.`);
+    return { name, key, role: cleanRole(u.role), perm: cleanPerm(u.perm), disabled: !!u.disabled, extra, position: idx };
   });
 
   if (!incoming.some((u) => u.perm === "admin" && !u.disabled)) {
     throw new HttpError(400, "Mindestens ein aktiver Administrator muss erhalten bleiben.");
   }
 
-  const existing = await q.query("SELECT id, lower(name) AS key FROM users");
-  const byKey = new Map(existing.rows.map((r) => [r.key, r.id]));
+  const existing = await q.query("SELECT id, name, lower(name) AS key, perm, disabled FROM users");
+  const byKey = new Map(existing.rows.map((r) => [r.key, r]));
+  // Änderungen fürs Sicherheitsprotokoll
+  const changes = { created: [], removed: [], perm: [], disabled: [], enabled: [] };
 
   for (const u of incoming) {
-    const pw = u.clientHash ? await hashPassword(u.clientHash) : null;
-    if (byKey.has(u.key)) {
+    const old = byKey.get(u.key);
+    if (old) {
       await q.query(
-        `UPDATE users SET name = $2, role = $3, perm = $4, disabled = $5, extra = $6::jsonb, position = $7,
-                pw_hash = coalesce($8, pw_hash)
+        `UPDATE users SET name = $2, role = $3, perm = $4, disabled = $5, extra = $6::jsonb, position = $7
           WHERE id = $1`,
-        [byKey.get(u.key), u.name, u.role, u.perm, u.disabled, JSON.stringify(u.extra), u.position, pw]
+        [old.id, u.name, u.role, u.perm, u.disabled, JSON.stringify(u.extra), u.position]
       );
+      if (old.perm !== u.perm) changes.perm.push({ name: u.name, from: old.perm, to: u.perm });
+      if (!old.disabled && u.disabled) changes.disabled.push(u.name);
+      if (old.disabled && !u.disabled) changes.enabled.push(u.name);
     } else {
+      // Ohne Passwort angelegt — kann sich erst anmelden, wenn ein Admin eines setzt
       await q.query(
-        `INSERT INTO users (name, role, perm, disabled, extra, position, pw_hash)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)`,
-        [u.name, u.role, u.perm, u.disabled, JSON.stringify(u.extra), u.position, pw]
+        `INSERT INTO users (name, role, perm, disabled, extra, position)
+         VALUES ($1, $2, $3, $4, $5::jsonb, $6)`,
+        [u.name, u.role, u.perm, u.disabled, JSON.stringify(u.extra), u.position]
       );
+      changes.created.push(u.name);
     }
   }
 
@@ -120,7 +123,14 @@ async function syncFromClient(q, list) {
     const del = await q.query("DELETE FROM users WHERE id = ANY($1::int[]) RETURNING name", [removed]);
     await q.query("DELETE FROM sessions WHERE lower(user_name) = ANY($1::text[])",
       [del.rows.map((r) => r.name.toLowerCase())]);
+    changes.removed = del.rows.map((r) => r.name);
   }
+  // Gesperrte Konten verlieren sofort alle Sitzungen (nicht nur beim nächsten Zugriff)
+  if (changes.disabled.length) {
+    await q.query("DELETE FROM sessions WHERE lower(user_name) = ANY($1::text[])",
+      [changes.disabled.map((n) => n.toLowerCase())]);
+  }
+  return changes;
 }
 
 module.exports = { HttpError, PERMS, toClient, listForClient, findByName, count, createUser, setPassword, syncFromClient, cleanName };

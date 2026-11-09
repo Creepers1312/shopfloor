@@ -84,9 +84,12 @@ ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 | `DB_PASSWORD` | zufällig | Datenbank-Passwort |
 | `ALLOW_REGISTER` | `false` | Selbstregistrierung (das allererste Konto ist immer möglich und wird Administrator) |
 | `ALLOW_DEMO` | `false` | Demo-Zugang mit Leserechten auf der Anmeldeseite |
-| `SESSION_DAYS` | `14` | Gültigkeit einer Anmeldung |
-| `COOKIE_SECURE` | `true` bei `https://` | Sitzungs-Cookie nur über HTTPS |
-| `TRUST_PROXY` | private Netze | Proxys, deren `X-Forwarded-For` übernommen wird |
+| `SESSION_DAYS` | `14` | Höchstdauer einer Anmeldung |
+| `SESSION_IDLE_HOURS` | `12` | Abmeldung nach so vielen Stunden ohne Bedienung (`0` = aus; der TV-Modus zählt als aktiv) |
+| `PASSWORD_MIN_LENGTH` | `10` | Mindestlänge für Passwörter (8–128) |
+| `COOKIE_SECURE` | `true` bei `https://` | Sitzungs-Cookie nur über HTTPS (Name dann `__Host-sfm_session`) |
+| `TRUSTED_PROXIES` | leer | IP(s) des Reverse Proxys, dessen `X-Forwarded-For` als Client-IP gilt |
+| `AUDIT_DAYS` | `365` | Aufbewahrung des Sicherheitsprotokolls in Tagen (nur in `docker-compose.yml`/Umgebung) |
 | `BACKUP_PATH` | `./backups` | Sicherungsordner auf dem Host |
 | `BACKUP_ENABLED` / `BACKUP_TIME` / `BACKUP_KEEP` | `true` / `02:00` / `14` | Standard für die tägliche Sicherung (danach in der Oberfläche änderbar) |
 
@@ -97,8 +100,12 @@ ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 ## Hinter Nginx Proxy Manager
 
 1. `PUBLIC_URL=https://shopfloor.trobox.de`, damit wird `COOKIE_SECURE=true`.
-2. In NPM einen Proxy Host `shopfloor.trobox.de` → `http://<server-ip>:<WEB_PORT>` anlegen, SSL-Zertifikat zuweisen, „Force SSL“ an.
+2. In NPM einen Proxy Host `shopfloor.trobox.de` → `http://<server-ip>:<WEB_PORT>` anlegen, SSL-Zertifikat zuweisen, „Force SSL“ und „HSTS“ an.
 3. Läuft NPM auf demselben Host, `WEB_BIND=127.0.0.1` setzen. Dann ist das Board nur noch über den Proxy erreichbar.
+4. `TRUSTED_PROXIES` auf die Adresse setzen, von der NPM das Board erreicht — sonst sehen Login-Bremse und
+   Sicherheitsprotokoll alle Zugriffe als „von NPM“. Welche das ist, steht nach dem ersten Aufruf im Protokoll
+   (*Einstellungen → Sicherheitsprotokoll*, Spalte IP-Adresse), typisch `172.17.0.1` (Docker-Gateway) oder die IP des NPM-Hosts.
+5. Wenn möglich in NPM eine Access List anlegen, die nur das Firmennetz bzw. VPN zulässt.
 
 Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber ungeschützt über das Netz.
 
@@ -111,7 +118,8 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh backup "Notiz"       # Sicherung sofort
 ./deploy.sh users                # Konten auflisten
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
-./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto)
+./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto, meldet es überall ab)
+./deploy.sh audit [50]           # letzte Einträge des Sicherheitsprotokolls
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
 
@@ -121,7 +129,8 @@ In `docker-compose.yml` sind Obergrenzen je Container hinterlegt: `db` 1 GB / 2 
 Bei Bedarf dort anpassen und `./deploy.sh -y` ausführen. Container-Logs sind auf 3 Dateien à 10 MB je Container begrenzt.
 
 Der `web`-Container läuft ohne Root-Rechte (`nginx-unprivileged`) und lauscht intern auf Port 8080.
-Nach außen gilt weiterhin `WEB_PORT`.
+Nach außen gilt weiterhin `WEB_PORT`. `web` und `api` laufen mit schreibgeschütztem Dateisystem, ohne
+Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch für `db`.
 
 ## Sicherungen
 
@@ -129,16 +138,48 @@ Nach außen gilt weiterhin `WEB_PORT`.
 - Von Hand in der Oberfläche unter *Einstellungen → Datenbank & Sicherung* oder per `./deploy.sh backup`.
 - Vor jedem `./deploy.sh` und vor jeder Wiederherstellung wird der aktuelle Stand automatisch gesichert.
 - Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents` und `users`).
-  Für den Ernstfall regelmäßig auf ein NAS kopieren.
+  Für den Ernstfall regelmäßig verschlüsselt auf ein NAS kopieren und die Wiederherstellung einmal ausprobieren.
+- Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
 
 ## Sicherheit
 
-- Passwörter verlassen den Browser nur als SHA-256 und werden in der Datenbank zusätzlich mit scrypt und Salt gespeichert.
-- Sitzung per HttpOnly-Cookie (`SameSite=Lax`). Nach 10 Fehlversuchen sperrt die Anmeldung für 15 Minuten.
-- Rechte werden auf dem Server geprüft: *Nur Lesen* kann nichts speichern, Konten und Sicherungen sind Administratoren vorbehalten.
-- Ohne Anmeldung liefert die API keine Daten aus.
-- Die Datenbank hängt in einem internen Docker-Netz ohne veröffentlichten Port.
+**Anmeldung und Konten**
+- Passwörter gehen über die (HTTPS-)Verbindung zum Server, der Mindestlänge und Regeln prüft, und werden nur als
+  scrypt-Hash mit Salt gespeichert — nie im Klartext und nie im Protokoll.
+- Passwörter werden nur über eigene Endpunkte gesetzt (Konto anlegen, Passwort zurücksetzen, eigenes Passwort ändern),
+  nie über die gemeinsame Benutzerliste. Ein neues Passwort beendet alle anderen Sitzungen des Kontos; gesperrte und
+  gelöschte Konten verlieren ihre Sitzungen sofort.
+- Login-Bremse: 10 Fehlversuche je IP und Name, 30 je IP, 50 je Name in 15 Minuten; dazu drosselt Nginx Anmeldungen auf
+  10 pro Minute und IP. Die Client-IP ermittelt Nginx — ein vom Browser mitgeschickter `X-Forwarded-For` zählt nicht.
+
+**Sitzungen**
+- HttpOnly-Cookie mit `SameSite=Strict`, über HTTPS mit `Secure` und `__Host-`-Präfix; in der Datenbank liegt nur ein Hash des Tokens.
+- Abmeldung nach `SESSION_IDLE_HOURS` ohne Bedienung (Server und Oberfläche), höchstens nach `SESSION_DAYS`.
+- Schreibende Anfragen müssen von genau dieser Adresse kommen (Origin- und `Sec-Fetch-Site`-Prüfung) —
+  auch andere Subdomains derselben Domain sind ausgeschlossen.
+
+**Rechte und Daten**
+- Rechte prüft der Server: *Nur Lesen* kann nichts speichern; Konten, Sicherungen und das Protokoll sind Administratoren
+  vorbehalten. In den Einstellungen dürfen Bearbeiter nur die Unfallchronik (Huddle) und das Versandprotokoll ändern.
+- Das SMTP-Passwort wird am Server nicht gespeichert und nicht ausgeliefert.
+- Ohne Anmeldung liefert die API keine Daten aus. Größenlimit 25 MB nur für Dokumente, sonst 32 KB.
+- Sicherheitsprotokoll für Anmeldungen, Fehlversuche, Konten, Sicherungen und Speichervorgänge
+  (*Einstellungen → Sicherheitsprotokoll* oder `./deploy.sh audit`).
+
+**Auslieferung**
+- Content-Security-Policy: Es laufen nur die mitgelieferten Skripte (Hashes werden beim Bauen aus `index.html` berechnet,
+  `frontend/csp-hashes.js`); keine externen Quellen. Die Schrift Inter liegt in `frontend/fonts/` (kein Google-Abruf).
+- Weitere Header: HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`.
+- Die Datenbank hängt in einem internen Docker-Netz ohne veröffentlichten Port; Container gehärtet (siehe oben).
+- Dependabot meldet wöchentlich Updates für npm-Pakete und Basis-Images (`.github/dependabot.yml`);
+  `./deploy.sh update` baut immer mit aktuellen Basis-Images neu.
+
+**Bewusst noch offen**
+- Bearbeiter speichern das Board als Ganzes. Feinere Rechte (z. B. nur eigene Maßnahmen ändern) bräuchten einzelne
+  API-Endpunkte statt eines Gesamtdokuments; bis dahin fangen Sicherungen und das Protokoll Fehlbedienungen ab.
+- Keine Zwei-Faktor-Anmeldung. Für Zugriff aus dem Internet besser VPN oder eine NPM-Access-List vorschalten.
 
 ## Ohne Server
 
 `frontend/index.html` lässt sich auch einfach im Browser öffnen. Ohne erreichbare API läuft das Board im lokalen Modus und speichert alles im Browser.
+Das ist nur zum Ausprobieren gedacht: Konten und Rechte liegen dann im Browser und schützen nichts.

@@ -10,6 +10,7 @@
 #  ./deploy.sh logs [dienst]      Logs verfolgen (web | api | db)
 #  ./deploy.sh backup [notiz]     Sofort eine Datenbanksicherung anlegen
 #  ./deploy.sh admin              Weiteres Administrator-Konto anlegen
+#  ./deploy.sh audit [anzahl]     Letzte Einträge des Sicherheitsprotokolls
 #  ./deploy.sh reset-password N   Passwort für Konto N neu setzen
 #  ./deploy.sh users              Konten auflisten
 #  ./deploy.sh stop               Container stoppen (Daten bleiben erhalten)
@@ -88,9 +89,11 @@ SETTINGS=(
   "DB_PASSWORD|__random__|secret|Datenbank-Passwort"
   "ALLOW_REGISTER|false|bool|Dürfen sich neue Benutzer selbst registrieren?"
   "ALLOW_DEMO|false|bool|Demo-Zugang (nur Lesen) auf der Anmeldeseite anbieten?"
-  "SESSION_DAYS|14|int|Wie viele Tage bleibt eine Anmeldung gültig?"
+  "SESSION_DAYS|14|int|Wie viele Tage bleibt eine Anmeldung höchstens gültig?"
+  "SESSION_IDLE_HOURS|12|hours|Nach wie vielen Stunden ohne Aktivität abmelden? (0 = nie)"
+  "PASSWORD_MIN_LENGTH|10|pwlen|Mindestlänge für Passwörter"
   "COOKIE_SECURE|__auto__|bool|Sitzungs-Cookie nur über HTTPS senden?"
-  "TRUST_PROXY|loopback, linklocal, uniquelocal|text|Vertrauenswürdige Proxy-Netze (für echte Client-IPs)"
+  "TRUSTED_PROXIES||iplist|IP-Adresse(n) des Reverse Proxys, z. B. Nginx Proxy Manager (leer = keiner)"
   "BACKUP_PATH|./backups|path|Ordner für Datenbanksicherungen auf dem Host"
   "BACKUP_ENABLED|true|bool|Standard für tägliche automatische Sicherung"
   "BACKUP_TIME|02:00|time|Uhrzeit der täglichen Sicherung (HH:MM)"
@@ -138,6 +141,10 @@ validate() {   # typ wert → normalisierter Wert auf stdout, Fehler → return 
     ip)     [[ "$v" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ || "$v" == "::" ]] || return 1 ;;
     port)   [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 1 && v <= 65535 )) || return 1 ;;
     int)    [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 1 && v <= 365 )) || return 1 ;;
+    hours)  [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 0 && v <= 720 )) || return 1 ;;
+    pwlen)  [[ "$v" =~ ^[0-9]+$ ]] && (( v >= 8 && v <= 128 )) || return 1 ;;
+    iplist) v="${v//[[:space:]]/}"; [[ "$v" == "-" ]] && v=""
+            [[ -z "$v" || "$v" =~ ^[0-9A-Fa-f.:/]+(,[0-9A-Fa-f.:/]+)*$ ]] || return 1 ;;
     time)   [[ "$v" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || return 1 ;;
     bool)   v="$(to_bool "$v")" || return 1 ;;
     url)    [[ "$v" =~ ^https?://[^[:space:]]+$ ]] || return 1; v="${v%/}" ;;
@@ -155,6 +162,9 @@ hint_for() {
     ip) echo "IPv4-Adresse, z. B. 0.0.0.0 oder 127.0.0.1" ;;
     port) echo "Zahl von 1 bis 65535" ;;
     int) echo "Zahl von 1 bis 365" ;;
+    hours) echo "Zahl von 0 bis 720" ;;
+    pwlen) echo "Zahl von 8 bis 128" ;;
+    iplist) echo "IP-Adressen oder Netze, mit Komma getrennt; - für keinen" ;;
     time) echo "Format HH:MM, z. B. 02:00" ;;
     bool) echo "ja oder nein" ;;
     url) echo "mit http:// oder https://" ;;
@@ -283,6 +293,8 @@ prepare_backup_dir() {
     info "Setze Besitzer von $p auf UID 1000 (Benutzer im API-Container) …"
     chown 1000:1000 "$p" 2>/dev/null || sudo chown 1000:1000 "$p" || warn "Konnte Besitzer von $p nicht ändern — Sicherungen könnten fehlschlagen."
   fi
+  # Sicherungen enthalten Passwort-Hashes — nur für den Besitzer lesbar
+  chmod 700 "$p" 2>/dev/null || sudo chmod 700 "$p" || warn "Konnte Rechte von $p nicht auf 700 setzen."
 }
 
 pre_backup() {
@@ -330,13 +342,13 @@ ensure_admin() {
 }
 
 create_admin_interactive() {
-  local name role pw pw2
+  local name role pw pw2 min="${VAL[PASSWORD_MIN_LENGTH]:-10}"
   while true; do printf 'Name: '; IFS= read -r name; [[ -n "$name" ]] && break; done
   printf 'Rolle [Administration]: '; IFS= read -r role; role="${role:-Administration}"
   while true; do
-    printf 'Passwort (mind. 4 Zeichen): '; IFS= read -rs pw; echo
+    printf 'Passwort (mind. %s Zeichen): ' "$min"; IFS= read -rs pw; echo
     printf 'Passwort wiederholen: '; IFS= read -rs pw2; echo
-    [[ ${#pw} -ge 4 && "$pw" == "$pw2" ]] && break
+    [[ ${#pw} -ge $min && "$pw" == "$pw2" ]] && break
     warn "Passwörter zu kurz oder nicht gleich — bitte erneut."
   done
   printf '%s' "$pw" | cli create-admin "$name" "$role"
@@ -408,6 +420,8 @@ case "$COMMAND" in
   reset-password) detect_compose; load_env_for_run; [[ -n "${1:-}" ]] || die "Aufruf: ./deploy.sh reset-password <Name>"
                   dc exec api node src/cli.js reset-password "$1" ;;
   users)          detect_compose; load_env_for_run; cli list-users ;;
+  audit)          detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
+                  cli audit "${1:-50}" ;;
   stop|down)      detect_compose; load_env_for_run; dc down; ok "Gestoppt — Daten und Sicherungen bleiben erhalten." ;;
   *)              die "Unbekannter Befehl '$COMMAND' — Hilfe: ./deploy.sh --help" ;;
 esac

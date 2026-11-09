@@ -6,6 +6,7 @@
   <symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><path d="m9 15 2 2 4-4"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.6 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.6a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
   <symbol id="i-track" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/><circle cx="19" cy="8" r="1.2"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 4 5.5v6c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10v-6Z"/><path d="m9 12 2 2 4-4"/></symbol>
   <symbol id="i-timer" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5"/><path d="M9.5 2.5h5"/><path d="M12 2.5V6"/></symbol>
   <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5v14Z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
   <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
@@ -62,7 +63,17 @@
 <style>
 /* Schlichtes Erscheinungsbild nach dem Design-System „Bewerbungsverwaltung“:
    neutrale Flächen, Haarlinien statt Schatten, Inter, Farbe nur für Status und Bedienung. */
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+/* Inter wird mitgeliefert (fonts/, SIL Open Font License) — kein Abruf bei Google */
+@font-face {
+  font-family: "Inter"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("fonts/inter-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "Inter"; font-style: normal; font-display: swap; font-weight: 100 900;
+  src: url("fonts/inter-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
 /* ============ Design tokens ============ */
 :root {
   color-scheme: light;
@@ -1595,6 +1606,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .huddle-cal-day.full { background: color-mix(in srgb, var(--good) 30%, var(--surface)); color: var(--ink); }
 .huddle-cal-day.partial { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); color: var(--ink); }
 
+/* ============ Sicherheit ============ */
+.user-chip.clickable { cursor: pointer; border-radius: 10px; padding: 2px 6px; margin: -2px -6px; }
+.user-chip.clickable:hover { background: var(--surface-2); }
+.user-chip.clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.audit-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 12px; }
+.audit-table { min-width: 720px; }
+#auditMore { margin: 10px 0; }
+
 /* ============ Abweichungs-Tracking ============ */
 .trk-filters { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
 .trk-filter-line { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
@@ -1935,6 +1954,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <button class="side-item" data-spane="mail" type="button"><svg class="ico" aria-hidden="true"><use href="#i-mail"/></svg><span>E-Mail-Versand</span></button>
           <button class="side-item" data-spane="users" type="button"><svg class="ico" aria-hidden="true"><use href="#i-users"/></svg><span>Benutzerverwaltung</span></button>
           <button class="side-item" data-spane="db" type="button"><svg class="ico" aria-hidden="true"><use href="#i-db"/></svg><span>Datenbank &amp; Sicherung</span></button>
+          <button class="side-item" data-spane="audit" id="sideAudit" type="button" hidden><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><span>Sicherheitsprotokoll</span></button>
         </nav>
       </div>
       <div class="side-group">
@@ -2005,7 +2025,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <!-- ===== E-Mail-Versand ===== -->
       <div class="spane" id="mailCard">
         <h2 class="pane-title">E-Mail-Versand</h2>
-        <p class="pane-sub">Absender, SMTP-Server und Verteiler für den Tagesbericht. Die Zugangsdaten bleiben lokal in diesem Browser — versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung (MES/Intranet) den automatischen Versand übernimmt.</p>
+        <p class="pane-sub" id="mailPaneSub">Absender, SMTP-Server und Verteiler für den Tagesbericht. Die Zugangsdaten bleiben lokal in diesem Browser — versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung (MES/Intranet) den automatischen Versand übernimmt.</p>
         <div class="card set-card">
           <div class="set-card-title">Absender</div>
           <div class="set-row">
@@ -2046,7 +2066,8 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
               <div class="auth-off-hint" id="authOffHint" hidden>Entfällt bei Verschlüsselung „Keine“ — der Server akzeptiert nur anonymen Versand.</div>
               <div class="auth-fields" id="authFields">
                 <input id="setSmtpUser" autocomplete="off" placeholder="Benutzername">
-                <div class="pw-row">
+                <p class="set-desc" id="smtpPassServerHint" hidden>Das SMTP-Passwort wird auf dem Server aus Sicherheitsgründen nicht gespeichert. Es wird erst gebraucht, wenn ein Server-Versand eingerichtet ist — dann gehört es in dessen Konfiguration, nicht ins Board.</p>
+                <div class="pw-row" id="smtpPassRow">
                   <input id="setSmtpPass" type="password" autocomplete="new-password" placeholder="Passwort">
                   <button class="btn" id="pwToggle" type="button">Anzeigen</button>
                 </div>
@@ -2148,6 +2169,26 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <div class="set-card-title">Vorhandene Sicherungen</div>
           <div class="set-desc">Die Dateien liegen im Projektordner unter <code>backups\</code> und lassen sich von dort auf ein Netzlaufwerk kopieren.</div>
           <div class="bk-list" id="dbBackupList"></div>
+        </div>
+      </div>
+
+      <!-- ===== Sicherheitsprotokoll ===== -->
+      <div class="spane" id="auditCard">
+        <h2 class="pane-title">Sicherheitsprotokoll</h2>
+        <p class="pane-sub">Wer hat sich wann angemeldet, welche Konten und Sicherungen wurden geändert, wer hat gespeichert. Mehrere Speichervorgänge derselben Person innerhalb von 10 Minuten sind zusammengefasst. Einträge werden nach der eingestellten Frist (Standard 365 Tage) gelöscht.</p>
+        <div class="card set-card">
+          <div class="audit-tools">
+            <select class="perm-select" id="auditFilter" aria-label="Protokoll filtern">
+              <option value="">Alle Einträge</option>
+              <option value="auth">Anmeldungen</option>
+              <option value="user">Konten und Passwörter</option>
+              <option value="backup">Sicherungen</option>
+              <option value="document">Speichervorgänge</option>
+            </select>
+            <button class="btn sm" id="auditReload" type="button">Aktualisieren</button>
+          </div>
+          <div class="trk-table-wrap"><table class="trk-table audit-table" id="auditTable"></table></div>
+          <button class="btn sm" id="auditMore" type="button" hidden>Ältere Einträge laden</button>
         </div>
       </div>
 
@@ -2297,6 +2338,35 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 </dialog>
 
 <!-- Dialog: devDialog -->
+<dialog id="pwDialog">
+  <form method="dialog" id="pwForm">
+    <div class="dlg-head">
+      <h2>Eigenes Passwort ändern</h2>
+      <button type="button" class="btn ghost sm" id="pwClose" aria-label="Schließen">✕</button>
+    </div>
+    <div class="dlg-body">
+      <div class="login-error" id="pwError" hidden></div>
+      <div class="field">
+        <label for="pwCurrent">Bisheriges Passwort</label>
+        <input id="pwCurrent" type="password" required autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="pwNew">Neues Passwort</label>
+        <input id="pwNew" type="password" required autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="pwNew2">Neues Passwort wiederholen</label>
+        <input id="pwNew2" type="password" required autocomplete="new-password">
+      </div>
+      <p class="mini-hint">Alle anderen Geräte, auf denen Sie angemeldet sind, werden danach abgemeldet.</p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" id="pwCancel">Abbrechen</button>
+      <button type="submit" class="btn primary">Passwort ändern</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="devDialog">
   <form method="dialog" id="devForm">
     <div class="dlg-head">
@@ -2765,8 +2835,9 @@ window.SFM = (function () {
   var cache = {};            // Dokumentname -> JSON-Zeichenkette (nur im Server-Modus)
   var timers = {};           // gebündelte Schreibvorgänge je Dokument
   var inflight = {};
-  var hooks = { reload: null, notice: null, status: null };
+  var hooks = { reload: null, notice: null, status: null, expired: null };
   var pollTimer = null;
+  var tvMode = false;        // TV-Modus: das Nachfragen zählt als Aktivität (keine Abmeldung)
 
   function notice(msg, kind) { if (hooks.notice) hooks.notice(msg, kind || "info"); }
   function setStatus(text, kind) { if (hooks.status) hooks.status(text, kind); }
@@ -2829,7 +2900,12 @@ window.SFM = (function () {
           if (hooks.reload) hooks.reload();
           return;
         }
-        if (r.status === 401 || r.status === 403) {
+        if (r.status === 401) {
+          setStatus("Nicht gespeichert", "bad");
+          if (hooks.expired) hooks.expired();
+          return;
+        }
+        if (r.status === 403) {
           setStatus("Nicht gespeichert", "bad");
           notice((r.data && r.data.error) || "Keine Berechtigung — Änderung nicht gespeichert", "bad");
           return pull().then(function () { if (hooks.reload) hooks.reload(); });
@@ -2855,7 +2931,8 @@ window.SFM = (function () {
     if (pollTimer) return;
     pollTimer = setInterval(function () {
       if (document.hidden) return;
-      api("/api/document?since=" + revision).then(function (r) {
+      api("/api/document?since=" + revision + (tvMode ? "&tv=1" : "")).then(function (r) {
+        if (r.status === 401) { if (hooks.expired) hooks.expired(); return; }
         if (r.status === 204 || !r.ok) return;
         applyDocument(r.data);
         if (hooks.reload) hooks.reload();
@@ -2912,9 +2989,12 @@ window.SFM = (function () {
     stopSync: function () { if (pollTimer) clearInterval(pollTimer); pollTimer = null; },
     on: function (name, fn) { hooks[name] = fn; },
     api: api,
-    // Anmeldung läuft im Server-Modus über die Datenbank
-    login: function (name, hash) { return api("/api/login", { method: "POST", body: { name: name, hash: hash } }); },
-    register: function (name, role, hash) { return api("/api/register", { method: "POST", body: { name: name, role: role, hash: hash } }); },
+    setTv: function (on) { tvMode = !!on; },
+    // Anmeldung läuft im Server-Modus über die Datenbank. Das Passwort geht über die
+    // (HTTPS-)Verbindung zum Server, der Mindestlänge und Regeln prüft und es nur als
+    // scrypt-Hash speichert.
+    login: function (name, password) { return api("/api/login", { method: "POST", body: { name: name, password: password } }); },
+    register: function (name, role, password) { return api("/api/register", { method: "POST", body: { name: name, role: role, password: password } }); },
     demoLogin: function () { return api("/api/login/demo", { method: "POST" }); },
     logout: function () { return api("/api/logout", { method: "POST" }).catch(function () { return null; }); }
   };
@@ -7465,6 +7545,7 @@ window.SFM = (function () {
   }
   function enterTv() {
     tvActive = true;
+    SFM.setTv(true);
     $("#tvScreen").hidden = false;
     renderTv(); renderTvClock();
     // Uhr im Sekundentakt, Daten einmal pro Minute auffrischen
@@ -7475,6 +7556,7 @@ window.SFM = (function () {
   }
   function exitTv() {
     tvActive = false;
+    SFM.setTv(false);
     $("#tvScreen").hidden = true;
     if (tvTick) { clearInterval(tvTick); tvTick = null; }
   }
@@ -7887,8 +7969,13 @@ window.SFM = (function () {
     SFM.on("notice", function (msg) { toast(msg); });
     SFM.on("status", setSyncChip);
     SFM.on("reload", function () { reloadFromStore(); loadBackups(); });
+    SFM.on("expired", function () { sessionEnded(); });
     var server = SFM.isServer(), h = SFM.health() || {};
+    $("#sideAudit").hidden = !server;
+    $("#smtpPassRow").hidden = server;
+    $("#smtpPassServerHint").hidden = !server;
     if (server) {
+      $("#mailPaneSub").textContent = "Absender, SMTP-Server und Verteiler für den Tagesbericht. Versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung den automatischen Versand übernimmt.";
       setSyncChip("Datenbank verbunden", "");
       // Demo-Zugang nur, wenn der Server ihn erlaubt
       $("#loginDemoBox").hidden = !h.allowDemo;
@@ -7900,9 +7987,93 @@ window.SFM = (function () {
     loadBackups();
   }
 
+  /* ---------- Sicherheitsprotokoll ---------- */
+  var AUDIT_LABELS = {
+    "auth.login": "Anmeldung", "auth.login.failed": "Fehlgeschlagene Anmeldung",
+    "auth.login.blocked": "Anmeldung gesperrt (zu viele Versuche)", "auth.login.disabled": "Anmeldung mit gesperrtem Konto",
+    "auth.logout": "Abmeldung", "auth.register": "Registrierung", "auth.demo": "Demo-Zugang",
+    "user.create": "Konto angelegt", "user.password": "Passwort neu gesetzt (Administration)",
+    "user.password.self": "Eigenes Passwort geändert", "user.password.self.failed": "Passwortänderung abgelehnt",
+    "users.update": "Benutzerliste geändert", "document.save": "Gespeichert",
+    "backup.create": "Sicherung erstellt", "backup.restore": "Sicherung wiederhergestellt",
+    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert"
+  };
+  var AUDIT_WARN = /failed|blocked|disabled|restore|delete/;
+  var DOC_NAMES = { state: "Board und Kennzahlen", settings: "Einstellungen", users: "Benutzerliste" };
+  function auditDetail(e) {
+    var d = e.detail || {};
+    switch (e.action) {
+      case "auth.login.failed": case "auth.login.blocked": case "auth.login.disabled":
+        return (d.name || d.user) ? "Versuchter Name: " + (d.name || d.user) : "";
+      case "auth.register": case "user.create":
+        return (d.name || d.user || "") + (d.perm ? " · " + permName(d.perm) : "");
+      case "user.password":
+        return (d.name || "") + (d.sessionsEnded ? " · " + d.sessionsEnded + " Sitzung(en) beendet" : "");
+      case "user.password.self":
+        return d.sessionsEnded ? d.sessionsEnded + " andere Sitzung(en) beendet" : "";
+      case "users.update":
+        var parts = [];
+        if (d.created && d.created.length) parts.push("angelegt: " + d.created.join(", "));
+        if (d.removed && d.removed.length) parts.push("gelöscht: " + d.removed.join(", "));
+        (d.perm || []).forEach(function (x) { parts.push(x.name + ": " + permName(x.from) + " → " + permName(x.to)); });
+        if (d.disabled && d.disabled.length) parts.push("gesperrt: " + d.disabled.join(", "));
+        if (d.enabled && d.enabled.length) parts.push("entsperrt: " + d.enabled.join(", "));
+        return parts.join(" · ");
+      case "document.save":
+        return (DOC_NAMES[d.doc] || d.doc || "") + (e.count > 1 ? " · " + e.count + "×" : "");
+      case "backup.config":
+        return (d.enabled ? "täglich " + d.time + " Uhr" : "aus") + (d.keep ? " · " + d.keep + " aufbewahren" : "");
+      default:
+        return d.file || "";
+    }
+  }
+  var auditOldest = null;
+  function loadAudit(more) {
+    if (!SFM.isServer() || !can("manageUsers")) return;
+    var q = "/api/audit?limit=200";
+    var f = $("#auditFilter").value;
+    if (f) q += "&action=" + encodeURIComponent(f);
+    if (more && auditOldest) q += "&before=" + auditOldest;
+    SFM.api(q).then(function (r) {
+      if (!r.ok) { toast((r.data && r.data.error) || "Protokoll konnte nicht geladen werden"); return; }
+      renderAudit(r.data.entries || [], more);
+    }).catch(function () { toast("Server nicht erreichbar"); });
+  }
+  function renderAudit(entries, append) {
+    var tbl = $("#auditTable");
+    if (!append) {
+      tbl.innerHTML = "";
+      var th = document.createElement("thead"), tr = document.createElement("tr");
+      ["Zeit", "Benutzer", "Aktion", "Details", "IP-Adresse"].forEach(function (l) { tr.appendChild(el("th", null, l)); });
+      th.appendChild(tr); tbl.appendChild(th);
+      tbl.appendChild(document.createElement("tbody"));
+    }
+    var tb = tbl.querySelector("tbody");
+    if (!append && !entries.length) {
+      var etr = document.createElement("tr"), etd = el("td", "empty-hint", "Keine Einträge.");
+      etd.colSpan = 5; etr.appendChild(etd); tb.appendChild(etr);
+    }
+    entries.forEach(function (e) {
+      var tr = document.createElement("tr"), d = new Date(e.at);
+      tr.appendChild(el("td", "nowrap", fmtDate(isoOf(d)) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes())));
+      tr.appendChild(el("td", "nowrap", e.user || "—"));
+      var ta = el("td", "nowrap");
+      ta.appendChild(el("span", "pill " + (AUDIT_WARN.test(e.action) ? "warn" : "neutral"), AUDIT_LABELS[e.action] || e.action));
+      tr.appendChild(ta);
+      tr.appendChild(el("td", null, auditDetail(e)));
+      tr.appendChild(el("td", "nowrap", e.ip || ""));
+      tb.appendChild(tr);
+    });
+    if (entries.length) auditOldest = entries[entries.length - 1].id;
+    $("#auditMore").hidden = entries.length < 200;
+  }
+  $("#auditReload").addEventListener("click", function () { loadAudit(false); });
+  $("#auditFilter").addEventListener("change", function () { loadAudit(false); });
+  $("#auditMore").addEventListener("click", function () { loadAudit(true); });
+
   /* ---------- Einstellungen: Seitenleiste (ein Bereich zur Zeit) ---------- */
   var settingsPane = "stamm";
-  var SETTINGS_PANES = { stamm: "stammCard", mail: "mailCard", users: "usersCard", db: "dbCard", doc: "docCard" };
+  var SETTINGS_PANES = { stamm: "stammCard", mail: "mailCard", users: "usersCard", db: "dbCard", audit: "auditCard", doc: "docCard" };
   function renderSettingsPanes() {
     var admin = can("manageUsers");
     if (!admin && settingsPane !== "doc") settingsPane = "doc";
@@ -7927,6 +8098,7 @@ window.SFM = (function () {
       settingsPane = b.dataset.spane;
       renderSettingsPanes();
       if (settingsPane === "db") { renderDbStatus(); loadBackups(); }
+      if (settingsPane === "audit") loadAudit(false);
     });
   });
   $("#settingsSearch").addEventListener("input", function () {
@@ -8175,6 +8347,12 @@ window.SFM = (function () {
       ["Wiederherstellen", "Administratoren spielen eine Sicherungsdatei über denselben Dialog wieder ein — nach Sicherheitsabfrage."],
       ["Demo zurücksetzen", "Das Kreispfeil-Symbol lädt die Demo-Daten neu; Benutzerkonten und Einstellungen bleiben erhalten."],
       ["Testdaten nachfüllen", "Das Datenbank-Symbol daneben ergänzt fehlende und unvollständige Tageswerte vom 1. Januar bis gestern. Bereits erfasste Werte, Maßnahmen und Begründungen bleiben erhalten, heute bleibt offen. Beide Symbole sehen nur Administratoren."]] },
+    { title: "Sicherheit & Konten", intro: "Am Server prüft die Datenbank jede Anmeldung und jede Berechtigung. Passwörter werden nur als scrypt-Hash gespeichert.", tip: "Das Board sollte nur über HTTPS erreichbar sein — sonst gehen Passwörter ungeschützt über das Netz.", steps: [
+      ["Eigenes Passwort", "Auf den eigenen Namen oben rechts klicken. Nach der Änderung werden alle anderen Geräte abgemeldet."],
+      ["Passwortregeln", "Mindestens 10 Zeichen (vom Server einstellbar), nicht gleich dem Namen. Nach mehreren Fehlversuchen ist die Anmeldung für 15 Minuten gesperrt."],
+      ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],
+      ["Konten verwalten", "Administratoren legen Konten an, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen."],
+      ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
     { title: "Dashboard anpassen", intro: "Das Dashboard besteht aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet ihre eigene Ansicht ein.", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe)."],
       ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Kennzahl-Kacheln und Diagramme. Ein Diagramm zeigt einen Wert oder mehrere Werte mit gleicher Einheit."],
@@ -8609,6 +8787,17 @@ window.SFM = (function () {
   function saveUsers(list) {
     try { LS.setItem(USERS_KEY, JSON.stringify(list)); } catch (e) {}
   }
+  // Mindestlänge neuer Passwörter: am Server dessen Einstellung, sonst 10
+  function pwMin() {
+    var h = SFM.isServer() ? (SFM.health() || {}) : {};
+    return h.passwordMinLength || 10;
+  }
+  function pwProblem(pass, name) {
+    if (pass.length < pwMin()) return "Das Passwort braucht mindestens " + pwMin() + " Zeichen.";
+    if (name && pass.trim().toLowerCase() === String(name).trim().toLowerCase()) return "Das Passwort darf nicht dem Namen entsprechen.";
+    return null;
+  }
+  // Nur für den lokalen Testmodus ohne Server (Konten liegen dann im Browser)
   function sha256(txt) {
     if (window.crypto && crypto.subtle && window.isSecureContext) {
       return crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then(function (buf) {
@@ -8651,12 +8840,38 @@ window.SFM = (function () {
     $("#userName").textContent = u.name;
     $("#userRole").textContent = u.role + " · " + permName(currentUser.perm);
     $("#userChip").hidden = false;
+    var canPw = SFM.isServer() && !currentUser.demo;
+    $("#userChip").classList.toggle("clickable", canPw);
+    $("#userChip").tabIndex = canPw ? 0 : -1;
+    $("#userChip").setAttribute("role", canPw ? "button" : "group");
+    $("#userChip").title = canPw ? "Eigenes Passwort ändern" : "";
     $("#logoutBtn").hidden = false;
+    lastActivity = Date.now();
     $("#loginScreen").hidden = true;
     dashLayout = null; dashEdit = false;
     applyPermissions();
     renderAll();
     pullDashLayoutRemote();
+  }
+  // Abmeldung nach Inaktivität (ohne Maus, Tastatur, Touch) — außer im TV-Modus.
+  // Der Server setzt dieselbe Frist durch; das hier meldet nur rechtzeitig sichtbar ab.
+  var lastActivity = Date.now();
+  ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
+    document.addEventListener(ev, function () { lastActivity = Date.now(); }, { passive: true, capture: true });
+  });
+  setInterval(function () {
+    if (!currentUser || !SFM.isServer() || tvActive) return;
+    var hours = (SFM.health() || {}).sessionIdleHours;
+    if (!hours || Date.now() - lastActivity < hours * 3600 * 1000) return;
+    sessionEnded("Sie wurden nach " + hours + " Stunden ohne Aktivität abgemeldet.");
+  }, 60 * 1000);
+  // Sitzung abgelaufen oder beendet (z. B. Passwort wurde geändert): zur Anmeldung
+  function sessionEnded(msg) {
+    if (!currentUser) return;
+    document.querySelectorAll("dialog[open]").forEach(function (d) { d.close(); });
+    if (tvActive) exitTv();
+    logoutUser();
+    showLoginError(msg || "Ihre Sitzung ist abgelaufen — bitte erneut anmelden.");
   }
   function logoutUser() {
     currentUser = null;
@@ -8684,14 +8899,15 @@ window.SFM = (function () {
     });
   });
   $("#logoutBtn").addEventListener("click", logoutUser);
-  // Anmeldung gegen die Datenbank; das Passwort verlässt den Browser nur als SHA-256-Hash
+  // Anmeldung gegen die Datenbank (Passwortprüfung am Server)
   function serverLogin(name, pass) {
     if (registerMode) {
-      if (pass.length < 4) { showLoginError("Das Passwort braucht mindestens 4 Zeichen."); return; }
+      var prob = pwProblem(pass, name);
+      if (prob) { showLoginError(prob); return; }
       if (pass !== $("#lPass2").value) { showLoginError("Die Passwörter stimmen nicht überein."); return; }
     }
-    sha256(pass).then(function (h) {
-      var call = registerMode ? SFM.register(name, $("#lRole").value, h) : SFM.login(name, h);
+    Promise.resolve().then(function () {
+      var call = registerMode ? SFM.register(name, $("#lRole").value, pass) : SFM.login(name, pass);
       return call.then(function (r) {
         if (!r.ok) { showLoginError((r.data && r.data.error) || "Anmeldung fehlgeschlagen."); return; }
         // Benutzerliste und Daten frisch holen, dann anmelden
@@ -8714,7 +8930,8 @@ window.SFM = (function () {
     var existing = users.filter(function (u) { return u.name.toLowerCase() === name.toLowerCase(); })[0];
     if (registerMode) {
       if (existing) { showLoginError("Dieser Name ist bereits vergeben — bitte melden Sie sich an."); return; }
-      if (pass.length < 4) { showLoginError("Das Passwort braucht mindestens 4 Zeichen."); return; }
+      var lprob = pwProblem(pass, name);
+      if (lprob) { showLoginError(lprob); return; }
       if (pass !== $("#lPass2").value) { showLoginError("Die Passwörter stimmen nicht überein."); return; }
       sha256(pass).then(function (h) {
         var u = { name: name, role: $("#lRole").value, hash: h, perm: users.length === 0 ? "admin" : "editor", lastLogin: Date.now() };
@@ -8733,6 +8950,58 @@ window.SFM = (function () {
     }
   });
   /* ---------- Benutzerverwaltung ---------- */
+  // Am Server: Konto anlegen bzw. Passwort setzen über eigene Endpunkte — Passwörter laufen
+  // nie über die gemeinsame Benutzerliste. Ein neues Passwort meldet das Konto überall ab.
+  function serverUserSave(pass) {
+    var creating = userDlgMode === "create";
+    var name = creating ? $("#uName").value.trim() : userDlgTarget;
+    if (!name) return;
+    var call = creating
+      ? SFM.api("/api/users", { method: "POST", body: { name: name, role: $("#uRole").value, perm: $("#uPerm").value, password: pass } })
+      : SFM.api("/api/users/password", { method: "POST", body: { name: name, password: pass } });
+    call.then(function (r) {
+      if (!r.ok) { showUserError((r.data && r.data.error) || "Speichern fehlgeschlagen."); return; }
+      return SFM.refresh().then(function () {
+        reloadFromStore();
+        userDlg.close(); renderUsers();
+        toast(creating ? "Konto „" + name + "“ angelegt"
+          : "Passwort aktualisiert" + (r.data.sessionsEnded ? " — " + r.data.sessionsEnded + (r.data.sessionsEnded === 1 ? " Gerät" : " Geräte") + " abgemeldet" : ""));
+      });
+    }).catch(function () { showUserError("Der Server hat nicht geantwortet."); });
+  }
+
+  /* ---------- Eigenes Passwort ändern (nur am Server) ---------- */
+  var pwDlg = $("#pwDialog");
+  function showPwError(msg) {
+    var e = $("#pwError");
+    e.hidden = !msg; e.textContent = msg || "";
+  }
+  function openPwDialog() {
+    if (!SFM.isServer() || !currentUser || currentUser.demo) return;
+    $("#pwCurrent").value = ""; $("#pwNew").value = ""; $("#pwNew2").value = "";
+    $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
+    showPwError(null);
+    pwDlg.showModal();
+    $("#pwCurrent").focus();
+  }
+  $("#pwForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var cur = $("#pwCurrent").value, nw = $("#pwNew").value;
+    var prob = pwProblem(nw, currentUser && currentUser.name);
+    if (prob) { showPwError(prob); return; }
+    if (nw !== $("#pwNew2").value) { showPwError("Die neuen Passwörter stimmen nicht überein."); return; }
+    SFM.api("/api/me/password", { method: "POST", body: { current: cur, password: nw } }).then(function (r) {
+      if (!r.ok) { showPwError((r.data && r.data.error) || "Ändern fehlgeschlagen."); return; }
+      pwDlg.close();
+      toast("Passwort geändert" + (r.data.sessionsEnded ? " — andere Geräte wurden abgemeldet" : ""));
+    }).catch(function () { showPwError("Der Server hat nicht geantwortet."); });
+  });
+  $("#pwCancel").addEventListener("click", function () { pwDlg.close(); });
+  $("#pwClose").addEventListener("click", function () { pwDlg.close(); });
+  $("#userChip").addEventListener("click", openPwDialog);
+  $("#userChip").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPwDialog(); }
+  });
   var userDlg = $("#userDialog");
   var userDlgMode = "create", userDlgTarget = null;
   function showUserError(msg) {
@@ -8748,6 +9017,7 @@ window.SFM = (function () {
     $("#uRoleField").hidden = mode !== "create";
     $("#uPermField").hidden = mode !== "create";
     $("#uPass").value = "";
+    $("#uPass").placeholder = "Mindestens " + pwMin() + " Zeichen";
     showUserError(null);
     userDlg.showModal();
   }
@@ -8853,7 +9123,9 @@ window.SFM = (function () {
   $("#userForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var pass = $("#uPass").value;
-    if (pass.length < 4) { showUserError("Das Passwort braucht mindestens 4 Zeichen."); return; }
+    var uprob = pwProblem(pass, userDlgMode === "create" ? $("#uName").value : userDlgTarget);
+    if (uprob) { showUserError(uprob); return; }
+    if (SFM.isServer()) { serverUserSave(pass); return; }
     var users = loadUsers();
     if (userDlgMode === "create") {
       var name = $("#uName").value.trim();
