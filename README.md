@@ -7,10 +7,10 @@ Läuft als Docker-Compose-Stack mit PostgreSQL. Alle Geräte einer Linie sehen d
 
 | Bereich | Inhalt |
 |---------|--------|
-| Dashboard | OEE, First Pass Yield, Termintreue und Tageswerte je Zeitraum (Tag, Arbeitswoche, Monat, Jahr, frei wählbar), eigene Widget-Anordnung je Benutzer, Detaillierte Auswertung mit Diagrammen |
+| Dashboard | OEE, First Pass Yield, Termintreue und Tageswerte je Zeitraum (Tag, Arbeitswoche, Monat, Jahr, frei wählbar), eigene Widget-Anordnung je Benutzer, Detaillierte Auswertung mit eigenen, anpassbaren Diagrammen |
 | SQIDP-Board | Monatsboard Sicherheit, Qualität, Inventory, Lieferung, Produktivität |
-| Maßnahmen | Abweichungen mit Art, PDCA-Phase, Verantwortlichem und 5-Why-Analyse |
-| Abweichungs-Tracking | Alle Abweichungen eines Zeitraums mit Filtern nach Kategorie, Art und Quelle, Summen je Art und CSV-Export |
+| Maßnahmen | Abweichungen mit Art, PDCA-Phase, Verantwortlichem und 5-Why-Analyse; Schlagwortsuche auch in abgeschlossenen Maßnahmen |
+| Abweichungs-Tracking | Alle Abweichungen eines Zeitraums mit Schlagwortsuche, Filtern nach Kategorie, Art und Quelle, Summen je Art und CSV-Export |
 | Daily Huddle | Kalender, Timer mit Start, Pause und Zurücksetzen, geführte Agenda, Erfassung der Tageskennzahlen, „Huddle ENDE“ |
 | Tagesbericht | Bericht je Tag, Versand per E-Mail |
 

@@ -1116,7 +1116,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .stepper { display: flex; align-items: center; gap: 12px; }
 .btn.icon-btn2 { width: 38px; height: 38px; padding: 0; display: inline-grid; place-items: center; font-size: 17px; }
 .stepper-val { min-width: 86px; text-align: center; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.targets-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 10px 0 16px; }
+.targets-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 10px 0 16px; }
+@media (max-width: 900px) { .targets-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 640px) { .targets-grid { grid-template-columns: 1fr; } }
 .mini-label { display: block; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
 .host-port { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
@@ -1381,7 +1382,7 @@ kbd {
 .detail-chart-svg-wrap { width: 100%; position: relative; }
 .trend-chart { width: 100%; height: auto; display: block; }
 .detail-period-card { margin-bottom: 18px; }
-.detail-chart-subhead { margin-top: 4px; padding-top: 10px; border-top: 1px dashed var(--line); }
+#detailToolbar { margin-top: 16px; }
 .detail-chart-title.sub { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 
 /* ============ Detail-Diagramme: Fadenkreuz-Tooltip ============ */
@@ -1606,6 +1607,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .huddle-cal-day.full { background: color-mix(in srgb, var(--good) 30%, var(--surface)); color: var(--ink); }
 .huddle-cal-day.partial { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); color: var(--ink); }
 
+/* ============ Suche ============ */
+.search-input { min-width: 220px; flex: 1 1 220px; max-width: 360px; }
+#trkSearch { max-width: 420px; }
+.done-item .cat-chip { flex: none; }
+.done-title { appearance: none; border: none; background: none; padding: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.done-title:hover { color: var(--accent); text-decoration: underline; }
+.done-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
 /* ============ Sicherheit ============ */
 .user-chip.clickable { cursor: pointer; border-radius: 10px; padding: 2px 6px; margin: -2px -6px; }
 .user-chip.clickable:hover { background: var(--surface-2); }
@@ -1772,6 +1781,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
   </div>
   <div class="filter-row">
+    <input type="search" class="perm-select search-input" id="filterText" placeholder="Schlagwort suchen …" aria-label="Maßnahmen nach Schlagwort durchsuchen" autocomplete="off">
     <select class="perm-select" id="filterCat" aria-label="Nach Kategorie filtern">
       <option value="">Alle Kategorien</option>
       <option value="S">S — Sicherheit</option>
@@ -1791,7 +1801,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </div>
   <div class="kanban" id="kanban"></div>
   <div class="done-section">
-    <div class="eyebrow">Abgeschlossen</div>
+    <div class="eyebrow" id="doneTitle">Abgeschlossen</div>
     <div class="done-list" id="doneList"></div>
   </div>
 </section>
@@ -1832,6 +1842,10 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <p class="mini-hint" id="trkPeriodHint"></p>
     <div class="trk-filters">
+      <div class="trk-filter-line">
+        <span class="trk-filter-lbl">Suche</span>
+        <input type="search" class="perm-select search-input" id="trkSearch" placeholder="Schlagwort, z. B. Hydraulik oder Presse 3 …" aria-label="Abweichungen nach Schlagwort durchsuchen" autocomplete="off">
+      </div>
       <div class="trk-filter-line">
         <span class="trk-filter-lbl">Kategorie</span>
         <div class="trk-chips" id="trkCatChips"></div>
@@ -1996,11 +2010,12 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         </div>
         <div class="card set-card">
           <div class="set-card-title">Kennzahlen-Ziele</div>
-          <div class="set-desc">Färben Dashboard, TV-Modus und Tagesbericht (grün / gelb / rot).</div>
+          <div class="set-desc">Die Ziele färben Dashboard, TV-Modus und Tagesbericht (grün / gelb / rot). Der Inventory-Grenzwert wird bei der täglichen Erfassung vorausgefüllt und kann dort je Tag angepasst werden.</div>
           <div class="targets-grid">
             <div><label class="mini-label" for="setOee">OEE %</label><input id="setOee" type="number" min="1" max="100" step="1" inputmode="numeric"></div>
             <div><label class="mini-label" for="setFpy">FPY %</label><input id="setFpy" type="number" min="1" max="100" step="1" inputmode="numeric"></div>
             <div><label class="mini-label" for="setOtd">Termintreue %</label><input id="setOtd" type="number" min="1" max="100" step="1" inputmode="numeric"></div>
+            <div><label class="mini-label" for="setInvLimit">Inventory-Grenzwert t (Vorgabe)</label><input id="setInvLimit" type="number" min="1" max="100000" step="1" inputmode="decimal"></div>
           </div>
         </div>
         <div class="card set-card">
@@ -2546,13 +2561,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
             </label>
             <input id="dfAusschuss" type="number" min="0" step="0.01" inputmode="decimal">
           </div>
-          <div class="field">
-            <label for="dfFaktoriert">Faktorierte Menge (t)
-              <button type="button" class="help-q" tabindex="0" aria-label="Erklärung"
-                title="Versendete/fakturierte Menge an diesem Tag in Tonnen (an Kunden abgerechnet). Rein informativ — fließt nicht in Qualität, OEE oder First Pass Yield ein.">?</button>
-            </label>
-            <input id="dfFaktoriert" type="number" min="0" step="0.01" inputmode="decimal">
-          </div>
         </div>
       </div>
       <div class="dpanel" role="tabpanel" id="dpanel-lager" aria-labelledby="dtab-lager" data-tab="lager" hidden>
@@ -2570,6 +2578,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
                 title="Maximale Lagerkapazität an diesem Tag in Tonnen. Überschreitet Inventory diesen Grenzwert, wird die Inventory-Kachel im Dashboard rot hervorgehoben.">?</button>
             </label>
             <input id="dfInventoryGrenzwert" type="number" min="0" step="0.01" inputmode="decimal">
+            <p class="mini-hint" id="dfInvHint" hidden>Vorgabe aus den Stammdaten — bitte bestätigen oder anpassen.</p>
           </div>
           <div class="field">
             <label for="dfFaellig">Aufträge fällig
@@ -2584,6 +2593,13 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
                 title="Anzahl der davon pünktlich gelieferten Aufträge (ganze Zahl). Sollte ≤ Aufträge fällig sein. Termintreue = Aufträge pünktlich geliefert ÷ Aufträge fällig.">?</button>
             </label>
             <input id="dfPuenktlich" type="number" min="0" step="1" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label for="dfFaktoriert">Fakturierte Menge (t)
+              <button type="button" class="help-q" tabindex="0" aria-label="Erklärung"
+                title="Versendete und an Kunden abgerechnete Menge an diesem Tag in Tonnen. Wird im Huddle unter D – Lieferung angezeigt; fließt nicht in Qualität, OEE oder First Pass Yield ein.">?</button>
+            </label>
+            <input id="dfFaktoriert" type="number" min="0" step="0.01" inputmode="decimal">
           </div>
         </div>
       </div>
@@ -2809,7 +2825,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <p class="mini-hint" id="detailRangeHint"></p>
   </div>
-  <div class="detail-groups" id="detailGroups"></div>
+  <div class="dash-toolbar" id="detailToolbar">
+    <button class="btn" id="detailEditBtn" title="Diagramme hinzufügen, ändern, verschieben und löschen — gilt nur für Ihr Konto">Auswertung anpassen</button>
+    <span class="dash-edit-tools" id="detailEditTools" hidden>
+      <button class="btn primary" id="detailAddBtn">+ Widget hinzufügen</button>
+      <button class="btn" id="detailLayoutReset">Standard-Layout</button>
+      <button class="btn" id="detailEditDone">Fertig</button>
+    </span>
+    <span class="mini-hint" id="detailEditHint" hidden>Kopfzeile ziehen = verschieben · Griff unten rechts = Größe ändern · ✎ = Diagramm bearbeiten · ✕ = entfernen.</span>
+  </div>
+  <div class="dash-grid" id="detailGrid"></div>
 </div>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
@@ -3060,8 +3085,8 @@ window.SFM = (function () {
   var SAFETY_STATES = [
     { key: "none", label: "Kein Unfall" },
     { key: "near", label: "Beinahe-Unfall" },
-    { key: "rep", label: "Meldepflichtig" },
-    { key: "nonrep", label: "Nicht meldepflichtig" }
+    { key: "nonrep", label: "Nicht meldepflichtiger Unfall" },
+    { key: "rep", label: "Meldepflichtiger Unfall" }
   ];
 
   /* ---------- 3. Schwellwerte und Standard-Ziele ---------- */
@@ -3168,8 +3193,8 @@ window.SFM = (function () {
   // bekommen die Art aus ihrem Regelschlüssel, von Hand erfasste wählen sie im Dialog.
   // group: Überschrift der Filtergruppe; auto: nur automatisch vergeben (nicht im Dialog wählbar).
   var DEV_SUBS = {
-    S: [{ k: "near", label: "Beinahe-Unfall" }, { k: "rep", label: "Meldepflichtig" },
-        { k: "nonrep", label: "Nicht meldepflichtig" }, { k: "other", label: "Sonstige" }],
+    S: [{ k: "near", label: "Beinahe-Unfall" }, { k: "nonrep", label: "Nicht meldepflichtiger Unfall" },
+        { k: "rep", label: "Meldepflichtiger Unfall" }, { k: "other", label: "Sonstige" }],
     Q: [{ k: "menge", label: "Menge ungleich Plan" }, { k: "rework", label: "Nacharbeit (kein FPY)" },
         { k: "scrap", label: "Ausschuss (Absandung / Kreislauf)" }, { k: "other", label: "Sonstige" }],
     C: [{ k: "inv", label: "Über Grenzwert" }, { k: "other", label: "Sonstige" }],
@@ -3216,6 +3241,7 @@ window.SFM = (function () {
     lineName: "Linie M2",
     huddleMinutes: 15,
     huddleTime: "13:00",
+    inventoryLimit: 2000, // t — Vorgabe für den täglichen Inventory-Grenzwert
     shiftHours: 24,
     targets: DEFAULT_TARGETS,
     safety: { lastAccident: "", countSince: "", accidents: [] },
@@ -3259,6 +3285,10 @@ window.SFM = (function () {
       huddleMinutes: clampNum(s.huddleMinutes, 5, 60, DEFAULT_SETTINGS.huddleMinutes),
       huddleTime: timeStr(s.huddleTime, DEFAULT_SETTINGS.huddleTime),
       shiftHours: clampNum(s.shiftHours, 1, 24, DEFAULT_SETTINGS.shiftHours),
+      inventoryLimit: (function (v) {
+        v = Number(v);
+        return isFinite(v) && v > 0 && v <= 100000 ? Math.round(v * 100) / 100 : DEFAULT_SETTINGS.inventoryLimit;
+      })(s.inventoryLimit),
       targets: {
         oee: clampNum(t.oee, 1, 100, DEFAULT_SETTINGS.targets.oee),
         fpy: clampNum(t.fpy, 1, 100, DEFAULT_SETTINGS.targets.fpy),
@@ -3316,7 +3346,7 @@ window.SFM = (function () {
     { key: "produziert", label: "Produzierte Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", min: 0, max: 100000, step: 0.01, optional: true },
     { key: "ausschuss", label: "Ausschuss", unit: "t", min: 0, max: 100000, step: 0.01 },
-    { key: "faktoriert", label: "Faktorierte Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
+    { key: "faktoriert", label: "Fakturierte Menge", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "inventory", label: "Inventory", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", unit: "t", min: 0, max: 100000, step: 0.01 },
     { key: "auftraegeFaellig", label: "Aufträge fällig", unit: "Stk.", min: 0, max: 100000, step: 1 },
@@ -3395,7 +3425,7 @@ window.SFM = (function () {
   }
   function oeeQuality(rec) {
     // Qualität = Gutmenge ÷ Produzierte Menge, wobei Gutmenge = Produzierte Menge − Ausschuss
-    // ("Faktorierte Menge" ist die versendete/fakturierte Menge und fließt hier bewusst nicht ein)
+    // (die Fakturierte Menge ist die versendete/abgerechnete Menge und fließt hier bewusst nicht ein)
     var prod = rec ? numOrNull(rec.produziert) : null, ausschuss = rec ? numOrNull(rec.ausschuss) : null;
     if (prod == null || ausschuss == null || prod <= 0) return null;
     return Math.max(0, Math.min(100, (prod - ausschuss) / prod * 100));
@@ -4535,7 +4565,7 @@ window.SFM = (function () {
     { key: "produziert", label: "Produzierte Menge", unit: "t", digits: 2, agg: "sum" },
     { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", digits: 2, agg: "sum" },
     { key: "ausschuss", label: "Ausschuss", unit: "t", digits: 2, agg: "sum" },
-    { key: "faktoriert", label: "Faktorierte Menge", unit: "t", digits: 2, agg: "sum" },
+    { key: "faktoriert", label: "Fakturierte Menge", unit: "t", digits: 2, agg: "sum" },
     { key: "inventory", label: "Inventory", unit: "t", digits: 2, agg: "last" },
     { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", unit: "t", digits: 2, agg: "last" }
   ];
@@ -4604,7 +4634,7 @@ window.SFM = (function () {
 
   /* ---------- Detaillierte Auswertung (Diagramme zu den Tageswerte-Kacheln) ---------- */
   // Rohwerte mehrerer Tagesfelder parallel über einen Zeitraum einsammeln — Grundlage für die
-  // kombinierten Diagramme (z. B. Geplante/Produzierte/Faktorierte Menge in einem Chart).
+  // kombinierten Diagramme (z. B. Geplante/Produzierte/Fakturierte Menge in einem Chart).
   // Abweichungen, die an einem bestimmten Tag angelegt wurden — Kontext für die Tooltips der
   // Detail-Diagramme ("warum gab es an diesem Tag eine Schwankung?"). Gleicher Datumsabgleich
   // wie bei den Huddle-Themen: angelegt am Tag, ersatzweise fällig an dem Tag.
@@ -4643,60 +4673,6 @@ window.SFM = (function () {
   }
   // Feste kategoriale Reihenfolge (Blau/Orange/Aqua) — dieselben, bereits im Design verwendeten
   // Farben wie --cat-s/--cat-q/--cat-c (SQIDP), je Feld fest zugeordnet statt durchgewürfelt.
-  var DETAIL_GROUPS = [
-    {
-      id: "oee-komponenten", title: "OEE-Komponenten — was beeinflusst die OEE?", unit: "%", source: "metric",
-      fields: [
-        { key: "verf", label: "Verfügbarkeit", color: "var(--cat-s)" },
-        { key: "leist", label: "Leistung", color: "var(--cat-q)" },
-        { key: "qual", label: "Qualität", color: "var(--cat-c)" }
-      ]
-    },
-    {
-      id: "kennzahlen", title: "Kennzahlen im Überblick", unit: "%", source: "metric",
-      fields: [
-        { key: "oee", label: "OEE", color: "var(--cat-s)" },
-        { key: "fpy", label: "First Pass Yield", color: "var(--cat-q)" },
-        { key: "otd", label: "Termintreue", color: "var(--cat-c)" }
-      ]
-    },
-    {
-      id: "ausfallzeiten", title: "Ausfallzeiten", unit: "h",
-      fields: [
-        { key: "ausfall", label: "Ungeplante Produktionsausfälle", color: "var(--cat-s)" },
-        { key: "ausfallGeplant", label: "Geplante Produktionsausfälle", color: "var(--cat-q)" },
-        { key: "personalausfall", label: "Personen Ausfallzeit Ungeplant", color: "var(--cat-c)" }
-      ]
-    },
-    {
-      id: "mengenfluss", title: "Mengenfluss", unit: "t",
-      fields: [
-        { key: "geplant", label: "Geplante Menge", color: "var(--cat-s)" },
-        { key: "produziert", label: "Produzierte Menge", color: "var(--cat-q)" },
-        { key: "faktoriert", label: "Faktorierte Menge", color: "var(--cat-c)" }
-      ],
-      // Ausschuss gehört inhaltlich dazu, hat aber eine ganz andere Größenordnung (wenige t statt
-      // 60-120 t) — auf derselben Achse würde er als flache Linie am Boden verschwinden. Deshalb
-      // als zweites, kleineres Panel mit eigener Achse in derselben Karte, x-Position identisch
-      // ausgerichtet (kein zweites Zeitraumfenster, keine „duale Achse" in einem Chart).
-      secondary: { key: "ausschuss", label: "Ausschuss", color: "var(--accent)", unit: "t" }
-    },
-    {
-      id: "qualitaet-mengen", title: "Nacharbeit & Ausschuss — was fehlt zum First Pass Yield?", unit: "t",
-      fields: [
-        { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", color: "var(--cat-q)" },
-        { key: "ausschuss", label: "Ausschuss (Absandung / Kreislauf)", color: "var(--cat-s)" }
-      ]
-    },
-    {
-      id: "inventory", title: "Inventory", unit: "t",
-      fields: [
-        { key: "inventory", label: "Inventory", color: "var(--cat-s)" },
-        { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", color: "var(--muted)", dashed: true, threshold: true }
-      ],
-      overflowIndex: 1 // Index innerhalb `fields` der Grenzwert-Linie — Fläche darüber wird rot markiert
-    }
-  ];
   // Mehrfach-Liniendiagramm mit gemeinsamer Achse (immer nur eine Einheit je Gruppe), fester
   // Farbzuordnung je Feld, Ziellinie/Überschreitungs-Fläche für Grenzwerte und nativen
   // Hover-Tooltips (bei moderater Punktzahl je Punkt, sonst nur am letzten Datenpunkt).
@@ -4916,54 +4892,11 @@ window.SFM = (function () {
     item.appendChild(document.createTextNode(f.label));
     return item;
   }
-  function renderDetailDashboard() {
-    var grid = $("#detailGroups");
-    if (!grid) return;
-    grid.innerHTML = "";
-    var range = detailChartRange();
-    $("#detailRangeHint").textContent = "Zeitraum: " + fmtDate(range.from) + " – " + fmtDate(range.to) +
-      (range.widened ? " · ein einzelner Tag ergibt kein Diagramm, daher die letzten 14 Tage" : "");
-    DETAIL_GROUPS.forEach(function (group) {
-      var keys = group.fields.map(function (f) { return f.key; });
-      var data = group.source === "metric" ? metricSeriesForRange(keys, range.from, range.to) : fieldSeriesForRange(keys, range.from, range.to);
-      var card = el("div", "card detail-chart-card");
-      var head = el("div", "detail-chart-head");
-      head.appendChild(el("div", "detail-chart-title", group.title + " (" + group.unit + ")"));
-      var legend = el("div", "detail-chart-legend");
-      group.fields.forEach(function (f) { legend.appendChild(buildDetailLegendItem(f)); });
-      head.appendChild(legend);
-      card.appendChild(head);
-      var stats = el("div", "detail-chart-stats");
-      group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], group.unit)); });
-      card.appendChild(stats);
-      var svgWrap = el("div", "detail-chart-svg-wrap");
-      svgWrap.innerHTML = multiFieldChartSvg(group, data.isos, data.series);
-      wireChartInteraction(svgWrap, group, data.isos, data.series, group.unit);
-      card.appendChild(svgWrap);
-      // Zweites, kleineres Panel für ein inhaltlich zugehöriges Feld anderer Größenordnung
-      // (z. B. Ausschuss neben Mengenfluss) — eigene Achse, aber gleiche x-Positionen/Zeitraum.
-      if (group.secondary) {
-        var sec = group.secondary;
-        var secData = fieldSeriesForRange([sec.key], range.from, range.to);
-        var secHead = el("div", "detail-chart-head detail-chart-subhead");
-        secHead.appendChild(el("div", "detail-chart-title sub", sec.label + " (" + sec.unit + ")"));
-        card.appendChild(secHead);
-        card.appendChild(buildDetailStat(sec.label, secData.series[0], sec.unit));
-        var secWrap = el("div", "detail-chart-svg-wrap");
-        var secGroup = { fields: [{ key: sec.key, label: sec.label, color: sec.color }], unit: sec.unit, height: 90 };
-        secWrap.innerHTML = multiFieldChartSvg(secGroup, secData.isos, secData.series);
-        wireChartInteraction(secWrap, secGroup, secData.isos, secData.series, sec.unit);
-        card.appendChild(secWrap);
-      }
-      grid.appendChild(card);
-    });
-  }
-
   /* ---------- Anpassbares Dashboard: Widgets im 12-Spalten-Raster ---------- */
-  // Jeder Benutzer hat sein eigenes Layout (Karten + Diagramme, Position, Größe). Gespeichert wird
-  // lokal je Benutzername (Schlüssel sfm-dashlayout-v1); im Server-Modus zusätzlich am Konto.
+  // Jeder Benutzer hat sein eigenes Layout (Karten + Diagramme, Position, Größe) — getrennt für das
+  // Dashboard und die Detaillierte Auswertung. Gespeichert wird lokal je Benutzername; im
+  // Server-Modus zusätzlich am Konto (beide Raster in einem Layout-Dokument).
   var DASH_COLS = 12;
-  var DASH_LAYOUT_KEY = "sfm-dashlayout-v1";
   var DASH_SERIES_COLORS = ["var(--cat-s)", "var(--cat-q)", "var(--cat-c)", "var(--cat-d)", "var(--cat-p)"];
   var DASH_MAX_SERIES = DASH_SERIES_COLORS.length;
   var DW_MIN = { bilanz: [4, 3], kpi: [3, 5], tile: [2, 2], chart: [3, 5] };
@@ -4983,7 +4916,33 @@ window.SFM = (function () {
   function dashSeriesInfo(key) {
     return dashSeriesCatalog().filter(function (s) { return s.key === key; })[0] || null;
   }
-  var dashEdit = false, dashDrag = null, dashLayout = null, dashLayoutUser = null, dashRO = null;
+  var dashDrag = null;
+  // Die Raster. B ist das Raster, das gerade bedient wird (Detail-Overlay offen → detail).
+  var BOARDS = {
+    dash: {
+      key: "dash", grid: "dashGrid", store: "sfm-dashlayout-v1", remote: "widgets",
+      editBtn: "dashEditBtn", tools: "dashEditTools", hint: "dashEditHint",
+      emptyEdit: "Das Dashboard ist leer — mit „+ Widget hinzufügen“ Karten oder Diagramme einfügen.",
+      emptyView: "Das Dashboard ist leer. Über „Dashboard anpassen“ lassen sich Karten und Diagramme hinzufügen.",
+      resetText: "Ihre eigene Anordnung (Karten, Diagramme, Größen) wird verworfen und das ursprüngliche Dashboard-Layout geladen.",
+      defaults: function () { return defaultDashWidgets(); },
+      edit: false, layout: null, user: null, ro: null
+    },
+    detail: {
+      key: "detail", grid: "detailGrid", store: "sfm-detaillayout-v1", remote: "detail",
+      editBtn: "detailEditBtn", tools: "detailEditTools", hint: "detailEditHint",
+      emptyEdit: "Die Auswertung ist leer — mit „+ Widget hinzufügen“ Diagramme oder Karten einfügen.",
+      emptyView: "Die Auswertung ist leer. Über „Auswertung anpassen“ lassen sich Diagramme hinzufügen.",
+      resetText: "Ihre eigene Anordnung der Detaillierten Auswertung wird verworfen und die ursprünglichen Diagramme geladen.",
+      defaults: function () { return defaultDetailWidgets(); },
+      edit: false, layout: null, user: null, ro: null
+    }
+  };
+  var B = BOARDS.dash;
+  function useBoard(key) { B = BOARDS[key]; }
+  function resetBoards() {
+    Object.keys(BOARDS).forEach(function (k) { BOARDS[k].layout = null; BOARDS[k].user = null; BOARDS[k].edit = false; });
+  }
 
   function newWidgetId() { return "w" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
   function defaultDashWidgets() {
@@ -4996,6 +4955,20 @@ window.SFM = (function () {
     MINI_TILES.forEach(function (m, i) {
       add({ type: "tile", tile: m.kind === "field" ? m.key : m.kind, x: (i % 6) * 2, y: 10 + Math.floor(i / 6) * 2, w: 2, h: 2 });
     });
+    return ws;
+  }
+  // Standard der Detaillierten Auswertung: die bisherigen festen Diagramme als Widgets
+  function defaultDetailWidgets() {
+    var ws = [], n = 0;
+    function add(title, series, x, y) {
+      ws.push({ id: "dd" + (++n), type: "chart", mode: series.length > 1 ? "multi" : "single", series: series, title: title, x: x, y: y, w: 6, h: 9 });
+    }
+    add("OEE-Komponenten — was beeinflusst die OEE? (%)", ["verf", "leist", "qual"], 0, 0);
+    add("Kennzahlen im Überblick (%)", ["oee", "fpy", "otd"], 6, 0);
+    add("Ausfallzeiten (h)", ["ausfall", "ausfallGeplant", "personalausfall"], 0, 9);
+    add("Mengenfluss (t)", ["geplant", "produziert", "faktoriert"], 6, 9);
+    add("Nacharbeit & Ausschuss (t)", ["nacharbeit", "ausschuss"], 0, 18);
+    add("Inventory (t)", ["inventory", "inventoryGrenzwert"], 6, 18);
     return ws;
   }
   // Gespeichertes Layout prüfen — unbekannte/kaputte Einträge werden verworfen, Werte begrenzt
@@ -5031,44 +5004,51 @@ window.SFM = (function () {
     return out;
   }
   function dashUserKey() { return currentUser ? currentUser.name : "_anon"; }
-  function loadDashLayoutAll() {
+  function loadDashLayoutAll(bd) {
     try {
-      var o = JSON.parse(LS.getItem(DASH_LAYOUT_KEY) || "{}");
+      var o = JSON.parse(LS.getItem((bd || B).store) || "{}");
       return o && typeof o === "object" && !Array.isArray(o) ? o : {};
     } catch (e) { return {}; }
   }
-  function getDashWidgets() {
+  function getDashWidgets(bd) {
+    bd = bd || B;
     var who = dashUserKey();
-    if (dashLayout && dashLayoutUser === who) return dashLayout;
-    var saved = loadDashLayoutAll()[who];
-    dashLayout = sanitizeWidgets(saved && saved.widgets) || defaultDashWidgets();
-    dashLayoutUser = who;
-    return dashLayout;
+    if (bd.layout && bd.user === who) return bd.layout;
+    var saved = loadDashLayoutAll(bd)[who];
+    bd.layout = sanitizeWidgets(saved && saved.widgets) || bd.defaults();
+    bd.user = who;
+    return bd.layout;
   }
-  function saveDashLayout() {
-    var all = loadDashLayoutAll();
-    all[dashLayoutUser || dashUserKey()] = { v: 1, widgets: dashLayout };
-    try { LS.setItem(DASH_LAYOUT_KEY, JSON.stringify(all)); } catch (e) { /* Speichern optional */ }
+  function saveDashLayout(bd) {
+    bd = bd || B;
+    var all = loadDashLayoutAll(bd);
+    all[bd.user || dashUserKey()] = { v: 1, widgets: bd.layout };
+    try { LS.setItem(bd.store, JSON.stringify(all)); } catch (e) { /* Speichern optional */ }
     pushDashLayoutRemote();
   }
   // Geräteübergreifend (Server-Modus): Layout am Benutzerkonto ablegen/holen. Best effort —
   // antwortet der Server nicht oder kennt den Endpunkt nicht, bleibt es beim lokalen Layout.
   function pushDashLayoutRemote() {
     if (!SFM.isServer() || !currentUser || currentUser.demo) return;
-    SFM.api("/api/user/dashboard", { method: "PUT", body: { layout: { v: 1, widgets: dashLayout } } }).catch(function () {});
+    SFM.api("/api/user/dashboard", { method: "PUT", body: { layout: {
+      v: 1, widgets: getDashWidgets(BOARDS.dash), detail: getDashWidgets(BOARDS.detail)
+    } } }).catch(function () {});
   }
   function pullDashLayoutRemote() {
     if (!SFM.isServer() || !currentUser || currentUser.demo) return;
     var who = currentUser.name;
     SFM.api("/api/user/dashboard").then(function (r) {
       if (!r.ok || !r.data || !r.data.layout || !currentUser || currentUser.name !== who) return;
-      var ws = sanitizeWidgets(r.data.layout.widgets);
-      if (!ws) return;
-      var all = loadDashLayoutAll();
-      all[who] = { v: 1, widgets: ws };
-      try { LS.setItem(DASH_LAYOUT_KEY, JSON.stringify(all)); } catch (e) {}
-      dashLayout = ws; dashLayoutUser = who;
-      if (!dashDrag) renderDashGrid();
+      Object.keys(BOARDS).forEach(function (k) {
+        var bd = BOARDS[k];
+        var ws = sanitizeWidgets(r.data.layout[bd.remote]);
+        if (!ws) return;
+        var all = loadDashLayoutAll(bd);
+        all[who] = { v: 1, widgets: ws };
+        try { LS.setItem(bd.store, JSON.stringify(all)); } catch (e) {}
+        bd.layout = ws; bd.user = who;
+      });
+      if (!dashDrag) { renderDashGrid(); if (detailActive) renderDetailDashboard(); }
     }).catch(function () {});
   }
 
@@ -5180,11 +5160,11 @@ window.SFM = (function () {
     wireChartInteraction(host, g, host._data.isos, host._data.series, g.unit);
   }
 
-  function buildDashWidget(w, ctx) {
+  function buildDashWidget(w, ctx, bd) {
     var box = el("div", "dw dw-" + w.type);
     box.dataset.id = w.id;
     dwApplyPos(box, w);
-    if (dashEdit) {
+    if (bd.edit) {
       var bar = el("div", "dw-bar");
       bar.tabIndex = 0;
       bar.setAttribute("role", "group");
@@ -5221,7 +5201,7 @@ window.SFM = (function () {
       body.appendChild(buildChartWidget(w));
     }
     box.appendChild(body);
-    if (dashEdit && !dwNarrow()) {
+    if (bd.edit && !dwNarrow()) {
       var rz = el("div", "dw-resize");
       rz.title = "Größe ändern";
       rz.addEventListener("pointerdown", function (e) { dwStartDrag(e, box, w, "resize"); });
@@ -5230,40 +5210,47 @@ window.SFM = (function () {
     return box;
   }
 
-  function renderDashGrid() {
-    var grid = $("#dashGrid");
+  function renderBoardGrid(bd) {
+    var grid = byId(bd.grid);
     if (!grid || dashDrag) return;
-    if (dashRO) dashRO.disconnect();
+    if (bd.ro) bd.ro.disconnect();
     grid.innerHTML = "";
-    grid.classList.toggle("editing", dashEdit);
-    var ws = getDashWidgets().slice().sort(dwSortYX);
+    grid.classList.toggle("editing", bd.edit);
+    var ws = getDashWidgets(bd).slice().sort(dwSortYX);
     var ctx = dashCtx();
-    ws.forEach(function (w) { grid.appendChild(buildDashWidget(w, ctx)); });
-    if (!ws.length) {
-      var empty = el("div", "dw-empty", dashEdit
-        ? "Das Dashboard ist leer — mit „+ Widget hinzufügen“ Karten oder Diagramme einfügen."
-        : "Das Dashboard ist leer. Über „Dashboard anpassen“ lassen sich Karten und Diagramme hinzufügen.");
-      grid.appendChild(empty);
-    }
+    ws.forEach(function (w) { grid.appendChild(buildDashWidget(w, ctx, bd)); });
+    if (!ws.length) grid.appendChild(el("div", "dw-empty", bd.edit ? bd.emptyEdit : bd.emptyView));
     // Diagramme erst nach dem Einfügen zeichnen (Pixelgröße bekannt) und bei Größenänderung neu zeichnen
     if (typeof ResizeObserver === "function") {
-      if (!dashRO) dashRO = new ResizeObserver(function (entries) { entries.forEach(function (en) { dwRenderChart(en.target); }); });
-      grid.querySelectorAll(".dw-chart-body").forEach(function (h) { dashRO.observe(h); });
+      if (!bd.ro) bd.ro = new ResizeObserver(function (entries) { entries.forEach(function (en) { dwRenderChart(en.target); }); });
+      grid.querySelectorAll(".dw-chart-body").forEach(function (h) { bd.ro.observe(h); });
     }
     grid.querySelectorAll(".dw-chart-body").forEach(dwRenderChart);
+    byId(bd.editBtn).hidden = bd.edit;
+    byId(bd.tools).hidden = !bd.edit;
+    byId(bd.hint).hidden = !bd.edit;
+    return ctx;
+  }
+  function renderDetailDashboard() {
+    var range = detailChartRange();
+    $("#detailRangeHint").textContent = "Zeitraum: " + fmtDate(range.from) + " – " + fmtDate(range.to) +
+      (range.widened ? " · ein einzelner Tag ergibt kein Diagramm, daher die letzten 14 Tage" : "");
+    renderBoardGrid(BOARDS.detail);
+  }
+  function renderDashGrid() {
+    var ctx = renderBoardGrid(BOARDS.dash);
+    if (!ctx) return;
     var hint = $("#miniHint");
     if (hint) hint.textContent = ctx.iso ? (dashMode === "day" ? "Tageswerte Stand: " + fmtDate(ctx.iso)
       : "Mengen und Ausfallzeiten: Summe " + dashPeriodNoun() + " · Inventory: Stand " + fmtDate(ctx.iso)) :
       (dashIsCurrentPeriod() ? "Noch keine Tageskennzahlen erfasst — im Huddle eintragen." : "Keine Tageskennzahlen " + dashPeriodNoun() + " erfasst.");
-    $("#dashEditBtn").hidden = dashEdit;
-    $("#dashEditTools").hidden = !dashEdit;
-    $("#dashEditHint").hidden = !dashEdit;
   }
+  function renderActiveBoard() { if (B === BOARDS.detail) renderDetailDashboard(); else renderDashGrid(); }
 
   /* -- Verschieben und Größe ändern (Zeiger: Maus, Touch, Stift) -- */
   function dwMetrics() {
-    var r = $("#dashGrid").getBoundingClientRect();
-    var style = getComputedStyle($("#dashGrid"));
+    var r = byId(B.grid).getBoundingClientRect();
+    var style = getComputedStyle(byId(B.grid));
     var gap = parseFloat(style.columnGap) || 12, row = parseFloat(style.gridAutoRows) || 40;
     var colW = (r.width - (DASH_COLS - 1) * gap) / DASH_COLS;
     return { stepX: colW + gap, stepY: row + (parseFloat(style.rowGap) || gap) };
@@ -5273,7 +5260,7 @@ window.SFM = (function () {
     if (dwNarrow() && mode === "resize") return;
     if (dwNarrow()) return; // einspaltige Ansicht: Reihenfolge bleibt wie im Layout (Entfernen/Bearbeiten weiter möglich)
     e.preventDefault();
-    var grid = $("#dashGrid");
+    var grid = byId(B.grid);
     var ph = el("div", "dw-ph");
     dwApplyPos(ph, w);
     grid.appendChild(ph);
@@ -5309,7 +5296,7 @@ window.SFM = (function () {
     });
     d.resolved = dwResolve(items, d.id);
     d.resolved.forEach(function (r) {
-      var b = $("#dashGrid").querySelector('.dw[data-id="' + r.id + '"]');
+      var b = byId(B.grid).querySelector('.dw[data-id="' + r.id + '"]');
       if (!b) return;
       if (r.id === d.id) { dwApplyPos(d.ph, r); if (d.mode === "resize") dwApplyPos(b, r); }
       else dwApplyPos(b, r);
@@ -5327,17 +5314,17 @@ window.SFM = (function () {
   function dwDragEnd() {
     var d = dwDragFinish(); if (!d) return;
     if (d.resolved) {
-      var byId = {};
-      d.resolved.forEach(function (r) { byId[r.id] = r; });
+      var posById = {};
+      d.resolved.forEach(function (r) { posById[r.id] = r; });
       getDashWidgets().forEach(function (w) {
-        var r = byId[w.id];
+        var r = posById[w.id];
         if (r) { w.x = r.x; w.y = r.y; w.w = r.w; w.h = r.h; }
       });
       saveDashLayout();
     }
-    renderDashGrid();
+    renderActiveBoard();
   }
-  function dwDragCancel() { dwDragFinish(); renderDashGrid(); }
+  function dwDragCancel() { dwDragFinish(); renderActiveBoard(); }
   // Tastatur: Pfeiltasten verschieben um eine Rasterzelle, Umschalt + Pfeiltasten ändern die Größe
   function dwKey(e, w) {
     var dx = e.key === "ArrowLeft" ? -1 : e.key === "ArrowRight" ? 1 : 0;
@@ -5354,12 +5341,12 @@ window.SFM = (function () {
       n.y = Math.max(0, w.y + dy);
     }
     var resolved = dwResolve(getDashWidgets().map(function (x) { return x.id === w.id ? n : x; }), w.id);
-    var byId = {};
-    resolved.forEach(function (r) { byId[r.id] = r; });
-    getDashWidgets().forEach(function (x) { var r = byId[x.id]; if (r) { x.x = r.x; x.y = r.y; x.w = r.w; x.h = r.h; } });
+    var posById = {};
+    resolved.forEach(function (r) { posById[r.id] = r; });
+    getDashWidgets().forEach(function (x) { var r = posById[x.id]; if (r) { x.x = r.x; x.y = r.y; x.w = r.w; x.h = r.h; } });
     saveDashLayout();
-    renderDashGrid();
-    var again = $("#dashGrid").querySelector('.dw[data-id="' + w.id + '"] .dw-bar');
+    renderActiveBoard();
+    var again = byId(B.grid).querySelector('.dw[data-id="' + w.id + '"] .dw-bar');
     if (again) again.focus();
   }
 
@@ -5369,16 +5356,18 @@ window.SFM = (function () {
     var idx = ws.indexOf(w);
     if (idx < 0) return;
     ws.splice(idx, 1);
-    dashLayout = dwResolve(ws, null).map(function (r) {
+    var bd = B;
+    bd.layout = dwResolve(ws, null).map(function (r) {
       var orig = ws.filter(function (x) { return x.id === r.id; })[0];
       orig.x = r.x; orig.y = r.y; return orig;
     });
-    saveDashLayout(); renderDashGrid();
+    saveDashLayout(bd); renderActiveBoard();
     toast("„" + dwTitle(w) + "“ entfernt", "Rückgängig", function () {
-      var cur = getDashWidgets();
+      var cur = getDashWidgets(bd);
       cur.push(w);
-      dashLayout = cur;
-      saveDashLayout(); renderDashGrid();
+      bd.layout = cur;
+      saveDashLayout(bd);
+      if (bd === BOARDS.detail) { if (detailActive) renderDetailDashboard(); } else renderDashGrid();
     });
   }
   function addDashWidget(cfg) {
@@ -5390,35 +5379,38 @@ window.SFM = (function () {
     cfg.w = Math.max(min[0], defaults[0]); cfg.h = Math.max(min[1], defaults[1]);
     cfg.x = 0; cfg.y = bottom;
     var resolved = dwResolve(ws.concat([cfg]), cfg.id);
-    var byId = {};
-    resolved.forEach(function (r) { byId[r.id] = r; });
-    ws.concat([cfg]).forEach(function (x) { var r = byId[x.id]; x.x = r.x; x.y = r.y; });
+    var posById = {};
+    resolved.forEach(function (r) { posById[r.id] = r; });
+    ws.concat([cfg]).forEach(function (x) { var r = posById[x.id]; x.x = r.x; x.y = r.y; });
     ws.push(cfg);
-    dashLayout = ws;
-    saveDashLayout(); renderDashGrid();
-    var box = $("#dashGrid").querySelector('.dw[data-id="' + cfg.id + '"]');
+    B.layout = ws;
+    saveDashLayout(); renderActiveBoard();
+    var box = byId(B.grid).querySelector('.dw[data-id="' + cfg.id + '"]');
     if (box) { box.classList.add("dw-flash"); box.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
   }
   function setDashEdit(on) {
-    dashEdit = on;
-    renderDashGrid();
+    B.edit = on;
+    renderActiveBoard();
   }
-  $("#dashEditBtn").addEventListener("click", function () { setDashEdit(true); });
-  $("#dashEditDone").addEventListener("click", function () { setDashEdit(false); });
-  $("#dashAddBtn").addEventListener("click", function () { openWidgetDialog(null); });
-  $("#dashLayoutReset").addEventListener("click", function () {
-    appConfirm("Standard-Layout wiederherstellen",
-      "Ihre eigene Anordnung (Karten, Diagramme, Größen) wird verworfen und das ursprüngliche Dashboard-Layout geladen.",
-      "Wiederherstellen", true,
-      function () {
-        dashLayout = defaultDashWidgets(); dashLayoutUser = dashUserKey();
-        saveDashLayout(); renderDashGrid();
+  // Bedienelemente beider Raster: Präfix dash… bzw. detail…
+  [["dash", "dash"], ["detail", "detail"]].forEach(function (x) {
+    var key = x[0], pre = x[1];
+    byId(pre + "EditBtn").addEventListener("click", function () { useBoard(key); setDashEdit(true); });
+    byId(pre + "EditDone").addEventListener("click", function () { useBoard(key); setDashEdit(false); });
+    byId(pre + "AddBtn").addEventListener("click", function () { useBoard(key); openWidgetDialog(null); });
+    byId(pre + "LayoutReset").addEventListener("click", function () {
+      useBoard(key);
+      var bd = B;
+      appConfirm("Standard-Layout wiederherstellen", bd.resetText, "Wiederherstellen", true, function () {
+        bd.layout = bd.defaults(); bd.user = dashUserKey();
+        saveDashLayout(bd); renderActiveBoard();
         toast("Standard-Layout wiederhergestellt");
       });
+    });
   });
   // Nach Fenster-/Ansichtswechsel Diagramme neu einpassen (falls kein ResizeObserver vorhanden)
   window.addEventListener("resize", function () {
-    document.querySelectorAll("#dashGrid .dw-chart-body").forEach(dwRenderChart);
+    document.querySelectorAll(".dash-grid .dw-chart-body").forEach(dwRenderChart);
   });
 
   /* -- Dialog: Widget hinzufügen / Diagramm bearbeiten -- */
@@ -5564,7 +5556,7 @@ window.SFM = (function () {
       wdEditing.series = keys; wdEditing.mode = multi ? "multi" : "single";
       if (title) wdEditing.title = title; else delete wdEditing.title;
       wdDlg.close();
-      saveDashLayout(); renderDashGrid();
+      saveDashLayout(); renderActiveBoard();
       return;
     }
     var chart = { type: "chart", mode: multi ? "multi" : "single", series: keys };
@@ -5719,9 +5711,26 @@ window.SFM = (function () {
   });
 
   /* ---------- Maßnahmen: Filter & Sortierung ---------- */
-  var filterCat = "", filterOwner = "", sortMode = "new", onlyOverdue = false;
+  var filterCat = "", filterOwner = "", sortMode = "new", onlyOverdue = false, filterText = "";
+  // Schlagwortsuche: alle Wörter müssen vorkommen (Titel, Beschreibung, 5 Why, Verantwortlich,
+  // Kategorie, Art, Datum) — Groß-/Kleinschreibung egal
+  function searchTerms(q) { return String(q || "").toLowerCase().split(/\s+/).filter(Boolean); }
+  function matchesTerms(hay, terms) {
+    hay = hay.toLowerCase();
+    return terms.every(function (t) { return hay.indexOf(t) !== -1; });
+  }
+  function devHaystack(d) {
+    var c = catOf(d.cat) || {};
+    return [d.title, d.desc, d.owner, (d.whys || []).join(" "), c.name, letterOf(d.cat), subLabel(d.cat, devSub(d)),
+      phaseName(d.phase), d.due ? fmtDate(d.due) : "", d.created ? fmtDate(d.created) : ""].join(" ");
+  }
+  function devMatchesSearch(d) {
+    var terms = searchTerms(filterText);
+    return !terms.length || matchesTerms(devHaystack(d), terms);
+  }
   function applyFilters(items) {
     var out = items.filter(function (d) {
+      if (!devMatchesSearch(d)) return false;
       if (filterCat && d.cat !== filterCat) return false;
       if (filterOwner && (d.owner || "") !== filterOwner) return false;
       if (onlyOverdue && !isOverdue(d)) return false;
@@ -5751,6 +5760,7 @@ window.SFM = (function () {
     sel.value = filterOwner;
   }
   $("#filterCat").addEventListener("change", function () { filterCat = this.value; renderKanban(); });
+  $("#filterText").addEventListener("input", function () { filterText = this.value; renderKanban(); });
   $("#filterOwner").addEventListener("change", function () { filterOwner = this.value; renderKanban(); });
   $("#sortMode").addEventListener("change", function () { sortMode = this.value; renderKanban(); });
   $("#filterOverdue").addEventListener("click", function () {
@@ -5856,12 +5866,28 @@ window.SFM = (function () {
     // Abgeschlossen
     var doneList = $("#doneList");
     doneList.innerHTML = "";
-    var done = state.deviations.filter(function (d) { return d.phase === "done"; });
-    if (done.length === 0) doneList.appendChild(el("div", "empty-hint", "Noch keine abgeschlossenen Maßnahmen."));
+    var allDone = state.deviations.filter(function (d) { return d.phase === "done"; });
+    // Abgeschlossene folgen Suche, Kategorie und Verantwortlichem (nicht „Nur überfällige“)
+    var done = allDone.filter(function (d) {
+      return devMatchesSearch(d) && (!filterCat || d.cat === filterCat) && (!filterOwner || (d.owner || "") === filterOwner);
+    });
+    var filtering = !!(searchTerms(filterText).length || filterCat || filterOwner);
+    $("#doneTitle").textContent = "Abgeschlossen" + (filtering ? " — " + done.length + " von " + allDone.length : " (" + allDone.length + ")");
+    if (allDone.length === 0) doneList.appendChild(el("div", "empty-hint", "Noch keine abgeschlossenen Maßnahmen."));
+    else if (done.length === 0) doneList.appendChild(el("div", "empty-hint", "Keine abgeschlossene Maßnahme passt zur Suche."));
     done.forEach(function (dev) {
       var it = el("div", "done-item");
       it.appendChild(el("span", "check", "✓"));
-      it.appendChild(el("span", "", dev.title));
+      var chip = el("span", "cat-chip", letterOf(dev.cat));
+      chip.style.background = catColor(dev.cat);
+      chip.title = catOf(dev.cat).name;
+      it.appendChild(chip);
+      var tt = el("button", "done-title", dev.title);
+      tt.type = "button";
+      tt.title = "Maßnahme öffnen";
+      tt.addEventListener("click", function () { openDialog(dev); });
+      it.appendChild(tt);
+      it.appendChild(el("span", "done-meta", [dev.owner, (dev.created || dev.due) ? fmtDate(dev.created || dev.due) : ""].filter(Boolean).join(" · ")));
       if (can("edit")) {
         var re = el("button", "btn ghost sm", "Wieder öffnen");
         re.style.marginLeft = "auto";
@@ -5997,6 +6023,7 @@ window.SFM = (function () {
   var trkCatOff = {};   // Kategorie → true = ausgeblendet
   var trkSubOff = {};   // "Kat:Art" → true = ausgeblendet
   var trkSrc = "";      // "" = alle Quellen
+  var trkQuery = "";    // Schlagwortsuche
   var TRK_LIST_MAX = 300;
   function trkQty(cat, key, rec) {
     if (!rec) return null;
@@ -6044,8 +6071,16 @@ window.SFM = (function () {
     }
     return out;
   }
+  function trkMatches(e) {
+    var terms = searchTerms(trkQuery);
+    if (!terms.length) return true;
+    var c = catOf(e.cat) || {};
+    var hay = [e.title, e.detail, subLabel(e.cat, e.sub), c.name, letterOf(e.cat), TRK_SRC_LABEL[e.src], fmtDate(e.iso),
+      e.dev ? [e.dev.title, e.dev.desc, e.dev.owner, (e.dev.whys || []).join(" ")].join(" ") : ""].join(" ");
+    return matchesTerms(hay, terms);
+  }
   function trkVisible(e) {
-    return !trkCatOff[e.cat] && !trkSubOff[e.cat + ":" + e.sub] && (!trkSrc || e.src === trkSrc);
+    return !trkCatOff[e.cat] && !trkSubOff[e.cat + ":" + e.sub] && (!trkSrc || e.src === trkSrc) && trkMatches(e);
   }
   function trkFmtQty(q) {
     if (!q || q.v == null) return "–";
@@ -6088,7 +6123,7 @@ window.SFM = (function () {
     });
     return any ? Math.round(v * 100) / 100 : null;
   }
-  function trkSrcOk(e) { return !trkSrc || e.src === trkSrc; }
+  function trkSrcOk(e) { return (!trkSrc || e.src === trkSrc) && trkMatches(e); }
 
   function renderTracking() {
     if (!$("#view-tracking").classList.contains("active")) return;
@@ -6312,7 +6347,8 @@ window.SFM = (function () {
   document.querySelectorAll("#trkSrcSeg button").forEach(function (b) {
     b.addEventListener("click", function () { trkSrc = b.dataset.src; renderTracking(); });
   });
-  $("#trkAllOn").addEventListener("click", function () { trkCatOff = {}; trkSubOff = {}; trkSrc = ""; renderTracking(); });
+  $("#trkAllOn").addEventListener("click", function () { trkCatOff = {}; trkSubOff = {}; trkSrc = ""; trkQuery = ""; $("#trkSearch").value = ""; renderTracking(); });
+  $("#trkSearch").addEventListener("input", function () { trkQuery = this.value; renderTracking(); });
   $("#trkCsvBtn").addEventListener("click", exportTrackingCsv);
   $("#trkNewDev").addEventListener("click", function () { openDialog(null); });
 
@@ -6484,6 +6520,7 @@ window.SFM = (function () {
   }
   function setSafetyState(iso, v) {
     if (!state.safetyLog) state.safetyLog = {};
+    if ((state.safetyLog[iso] || null) !== (v || null)) reopenAgenda(iso, ["S"]);
     if (!Array.isArray(settings.safety.accidents)) settings.safety.accidents = [];
     // frühere Unfall-Protokolleinträge dieses Tages entfernen, dann gemäß Auswahl neu setzen
     settings.safety.accidents = settings.safety.accidents.filter(function (a) { return a.date !== iso; });
@@ -6539,7 +6576,7 @@ window.SFM = (function () {
     } else if (catKey === "D") {
       var fa = numOrNull(rec.auftraegeFaellig), pu = numOrNull(rec.auftraegePuenktlich);
       rows.push(["Aufträge fällig", n2(rec.auftraegeFaellig, "Stk.", 0)], ["Aufträge pünktlich geliefert", n2(rec.auftraegePuenktlich, "Stk.", 0), ordersDeviate(fa, pu)],
-        ["Termintreue", m.otd == null ? "–" : fmtNum(m.otd, 1) + " %"]);
+        ["Termintreue", m.otd == null ? "–" : fmtNum(m.otd, 1) + " %"], ["Fakturierte Menge", n2(rec.faktoriert, "t")]);
     } else if (catKey === "P") {
       [["G", "Geplante Produktionsausfälle"], ["U", "Ungeplante Produktionsausfälle"]].forEach(function (x) {
         var t = outageTotal(rec, x[0]);
@@ -6729,7 +6766,8 @@ window.SFM = (function () {
       { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", unit: "t", step: "0.01" }] }];
     if (cat === "D") return [{ fields: [
       { key: "auftraegeFaellig", label: "Aufträge fällig", unit: "Stk.", step: "1" },
-      { key: "auftraegePuenktlich", label: "Aufträge pünktlich geliefert", unit: "Stk.", step: "1", flag: function (r) { return ordersDeviate(n(r, "auftraegeFaellig"), n(r, "auftraegePuenktlich")); } }] }];
+      { key: "auftraegePuenktlich", label: "Aufträge pünktlich geliefert", unit: "Stk.", step: "1", flag: function (r) { return ordersDeviate(n(r, "auftraegeFaellig"), n(r, "auftraegePuenktlich")); } },
+      { key: "faktoriert", label: "Fakturierte Menge", unit: "t", step: "0.01" }] }];
     if (cat === "P") return [["U", "Ungeplante Produktionsausfälle"], ["G", "Geplante Produktionsausfälle"]].map(function (x) {
       return { title: x[1], g: x[0], fields: OUTAGE_KINDS.map(function (o) {
         var key = outageKey(x[0], o.k);
@@ -6799,6 +6837,11 @@ window.SFM = (function () {
         inp.type = "number"; inp.id = id; inp.min = "0"; inp.step = f.step; inp.inputMode = f.step === "1" ? "numeric" : "decimal";
         if (f.max) inp.max = String(f.max);
         var cur = agNum(rec, f.key);
+        if (cur == null && f.key === "inventoryGrenzwert" && rec && can("edit")) {
+          setDailyValue(iso, f.key, String(settings.inventoryLimit));
+          cur = settings.inventoryLimit;
+          wrap.title = "Vorgabe aus den Stammdaten eingetragen — bei Bedarf anpassen";
+        }
         inp.value = cur == null ? "" : String(cur);
         inp.addEventListener("input", function () {
           // Ungültiges (negativ, über 24 h …) wird nicht gespeichert, sondern rot markiert
@@ -6956,7 +6999,7 @@ window.SFM = (function () {
         ch.appendChild(bt);
       });
       left.appendChild(ch);
-      if (!cur) left.appendChild(el("p", "ag-empty", "Noch nichts erfasst. Beinahe-Unfall, Meldepflichtig und Nicht meldepflichtig führen zwingend zu einer Abweichung."));
+      if (!cur) left.appendChild(el("p", "ag-empty", "Noch nichts erfasst. Beinahe-Unfall, Nicht meldepflichtiger Unfall und Meldepflichtiger Unfall führen zwingend zu einer Abweichung."));
     } else if (editable) {
       buildAgendaInputs(left, iso);
     } else if (!rec) {
@@ -7112,10 +7155,44 @@ window.SFM = (function () {
     if (rec.grund) return false;
     return !Object.keys(rec).some(function (k) { return k !== "grund" && numOrNull(rec[k]) != null; });
   }
+  // Welcher Agenda-Punkt hängt an welchem Tageswert? Ändert sich ein Wert, muss der Punkt
+  // erneut besprochen werden — auch an einem bereits vollständigen (grünen) Tag.
+  var FIELD_CATS = {
+    geplant: "Q", produziert: "Q", nacharbeit: "Q", ausschuss: "Q",
+    inventory: "C", inventoryGrenzwert: "C",
+    auftraegeFaellig: "D", auftraegePuenktlich: "D", faktoriert: "D"
+  };
+  function fieldCat(key) {
+    if (FIELD_CATS[key]) return FIELD_CATS[key];
+    return /^(ausfall|personalausfall)/.test(key) ? "P" : null;
+  }
+  function reopenAgenda(iso, cats) {
+    var h = state.huddleLog && state.huddleLog[iso];
+    if (!h || !h.checked) return [];
+    var hit = cats.filter(function (c, i) { return c && cats.indexOf(c) === i && h.checked.indexOf(c) !== -1; });
+    if (!hit.length) return [];
+    h.checked = h.checked.filter(function (c) { return hit.indexOf(c) === -1; });
+    toast("Werte geändert — " + hit.map(function (c) { return letterOf(c) + " " + catOf(c).name; }).join(", ") +
+      (hit.length === 1 ? " muss" : " müssen") + " erneut besprochen werden");
+    return hit;
+  }
+  // Kategorien, deren Tageswerte sich zwischen zwei Ständen unterscheiden
+  function changedCats(oldRec, newRec) {
+    var cats = [];
+    var keys = Object.keys(oldRec || {}).concat(Object.keys(newRec || {}));
+    keys.forEach(function (k) {
+      var c = fieldCat(k);
+      if (!c || cats.indexOf(c) !== -1) return;
+      var a = oldRec ? numOrNull(oldRec[k]) : null, b = newRec ? numOrNull(newRec[k]) : null;
+      if (a !== b) cats.push(c);
+    });
+    return cats;
+  }
   function setDailyValue(iso, key, raw) {
     if (!can("edit")) return;
     var rec = state.dailyData[iso];
     if (!rec) rec = state.dailyData[iso] = emptyDailyRecord();
+    if (numOrNull(rec[key]) !== numOrNull(raw)) reopenAgenda(iso, [fieldCat(key)]);
     rec[key] = numOrNull(raw);
     ["U", "G"].forEach(function (g) {
       if (key.indexOf("ausfall" + g + "_") !== 0) return;
@@ -7230,9 +7307,13 @@ window.SFM = (function () {
     $("#dailyDlgSub").textContent = editable
       ? (dailyRecord(iso) ? "Bereits erfasste Werte für diesen Tag — bei Bedarf anpassen." : "Noch keine Werte für diesen Tag erfasst. Bitte eintragen.")
       : "Nur Lesen — Ihre Berechtigung erlaubt keine Bearbeitung.";
+    var invPrefill = editable && numOrNull(rec.inventoryGrenzwert) == null;
+    $("#dfInvHint").hidden = !invPrefill;
     Object.keys(DAILY_INPUT_IDS).forEach(function (key) {
       var inp = $("#" + DAILY_INPUT_IDS[key]);
       inp.value = rec[key] != null ? rec[key] : "";
+      // Inventory-Grenzwert bleibt lange gleich: Vorgabe aus den Stammdaten eintragen
+      if (key === "inventoryGrenzwert" && invPrefill) inp.value = settings.inventoryLimit;
       inp.disabled = !editable;
     });
     dailyLegacy = {
@@ -7277,6 +7358,7 @@ window.SFM = (function () {
     });
     rec.personalausfall = outageHasSubs(rec, "U") ? rec.ausfallU_pers : dailyLegacy.personalausfall;
     rec.grund = $("#dfGrund").value.trim() || null;
+    reopenAgenda(editingDailyIso, changedCats(state.dailyData[editingDailyIso], rec));
     state.dailyData[editingDailyIso] = rec;
     syncAgendaStatusAll(editingDailyIso);
     var goOn = dailyGoOn; dailyGoOn = false;
@@ -7297,6 +7379,7 @@ window.SFM = (function () {
   $("#dailyDlgClose").addEventListener("click", function () { dailyDlg.close(); });
   $("#dailyDlgClear").addEventListener("click", function () {
     if (!can("edit") || !editingDailyIso) return;
+    reopenAgenda(editingDailyIso, changedCats(state.dailyData[editingDailyIso], {}));
     delete state.dailyData[editingDailyIso];
     syncAgendaStatusAll(editingDailyIso);
     save(); dailyDlg.close(); renderAll();
@@ -7570,12 +7653,15 @@ window.SFM = (function () {
   var detailActive = false;
   function enterDetail() {
     detailActive = true;
+    useBoard("detail");
     $("#detailScreen").hidden = false;
     syncPeriodUis();
     renderDetailDashboard();
   }
   function exitDetail() {
     detailActive = false;
+    BOARDS.detail.edit = false;
+    useBoard("dash");
     $("#detailScreen").hidden = true;
   }
   $("#detailDashBtn").addEventListener("click", enterDetail);
@@ -7659,7 +7745,7 @@ window.SFM = (function () {
       "Datum", "Ungeplante Produktionsausfälle (h)", "Geplante Produktionsausfälle (h)", "Personen Ausfallzeit Ungeplant (h)",
       "Ungeplant: Personen (h)", "Ungeplant: Technisch (h)", "Ungeplant: Organisatorisch (h)", "Ungeplant: Rüst-/Handhabungszeiten (h)",
       "Geplant: Personen (h)", "Geplant: Technisch (h)", "Geplant: Organisatorisch (h)", "Geplant: Rüst-/Handhabungszeiten (h)",
-      "Geplante Menge (t)", "Produzierte Menge (t)", "Mit Nacharbeit verwendbar (t)", "Ausschuss (t)", "Faktorierte Menge (t)",
+      "Geplante Menge (t)", "Produzierte Menge (t)", "Mit Nacharbeit verwendbar (t)", "Ausschuss (t)", "Fakturierte Menge (t)",
       "Inventory (t)", "Inventory-Grenzwert (t)",
       "Aufträge fällig", "Aufträge pünktlich geliefert",
       "Verfügbarkeit (%)", "Leistung (%)", "Qualität (%)", "OEE (%)", "First Pass Yield (%)", "Termintreue (%)",
@@ -8213,6 +8299,7 @@ window.SFM = (function () {
     $("#setOee").value = settings.targets.oee;
     $("#setFpy").value = settings.targets.fpy;
     $("#setOtd").value = settings.targets.otd;
+    $("#setInvLimit").value = settings.inventoryLimit;
     // Arbeitssicherheit — Zukunft im Datumsfeld sperren
     var maxIso = isoOf(new Date(Y, M, TODAY_D));
     $("#setAccident").max = maxIso; $("#setSafeStart").max = maxIso;
@@ -8260,6 +8347,8 @@ window.SFM = (function () {
     settings.targets.oee = clampNum($("#setOee").value, 1, 100, settings.targets.oee);
     settings.targets.fpy = clampNum($("#setFpy").value, 1, 100, settings.targets.fpy);
     settings.targets.otd = clampNum($("#setOtd").value, 1, 100, settings.targets.otd);
+    var invIn = Number($("#setInvLimit").value);
+    if (isFinite(invIn) && invIn > 0 && invIn <= 100000) settings.inventoryLimit = Math.round(invIn * 100) / 100;
     var accIn = $("#setAccident").value, startIn = $("#setSafeStart").value;
     var dropped = (accIn && !pastDateStr(accIn)) || (startIn && !pastDateStr(startIn));
     settings.safety.lastAccident = pastDateStr(accIn);
@@ -8312,7 +8401,7 @@ window.SFM = (function () {
       ["Tag ansehen", "Ein Klick auf eine Tageszelle zeigt Status, Abweichung mit Maßnahme und die Tagesnotiz. Das Board selbst ist nur lesend — den Status setzen Sie im Huddle."],
       ["Status entsteht im Huddle", "Eine Zelle wird rot, sobald zu dem Tag und der Kategorie eine Abweichung vorliegt — erkannt aus den Tageswerten oder von Hand erfasst. Grün wird sie, wenn der Punkt ohne Abweichung besprochen wurde."],
       ["Monate blättern", "Mit ◀ ▶ oder den Pfeiltasten durch die Monate — vergangene Monate sind als Archiv markiert."],
-      ["Unfall erfassen", "Im Huddle beim Agenda-Punkt Sicherheit wählen: Kein Unfall, Beinahe-Unfall, Meldepflichtig oder Nicht meldepflichtig. Nur „Meldepflichtig“ startet den Zähler „Tage unfallfrei“ im Dashboard neu; die anderen Auswahlen sind trotzdem Abweichungen und brauchen eine Begründung."]] },
+      ["Unfall erfassen", "Im Huddle beim Agenda-Punkt Sicherheit wählen: Kein Unfall, Beinahe-Unfall, Nicht meldepflichtiger Unfall oder Meldepflichtiger Unfall. Nur „Meldepflichtiger Unfall“ startet den Zähler „Tage unfallfrei“ im Dashboard neu; die anderen Auswahlen sind trotzdem Abweichungen und brauchen eine Begründung."]] },
     { title: "Abweichungen & Maßnahmen", intro: "Jede Abweichung durchläuft den PDCA-Zyklus (Plan – Do – Check – Act), bis die Ursache beseitigt ist.", tip: "Oben lässt sich nach Kategorie, Verantwortlichem und Überfälligkeit filtern; der CSV-Export öffnet direkt in Excel.", steps: [
       ["Neu anlegen", "Über „+ Neue Abweichung“ oder Taste N — Titel, Kategorie, Verantwortliche Person und Zieltermin festlegen."],
       ["Durch PDCA bewegen", "Karten per Pfeil-Buttons oder Drag & Drop verschieben; ein Klick öffnet die Details."],
@@ -8353,7 +8442,7 @@ window.SFM = (function () {
       ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],
       ["Konten verwalten", "Administratoren legen Konten an, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen."],
       ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
-    { title: "Dashboard anpassen", intro: "Das Dashboard besteht aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet ihre eigene Ansicht ein.", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
+    { title: "Dashboard anpassen", intro: "Das Dashboard und die Detaillierte Auswertung bestehen aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet beide Ansichten für sich ein (in der Detaillierten Auswertung über „Auswertung anpassen“).", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe)."],
       ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Kennzahl-Kacheln und Diagramme. Ein Diagramm zeigt einen Wert oder mehrere Werte mit gleicher Einheit."],
       ["Entfernen", "Das ✕ im Kopfbalken entfernt ein Widget; „Rückgängig“ im Hinweis stellt es wieder her."]] },
@@ -8367,13 +8456,13 @@ window.SFM = (function () {
       ["I – Inventory", "Inventory größer als der Inventory-Grenzwert."],
       ["D – Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
       ["P – Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) mit mehr als 0 Stunden ist eine eigene Abweichung. Geplante Ausfallarten über 0 Stunden sind keine Abweichung, brauchen aber eine Begründung, bevor der Punkt als besprochen gilt."],
-      ["S – Sicherheit", "Beinahe-Unfall, Meldepflichtig und Nicht meldepflichtig. „Kein Unfall“ ist keine Abweichung."]] },
+      ["S – Sicherheit", "Beinahe-Unfall, Nicht meldepflichtiger Unfall und Meldepflichtiger Unfall. „Kein Unfall“ ist keine Abweichung."]] },
     { title: "Kennzahlen & Formeln", intro: "Alle Kennzahlen entstehen aus den Tageswerten der Huddle-Erfassung.", tip: "Die Schichtlänge (Standard 24 h) und die Zielwerte stehen unter Einstellungen → Stammdaten.", steps: [
       ["Verfügbarkeit", "(Schicht − geplante Ausfälle − ungeplante Ausfälle) ÷ (Schicht − geplante Ausfälle). Alle vier Ausfallarten zählen mit."],
       ["Technische Anlagenverfügbarkeit", "(Schicht − geplant technisch − ungeplant technisch) ÷ (Schicht − geplant technisch). Personen-, organisatorische und Rüstzeiten bleiben außen vor."],
       ["Leistung, Qualität, OEE", "Leistung = produziert ÷ geplant, Qualität = (produziert − Ausschuss) ÷ produziert, OEE = Verfügbarkeit × Leistung × Qualität. Termintreue = pünktlich ÷ fällig."],
       ["First Pass Yield, Nacharbeit, Ausschuss", "Die produzierte Menge teilt sich in drei Teile: Gutmenge im ersten Durchlauf (First Pass Yield), mit Nacharbeit verwendbar (gut, kein Ausschuss, aber kein First Pass Yield) und Ausschuss (geht zurück als Absandung / Kreislaufmaterial). First Pass Yield = (produziert − Nacharbeit − Ausschuss) ÷ produziert; die Qualität der OEE zählt Nacharbeit als verwendbar."],
-      ["Zeitraum im Dashboard", "Bei Monat, Jahr und Zeitraum werden Ausfallzeiten und Mengen (geplant, produziert, Ausschuss, faktoriert) summiert. Inventory zeigt den jüngsten Stand. Leistung, Qualität und Termintreue werden aus den Summen gebildet, Verfügbarkeit und OEE als Mittel der Tageswerte."]] },
+      ["Zeitraum im Dashboard", "Bei Monat, Jahr und Zeitraum werden Ausfallzeiten und Mengen (geplant, produziert, Ausschuss, fakturiert) summiert. Inventory zeigt den jüngsten Stand. Leistung, Qualität und Termintreue werden aus den Summen gebildet, Verfügbarkeit und OEE als Mittel der Tageswerte."]] },
     { title: "Methodik (SQIDP & PDCA)", intro: "Shopfloor Management ist eine Lean-Führungsmethode: Abweichungen am Ort der Wertschöpfung erkennen, strukturiert lösen, Prozesse kontinuierlich verbessern.", tip: "Bewährt: maximal fünf bis sieben Kennzahlen, Commitment der Führung und eine offene Fehlerkultur. Fachliche Grundlage: symestic.com — „Shopfloor Management“.", steps: [
       ["Führung am Gemba", "Regelmäßige Präsenz in der Fertigung — digitale Daten ersetzen den Gemba Walk nicht, sie bereiten ihn vor."],
       ["Visuelle Boards", "Sicherheit, Qualität, Inventory, Lieferung und Produktivität auf einen Blick — grün oder rot, ohne Interpretationsspielraum."],
@@ -8848,7 +8937,7 @@ window.SFM = (function () {
     $("#logoutBtn").hidden = false;
     lastActivity = Date.now();
     $("#loginScreen").hidden = true;
-    dashLayout = null; dashEdit = false;
+    resetBoards();
     applyPermissions();
     renderAll();
     pullDashLayoutRemote();
@@ -8875,7 +8964,7 @@ window.SFM = (function () {
   }
   function logoutUser() {
     currentUser = null;
-    dashLayout = null; dashEdit = false;
+    resetBoards();
     if (SFM.isServer()) SFM.logout();
     try { LS.removeItem(SESSION_KEY); } catch (e) {}
     $("#userChip").hidden = true;
