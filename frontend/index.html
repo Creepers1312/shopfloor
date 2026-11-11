@@ -869,16 +869,21 @@ table.board th.is-today .wd { color: var(--accent); }
 /* ============ Tab-Zähler ============ */
 .tab { display: inline-flex; align-items: center; }
 
-/* Tabs standardmäßig nur als Icon — Text fährt bei Hover/Fokus nach
-   rechts aus; der aktive Tab behält sein Etikett zur Orientierung */
-.tab-label {
-  max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap;
-  margin-left: 0;
-  transition: max-width .25s ease, opacity .18s ease, margin-left .25s ease;
+/* Menü mit fester Breite: nur Symbole, der Name erscheint als schwebender Hinweis
+   (#tabTip) — nichts klappt auf, nichts verschiebt sich. Passen alle Namen in die
+   Leiste (breiter Bildschirm), stehen sie dauerhaft neben den Symbolen (.labeled). */
+.tab-label { display: none; white-space: nowrap; margin-left: 8px; }
+.tabs.labeled .tab-label { display: inline; }
+.tabs.labeled .tab-badge { position: static; margin-left: 6px; }
+.tab-tip {
+  position: fixed; z-index: 60; pointer-events: none;
+  background: var(--ink); color: var(--surface);
+  font-size: 12.5px; font-weight: 500; line-height: 1; white-space: nowrap;
+  padding: 6px 9px; border-radius: 6px;
+  opacity: 0; transform: translate(-50%, -2px); transition: opacity .12s ease, transform .12s ease;
 }
-.tab:hover .tab-label, .tab:focus-visible .tab-label,
-.tab[aria-selected="true"] .tab-label { max-width: 200px; opacity: 1; margin-left: 8px; }
-@media (prefers-reduced-motion: reduce) { .tab-label { transition: none; } }
+.tab-tip.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { .tab-tip { transition: none; } }
 
 .tab-badge {
   position: absolute; top: 7px; right: 3px;
@@ -9006,6 +9011,7 @@ window.SFM = (function () {
     $("#userChip").title = canPw ? "Eigenes Passwort ändern" : "";
     $("#logoutBtn").hidden = false;
     lastActivity = Date.now();
+    if (typeof fitTabs === "function") fitTabs();
     $("#loginScreen").hidden = true;
     resetBoards();
     applyPermissions();
@@ -9330,10 +9336,41 @@ window.SFM = (function () {
   /* ---------- Init ---------- */
   var WEEKDAYS = ["Sonntag","Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag"];
   $("#todayChip").textContent = WEEKDAYS[today.getDay()] + ", " + TODAY_D + ". " + MONTH_NAMES[M] + " " + Y;
+  // Name des Reiters als schwebender Hinweis unter dem Symbol (verschiebt nichts)
+  var tabTip = el("div", "tab-tip");
+  tabTip.setAttribute("aria-hidden", "true");
+  document.body.appendChild(tabTip);
+  function showTabTip(t) {
+    var lbl = t.querySelector(".tab-label");
+    if (!lbl || getComputedStyle(lbl).display !== "none") return; // Namen stehen schon da
+    var r = t.getBoundingClientRect();
+    tabTip.textContent = lbl.textContent;
+    tabTip.style.left = (r.left + r.width / 2) + "px";
+    tabTip.style.top = (r.bottom + 6) + "px";
+    tabTip.classList.add("show");
+  }
+  function hideTabTip() { tabTip.classList.remove("show"); }
   document.querySelectorAll(".tab").forEach(function (t, i) {
     var lbl = t.querySelector(".tab-label");
-    t.title = (lbl ? lbl.textContent + " — " : "") + "Tastaturkürzel: " + (i + 1);
+    t.dataset.shortcut = String(i + 1);
+    t.addEventListener("mouseenter", function () { showTabTip(t); });
+    t.addEventListener("mouseleave", hideTabTip);
+    t.addEventListener("focus", function () { if (t.matches(":focus-visible")) showTabTip(t); });
+    t.addEventListener("blur", hideTabTip);
+    t.addEventListener("click", hideTabTip);
+    if (lbl) t.setAttribute("aria-label", lbl.textContent + " (Tastaturkürzel " + (i + 1) + ")");
   });
+  window.addEventListener("scroll", hideTabTip, { passive: true });
+  // Namen nur dauerhaft zeigen, wenn alle ohne seitliches Scrollen hineinpassen
+  function fitTabs() {
+    var tabs = $(".tabs");
+    if (!tabs) return;
+    tabs.classList.add("labeled");
+    if (tabs.scrollWidth > tabs.clientWidth + 1) tabs.classList.remove("labeled");
+  }
+  var fitTimer = null;
+  window.addEventListener("resize", function () { clearTimeout(fitTimer); fitTimer = setTimeout(fitTabs, 120); });
+  fitTabs();
 
   function renderAll() {
     renderDashboardStats(); renderDashGrid(); renderBoard(); renderKanban(); renderAgenda();
