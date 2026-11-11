@@ -167,6 +167,13 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
 
+### Testdaten
+
+Am Server startet das Board leer — Testdaten gibt es nur, wenn `frontend/index.html` ohne Server geöffnet wird.
+Sind trotzdem Daten zu entfernen (z. B. nach einem Probebetrieb): *Einstellungen → Datenbank & Sicherung →
+Alle Board-Daten löschen*. Das löscht Board, Kennzahlen, Maßnahmen und Huddle-Protokoll nach einer automatischen
+Sicherung; Konten und Einstellungen bleiben.
+
 ### Ressourcen und Logs
 
 In `docker-compose.yml` sind Obergrenzen je Container hinterlegt: `db` 1 GB / 2 CPUs, `api` 512 MB / 1 CPU, `web` 128 MB / 0,5 CPU.

@@ -1607,6 +1607,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .huddle-cal-day.full { background: color-mix(in srgb, var(--good) 30%, var(--surface)); color: var(--ink); }
 .huddle-cal-day.partial { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); color: var(--ink); }
 
+/* ============ Kopfzeile: anklickbare Felder ============ */
+.today-chip.clickable, .sync-chip.clickable { cursor: pointer; }
+.today-chip.clickable:hover, .sync-chip.clickable:hover { border-color: var(--accent); color: var(--ink); }
+.today-chip.clickable:focus-visible, .sync-chip.clickable:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 /* ============ Suche ============ */
 .search-input { min-width: 220px; flex: 1 1 220px; max-width: 360px; }
 #trkSearch { max-width: 420px; }
@@ -1730,7 +1735,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </div>
   <div class="dash-grid" id="dashGrid"></div>
   <p class="mini-hint" id="miniHint"></p>
-  <div class="demo-note">
+  <div class="demo-note" id="demoNote">
     <span class="demo-badge">Demo-Daten</span>
     <span>SQIDP-Board und Maßnahmen pflegt Ihr Team direkt hier. OEE, First Pass Yield und Termintreue werden aus den im Huddle erfassten Tageskennzahlen berechnet.</span>
   </div>
@@ -2157,6 +2162,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <div class="card set-card">
           <div class="set-card-title">Status</div>
           <div class="db-status" id="dbStatus"></div>
+        </div>
+
+        <div class="card set-card" id="dbWipeCard" hidden>
+          <div class="set-card-title">Board-Daten</div>
+          <div class="set-row">
+            <div><div class="set-name">Alle Board-Daten löschen</div><div class="set-desc">Entfernt SQIDP-Board, Tageskennzahlen, Abweichungen und Maßnahmen, Huddle-Protokoll und Begründungen — z. B. Testdaten vor dem Echtbetrieb. Konten, Einstellungen und Sicherungen bleiben. Vorher wird automatisch eine Sicherung angelegt.</div></div>
+            <div class="set-ctl"><button class="btn danger-solid" id="dbWipeBtn" type="button">Alle Board-Daten löschen</button></div>
+          </div>
         </div>
 
         <div class="card set-card" id="dbAutoCard">
@@ -3911,10 +3924,18 @@ window.SFM = (function () {
     var hasDev = Array.isArray(s.deviations) && s.deviations.length > 0;
     return !hasBoard && !hasDaily && !hasDev;
   }
+  // Leeres Board — Startzustand am Server (Testdaten gibt es nur im lokalen Testmodus)
+  function emptyState() {
+    return {
+      boards: {}, deviations: [], dailyData: {}, huddleLog: {},
+      huddle: { date: "", checked: [] }, seq: 1, safetyLog: {}, reasons: {}
+    };
+  }
+  function freshState() { return SFM.isServer() ? emptyState() : seedState(); }
   function loadState() {
     try {
       var raw = LS.getItem(STORE_KEY);
-      if (!raw) return seedState();
+      if (!raw || raw === "null") return freshState();
       var s = JSON.parse(raw);
       // Migration: ältere Version hielt nur den aktuellen Monat unter s.board
       if (!s.boards) {
@@ -3928,9 +3949,9 @@ window.SFM = (function () {
       if (!s.huddleLog || typeof s.huddleLog !== "object") s.huddleLog = {};
       if (!s.safetyLog || typeof s.safetyLog !== "object") s.safetyLog = {};
       if (!s.reasons || typeof s.reasons !== "object") s.reasons = {};
-      if (isStateEmpty(s)) return seedState();
+      if (isStateEmpty(s)) return freshState();
       return s;
-    } catch (e) { return seedState(); }
+    } catch (e) { return freshState(); }
   }
   var state = loadState();
   function save() {
@@ -8051,6 +8072,26 @@ window.SFM = (function () {
       chip._t = setTimeout(function () { chip.textContent = "Datenbank verbunden"; chip.className = "sync-chip"; }, 2000);
     }
   }
+  // Kopfzeile: Datenbank-Status öffnet „Datenbank & Sicherung“, das Datum den heutigen Huddle
+  function openDbPane() {
+    if (!SFM.isServer()) return;
+    if (!can("manageUsers")) { toast("Mit der Datenbank verbunden — Änderungen werden automatisch gespeichert"); return; }
+    settingsPane = "db"; switchView("settings"); renderSettingsPanes(); renderDbStatus(); loadBackups();
+  }
+  function openTodayHuddle() {
+    if (!currentUser) return;
+    switchView("huddle");
+    selectHuddleDay(TODAY_ISO);
+  }
+  [["#syncChip", openDbPane], ["#todayChip", openTodayHuddle]].forEach(function (x) {
+    var elx = $(x[0]);
+    elx.addEventListener("click", x[1]);
+    elx.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); x[1](); } });
+  });
+  $("#todayChip").classList.add("clickable");
+  $("#todayChip").tabIndex = 0;
+  $("#todayChip").setAttribute("role", "button");
+  $("#todayChip").title = "Huddle für heute öffnen";
   function setupServerMode() {
     SFM.on("notice", function (msg) { toast(msg); });
     SFM.on("status", setSyncChip);
@@ -8058,9 +8099,15 @@ window.SFM = (function () {
     SFM.on("expired", function () { sessionEnded(); });
     var server = SFM.isServer(), h = SFM.health() || {};
     $("#sideAudit").hidden = !server;
+    $("#dbWipeCard").hidden = !server;
     $("#smtpPassRow").hidden = server;
     $("#smtpPassServerHint").hidden = !server;
     if (server) {
+      var chip = $("#syncChip");
+      chip.classList.add("clickable");
+      chip.tabIndex = 0;
+      chip.setAttribute("role", "button");
+      chip.title = "Datenbank & Sicherung öffnen";
       $("#mailPaneSub").textContent = "Absender, SMTP-Server und Verteiler für den Tagesbericht. Versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung den automatischen Versand übernimmt.";
       setSyncChip("Datenbank verbunden", "");
       // Demo-Zugang nur, wenn der Server ihn erlaubt
@@ -8072,6 +8119,27 @@ window.SFM = (function () {
     renderDbStatus();
     loadBackups();
   }
+
+  /* ---------- Board-Daten löschen (nur am Server) ---------- */
+  function wipeBoard() {
+    state = emptyState();
+    save(); renderAll();
+    toast("Alle Board-Daten gelöscht — das Board ist leer");
+  }
+  $("#dbWipeBtn").addEventListener("click", function () {
+    if (!SFM.isServer() || !can("manageUsers")) return;
+    appConfirm("Alle Board-Daten löschen?",
+      "SQIDP-Board, Tageskennzahlen, Abweichungen und Maßnahmen, Huddle-Protokoll und Begründungen werden gelöscht. Konten, Einstellungen und Sicherungen bleiben erhalten. Vorher wird eine Sicherung angelegt, aus der sich der Stand wiederherstellen lässt.",
+      "Sichern und löschen", true, function () {
+        toast("Lege Sicherung an …");
+        SFM.api("/api/backups", { method: "POST", body: { note: "vor dem Löschen aller Board-Daten" } }).then(function (r) {
+          if (r.ok) { wipeBoard(); loadBackups(); return; }
+          appConfirm("Sicherung fehlgeschlagen",
+            ((r.data && r.data.error) || "Die Sicherung konnte nicht angelegt werden.") + " Trotzdem ohne Sicherung löschen?",
+            "Ohne Sicherung löschen", true, wipeBoard);
+        }).catch(function () { toast("Server nicht erreichbar — nichts gelöscht"); });
+      });
+  });
 
   /* ---------- Sicherheitsprotokoll ---------- */
   var AUDIT_LABELS = {
@@ -8869,8 +8937,10 @@ window.SFM = (function () {
     $("#newDevBtn").hidden = !can("edit");
     $("#newDevFromBoard").hidden = !can("edit");
     var admin = can("manageUsers");
-    $("#resetBtn").hidden = !admin;
-    $("#topUpBtn").hidden = !admin;
+    // Testdaten-Knöpfe nur im lokalen Testmodus — am Server gibt es „Alle Board-Daten löschen“
+    $("#resetBtn").hidden = !admin || SFM.isServer();
+    $("#topUpBtn").hidden = !admin || SFM.isServer();
+    $("#demoNote").hidden = SFM.isServer();
     renderSettingsPanes();
   }
   function saveUsers(list) {
