@@ -29,10 +29,18 @@ module.exports = {
   allowRegister: bool(env.ALLOW_REGISTER, false),
   allowDemo: bool(env.ALLOW_DEMO, false),
   sessionDays: int(env.SESSION_DAYS, 14, 1, 365),
+  // Abmeldung nach so vielen Stunden ohne Aktivität (0 = aus)
+  sessionIdleHours: int(env.SESSION_IDLE_HOURS, 12, 0, 720),
+  passwordMinLength: int(env.PASSWORD_MIN_LENGTH, 10, 8, 128),
+  auditDays: int(env.AUDIT_DAYS, 365, 30, 3650),
+  // Erlaubte Herkunft schreibender Anfragen zusätzlich zur eigenen Adresse (z. B. https://shopfloor.trobox.de)
+  publicUrl: String(env.PUBLIC_URL || "").replace(/\/+$/, ""),
   cookieSecure: bool(env.COOKIE_SECURE, false),
-  cookieName: "sfm_session",
+  // Mit HTTPS: __Host-Präfix — der Browser nimmt das Cookie dann nur über HTTPS und nur für genau diese Adresse an
+  cookieName: bool(env.COOKIE_SECURE, false) ? "__Host-sfm_session" : "sfm_session",
   trustProxy: env.TRUST_PROXY || "loopback, linklocal, uniquelocal",
-  bodyLimit: env.BODY_LIMIT || "25mb",
+  bodyLimit: env.BODY_LIMIT || "25mb",      // nur für Dokumente (Board, Wiederherstellung aus Datei)
+  smallBodyLimit: "32kb",                   // alle übrigen Anfragen (Anmeldung, Konten, Sicherungen …)
   backupDir: env.BACKUP_DIR || "/backups",
   backupDefaults: {
     enabled: bool(env.BACKUP_ENABLED, true),

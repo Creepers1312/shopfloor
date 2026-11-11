@@ -7,10 +7,30 @@
 
 name: ${COMPOSE_PROJECT_NAME:-shopfloor}
 
+# Container-Logs begrenzen: je Container höchstens 3 Dateien à 10 MB
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# Kein Prozess im Container darf sich zusätzliche Rechte verschaffen (z. B. über setuid-Programme)
+x-hardening: &hardening
+  security_opt:
+    - no-new-privileges:true
+
 services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    logging: *logging
+    <<: *hardening
+    # Obergrenzen, damit ein Container den Server nicht auslastet (bei Bedarf hier anpassen)
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "2"
     environment:
       POSTGRES_DB: ${DB_NAME:-shopfloor}
       POSTGRES_USER: ${DB_USER:-shopfloor}
@@ -31,6 +51,18 @@ services:
     build: ./backend
     image: ${COMPOSE_PROJECT_NAME:-shopfloor}-api:latest
     restart: unless-stopped
+    logging: *logging
+    <<: *hardening
+    # Keine Linux-Sonderrechte, Dateisystem schreibgeschützt (nur /tmp und /backups beschreibbar)
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +76,12 @@ services:
       ALLOW_REGISTER: ${ALLOW_REGISTER:-false}
       ALLOW_DEMO: ${ALLOW_DEMO:-false}
       SESSION_DAYS: ${SESSION_DAYS:-14}
+      SESSION_IDLE_HOURS: ${SESSION_IDLE_HOURS:-12}
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-10}
+      AUDIT_DAYS: ${AUDIT_DAYS:-365}
+      PUBLIC_URL: ${PUBLIC_URL:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      # Die API wird nur über den web-Container erreicht; der setzt X-Forwarded-For selbst
       TRUST_PROXY: ${TRUST_PROXY:-loopback, linklocal, uniquelocal}
       BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
       BACKUP_TIME: ${BACKUP_TIME:-02:00}
@@ -59,11 +96,26 @@ services:
     build: ./frontend
     image: ${COMPOSE_PROJECT_NAME:-shopfloor}-web:latest
     restart: unless-stopped
+    logging: *logging
+    <<: *hardening
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      # IP(s) des Reverse Proxys, dessen X-Forwarded-For als Client-IP gilt (leer = keiner)
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      TZ: ${TZ:-Europe/Berlin}
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"
     depends_on:
       api:
         condition: service_healthy
     ports:
-      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:80"
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
     networks:
       - frontend
 

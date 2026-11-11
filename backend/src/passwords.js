@@ -1,9 +1,10 @@
 "use strict";
-// Die Oberfläche schickt nie das Klartext-Passwort, sondern SHA-256(Passwort) als Hex.
-// Ohne sicheren Kontext (HTTP im LAN statt HTTPS/localhost) kann der Browser kein
-// SHA-256 rechnen und schickt "plain:<Passwort>" — das gleichen wir hier an.
-// Gespeichert wird zusätzlich gesalzen mit scrypt, nie der Client-Hash selbst.
+// Die Oberfläche schickt das Passwort über die (HTTPS-)Verbindung; nur so kann der Server
+// Mindestlänge und Regeln prüfen. Gespeichert wird scrypt mit Salt über SHA-256(Passwort) —
+// dieselbe Form wie zuvor, damit vorhandene Hashes gültig bleiben. Das Klartext-Passwort
+// wird nirgends gespeichert oder protokolliert.
 const crypto = require("crypto");
+const config = require("./config");
 const { promisify } = require("util");
 const scrypt = promisify(crypto.scrypt);
 
@@ -48,4 +49,16 @@ async function burn(clientHash) {
   return false;
 }
 
-module.exports = { sha256hex, normalizeClientHash, hashPassword, verifyPassword, burn };
+// Neues Passwort prüfen; liefert eine Fehlermeldung oder null
+function passwordProblem(pw, name) {
+  if (typeof pw !== "string" || !pw) return "Bitte ein Passwort angeben.";
+  if (pw.length < config.passwordMinLength) return `Das Passwort braucht mindestens ${config.passwordMinLength} Zeichen.`;
+  if (pw.length > 200) return "Das Passwort ist zu lang (max. 200 Zeichen).";
+  if (name && pw.trim().toLowerCase() === String(name).trim().toLowerCase()) return "Das Passwort darf nicht dem Namen entsprechen.";
+  if (/^(.)\1+$/.test(pw)) return "Das Passwort darf nicht aus einem einzigen wiederholten Zeichen bestehen.";
+  return null;
+}
+// Passwort aus einer Anfrage in die gespeicherte Form bringen (SHA-256-Hex)
+function fromPlain(pw) { return typeof pw === "string" && pw ? sha256hex(pw) : null; }
+
+module.exports = { sha256hex, normalizeClientHash, hashPassword, verifyPassword, burn, passwordProblem, fromPlain };

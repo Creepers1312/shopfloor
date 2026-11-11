@@ -8,7 +8,9 @@ const readline = require("readline");
 const db = require("./db");
 const users = require("./users");
 const backups = require("./backups");
-const { sha256hex } = require("./passwords");
+const sessions = require("./sessions");
+const audit = require("./audit");
+const { sha256hex, passwordProblem } = require("./passwords");
 
 function readPassword(prompt) {
   return new Promise((resolve) => {
@@ -26,36 +28,40 @@ function readPassword(prompt) {
   });
 }
 
-async function askNewPassword() {
+async function askNewPassword(name) {
   const pw = await readPassword("Passwort: ");
-  if (pw.length < 4) throw new Error("Das Passwort braucht mindestens 4 Zeichen.");
+  const problem = passwordProblem(pw, name);
+  if (problem) throw new Error(problem);
   if (process.stdin.isTTY) {
     const pw2 = await readPassword("Passwort wiederholen: ");
     if (pw !== pw2) throw new Error("Die Passwörter stimmen nicht überein.");
   }
-  // Gleicher Hash wie im Browser: SHA-256 über das Passwort
+  // Gespeicherte Form wie bei der Anmeldung: scrypt über SHA-256(Passwort)
   return sha256hex(pw);
 }
 
 const commands = {
   async "create-admin"(name, role) {
     if (!name) throw new Error("Aufruf: create-admin <Name> [Rolle]");
-    const clientHash = await askNewPassword();
+    const clientHash = await askNewPassword(name);
     await db.tx(async (c) => {
       await db.lockRevision(c);
       await users.createUser(c, { name, role: role || "Administration", perm: "admin", clientHash });
       await db.bumpRevision(c, ["users"], "cli");
     });
+    await audit.log(null, "user.create", { name, perm: "admin", user: "Kommandozeile" });
     console.log(`Administrator „${name}“ angelegt.`);
   },
 
   async "reset-password"(name) {
     if (!name) throw new Error("Aufruf: reset-password <Name>");
     if (!(await users.findByName(db.pool, name))) throw new Error(`Kein Konto „${name}“ gefunden.`);
-    const clientHash = await askNewPassword();
+    const clientHash = await askNewPassword(name);
     await users.setPassword(db.pool, name, clientHash);
     await db.pool.query("UPDATE users SET disabled = false WHERE lower(name) = lower($1)", [name]);
-    console.log(`Passwort für „${name}“ gesetzt (Konto ist aktiv).`);
+    const ended = await sessions.destroyForUser(name, null);
+    await audit.log(null, "user.password", { name, sessionsEnded: ended, user: "Kommandozeile" });
+    console.log(`Passwort für „${name}“ gesetzt (Konto ist aktiv, ${ended} Sitzung(en) beendet).`);
   },
 
   async "list-users"() {
@@ -64,6 +70,16 @@ const commands = {
     r.rows.forEach((u) => console.log(
       `${u.name.padEnd(28)} ${u.perm.padEnd(7)} ${u.disabled ? "gesperrt" : "aktiv   "} ${u.has_pw ? "" : "(kein Passwort) "}${u.role}`
     ));
+  },
+
+  // Letzte Einträge des Sicherheitsprotokolls
+  async audit(limit) {
+    const entries = await audit.list({ limit: limit || 50 });
+    if (!entries.length) { console.log("(keine Einträge)"); return; }
+    entries.reverse().forEach((e) => {
+      const t = new Date(e.at).toISOString().replace("T", " ").slice(0, 19);
+      console.log(`${t}  ${String(e.user || "-").padEnd(20)} ${String(e.ip || "").padEnd(16)} ${e.action}${e.count > 1 ? " ×" + e.count : ""}  ${JSON.stringify(e.detail)}`);
+    });
   },
 
   async "count-users"() {

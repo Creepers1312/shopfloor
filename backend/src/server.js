@@ -3,7 +3,11 @@ const config = require("./config");
 const db = require("./db");
 const backups = require("./backups");
 const sessions = require("./sessions");
+const audit = require("./audit");
 const { createApp, loadDbVersion } = require("./app");
+
+// Neue Dateien (Sicherungen enthalten Passwort-Hashes) nur für den Besitzer lesbar
+process.umask(0o077);
 
 async function main() {
   console.log(`[api] Shopfloor Board API ${config.version} startet …`);
@@ -15,11 +19,13 @@ async function main() {
   console.log(`[api] Datenbank bereit · pg_dump: ${tool.ok ? tool.info : "fehlt (" + tool.info + ")"}`);
 
   await sessions.purgeExpired();
-  setInterval(sessions.purgeExpired, 60 * 60 * 1000).unref();
+  await audit.purge();
+  setInterval(() => { sessions.purgeExpired(); audit.purge(); }, 60 * 60 * 1000).unref();
   backups.startScheduler();
 
   const server = createApp().listen(config.port, () => {
     console.log(`[api] lauscht auf Port ${config.port} · Registrierung: ${config.allowRegister ? "an" : "aus"} · Demo: ${config.allowDemo ? "an" : "aus"}`);
+    if (!config.cookieSecure) console.warn("[api] HINWEIS: COOKIE_SECURE ist aus — Passwörter und Sitzungen sind nur mit HTTPS geschützt.");
   });
 
   const shutdown = (sig) => {

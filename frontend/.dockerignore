@@ -1,0 +1,8 @@
+# Nur, was ins Image gehört
+*
+!nginx.conf
+!shopfloor-proxy.conf
+!05-shopfloor-proxy.sh
+!csp-hashes.js
+!index.html
+!fonts
