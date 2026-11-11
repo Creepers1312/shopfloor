@@ -57,21 +57,49 @@ Das Skript
 1. prüft Docker und Docker Compose (mind. 2.20) und installiert Docker bei Bedarf nach Rückfrage
    (ist der Benutzer nicht in der Gruppe `docker`, läuft dieser Lauf über `sudo`; die Gruppe wird für
    die nächste Anmeldung eingetragen),
-2. fragt alle Einstellungen ab (Enter übernimmt den Vorschlag) und schreibt sie nach `.env` (Rechte 600),
+2. fragt die Betriebsart ab (siehe unten) und alle Einstellungen (Enter übernimmt den Vorschlag),
+   prüft, dass Projektname und Port auf dem Server frei sind, und schreibt alles nach `.env` (Rechte 600),
 3. erzeugt ein zufälliges Datenbank-Passwort,
 4. legt den Sicherungsordner an,
-5. baut die Images und startet die Container,
+5. prüft die Compose-Konfiguration, baut die Images und startet die Container,
 6. wartet, bis Board und Datenbank antworten,
-7. legt beim ersten Mal das Administrator-Konto an.
+7. legt beim ersten Mal das Administrator-Konto an,
+8. räumt alte Images und Build-Cache (älter als 7 Tage) auf — nie Container, Volumes oder andere Projekte.
 
-Ein Protokoll jedes Laufs landet in `logs/deploy.log`.
+Ein Protokoll jedes Laufs landet in `logs/deploy.log`. Alle Optionen: `./deploy.sh --help`.
+
+### Betriebsarten
+
+| Betriebsart | Wann | Ziel im Reverse Proxy |
+|-------------|------|------------------------|
+| `proxy` | Nginx Proxy Manager, Traefik o. Ä. laufen **als Docker-Container auf demselben Server** (empfohlen) | `http://<projekt>-web:8080`, z. B. `http://shopfloor-web:8080` |
+| `port` | Kein Proxy oder ein Proxy auf einem anderen Rechner | `http://<server-ip>:<WEB_PORT>` |
+
+Läuft beim ersten Start bereits ein Reverse-Proxy-Container, schlägt das Skript `proxy` und dessen Docker-Netz
+von selbst vor. Der Web-Container hängt sich dann zusätzlich in dieses Netz (`deploy/compose.proxy.yml`),
+der Port wird nur noch lokal gebunden, und `TRUSTED_PROXIES` wird auf das Subnetz des Proxy-Netzes gesetzt —
+die echte Client-IP für Login-Bremse und Sicherheitsprotokoll stimmt damit ohne Nacharbeit.
+
+### Update
+
+Im selben Ordner einfach erneut:
+
+```bash
+./deploy.sh
+```
+
+Das Skript erkennt die bestehende Installation, sichert die Datenbank, holt mit `git pull` den neuen Stand
+(übersprungen bei lokalen Änderungen oder mit `--no-pull`), startet sich mit dem neuen Code neu, baut und
+startet die Container. Die Einstellungen bleiben; neu hinzugekommene bekommen ihren Standard und werden genannt.
+`./deploy.sh update` macht dasselbe.
 
 ### Ohne Rückfragen
 
 Jede Einstellung lässt sich vorab als Umgebungsvariable setzen. Es gilt: Umgebung → vorhandene `.env` → Standard.
+Danach ist allein die `.env` maßgeblich (Umgebungsvariablen überschreiben sie beim Start nicht mehr).
 
 ```bash
-WEB_PORT=8090 PUBLIC_URL=https://shopfloor.trobox.de \
+DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.trobox.de \
 ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 ```
 
@@ -80,7 +108,9 @@ ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 | Variable | Standard | Bedeutung |
 |----------|----------|-----------|
 | `COMPOSE_PROJECT_NAME` | `shopfloor` | Präfix für Container, Netze, Volumes |
-| `WEB_BIND` | `0.0.0.0` | IP für den Web-Port (`127.0.0.1` = nur lokal, z. B. wenn der Reverse Proxy auf demselben Host läuft) |
+| `DEPLOY_MODE` | `proxy`, wenn ein Proxy-Container läuft, sonst `port` | Betriebsart (siehe oben) |
+| `PROXY_NETWORK` | Netz des erkannten Proxys | Docker-Netz des Reverse Proxys (nur Betriebsart `proxy`) |
+| `WEB_BIND` | `0.0.0.0` bzw. `127.0.0.1` bei `proxy` | IP für den Web-Port (`127.0.0.1` = nur lokal) |
 | `WEB_PORT` | `8080` | Port des Boards |
 | `PUBLIC_URL` | `http://<server-ip>:<port>` | Adresse für Benutzer, bestimmt den Standard für `COOKIE_SECURE` |
 | `TZ` | `Europe/Berlin` | Zeitzone |
@@ -97,19 +127,29 @@ ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 | `BACKUP_PATH` | `./backups` | Sicherungsordner auf dem Host |
 | `BACKUP_ENABLED` / `BACKUP_TIME` / `BACKUP_KEEP` | `true` / `02:00` / `14` | Standard für die tägliche Sicherung (danach in der Oberfläche änderbar) |
 
-Ändern: `./deploy.sh config`, danach `./deploy.sh -y`.
+Ändern: `./deploy.sh config`, danach `./deploy.sh`. `COMPOSE_FILE` ergibt sich aus der Betriebsart und wird nicht von Hand gepflegt.
 
 > **Achtung:** `DB_PASSWORD` nachträglich in der `.env` zu ändern, ändert es nicht in der bestehenden Datenbank. Das Skript warnt in diesem Fall.
 
 ## Hinter Nginx Proxy Manager
 
+**NPM als Docker-Container auf demselben Server (Betriebsart `proxy`, empfohlen):**
+
+1. `./deploy.sh` ausführen; Betriebsart `proxy` und das NPM-Netz werden vorgeschlagen.
+   `PUBLIC_URL=https://shopfloor.trobox.de`, damit wird `COOKIE_SECURE=true`.
+2. In NPM einen Proxy Host `shopfloor.trobox.de` anlegen: Schema `http`, Host `shopfloor-web`, Port `8080`
+   (bei anderem Projektnamen `<projekt>-web`). SSL-Zertifikat zuweisen, „Force SSL“, „HTTP/2“ und „HSTS“ an.
+3. Fertig — `TRUSTED_PROXIES` ist bereits auf das Proxy-Netz gesetzt.
+
+**NPM auf einem anderen Rechner (Betriebsart `port`):**
+
 1. `PUBLIC_URL=https://shopfloor.trobox.de`, damit wird `COOKIE_SECURE=true`.
 2. In NPM einen Proxy Host `shopfloor.trobox.de` → `http://<server-ip>:<WEB_PORT>` anlegen, SSL-Zertifikat zuweisen, „Force SSL“ und „HSTS“ an.
-3. Läuft NPM auf demselben Host, `WEB_BIND=127.0.0.1` setzen. Dann ist das Board nur noch über den Proxy erreichbar.
-4. `TRUSTED_PROXIES` auf die Adresse setzen, von der NPM das Board erreicht — sonst sehen Login-Bremse und
-   Sicherheitsprotokoll alle Zugriffe als „von NPM“. Welche das ist, steht nach dem ersten Aufruf im Protokoll
-   (*Einstellungen → Sicherheitsprotokoll*, Spalte IP-Adresse), typisch `172.17.0.1` (Docker-Gateway) oder die IP des NPM-Hosts.
-5. Wenn möglich in NPM eine Access List anlegen, die nur das Firmennetz bzw. VPN zulässt.
+3. `TRUSTED_PROXIES` auf die IP des NPM-Rechners setzen (`./deploy.sh config`, danach `./deploy.sh`) — sonst sehen
+   Login-Bremse und Sicherheitsprotokoll alle Zugriffe als „von NPM“. Die IP steht nach dem ersten Aufruf im
+   Protokoll (*Einstellungen → Sicherheitsprotokoll*, Spalte IP-Adresse).
+
+In beiden Fällen: wenn möglich in NPM eine Access List anlegen, die nur das Firmennetz bzw. VPN zulässt.
 
 Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber ungeschützt über das Netz.
 
@@ -118,7 +158,7 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ```bash
 ./deploy.sh status               # Container und Health-Check
 ./deploy.sh logs [web|api|db]    # Logs verfolgen
-./deploy.sh update               # git pull → Sicherung → neu bauen → starten
+./deploy.sh                      # Update: Sicherung → git pull → neu bauen → starten
 ./deploy.sh backup "Notiz"       # Sicherung sofort
 ./deploy.sh users                # Konten auflisten
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
@@ -130,7 +170,7 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ### Ressourcen und Logs
 
 In `docker-compose.yml` sind Obergrenzen je Container hinterlegt: `db` 1 GB / 2 CPUs, `api` 512 MB / 1 CPU, `web` 128 MB / 0,5 CPU.
-Bei Bedarf dort anpassen und `./deploy.sh -y` ausführen. Container-Logs sind auf 3 Dateien à 10 MB je Container begrenzt.
+Bei Bedarf dort anpassen und `./deploy.sh` ausführen. Container-Logs sind auf 3 Dateien à 10 MB je Container begrenzt.
 
 Der `web`-Container läuft ohne Root-Rechte (`nginx-unprivileged`) und lauscht intern auf Port 8080.
 Nach außen gilt weiterhin `WEB_PORT`. `web` und `api` laufen mit schreibgeschütztem Dateisystem, ohne
@@ -176,7 +216,7 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Weitere Header: HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, `Cross-Origin-Opener-Policy`.
 - Die Datenbank hängt in einem internen Docker-Netz ohne veröffentlichten Port; Container gehärtet (siehe oben).
 - Dependabot meldet wöchentlich Updates für npm-Pakete und Basis-Images (`.github/dependabot.yml`);
-  `./deploy.sh update` baut immer mit aktuellen Basis-Images neu.
+  `./deploy.sh` baut bei jedem Update mit aktuellen Basis-Images neu.
 
 **Bewusst noch offen**
 - Bearbeiter speichern das Board als Ganzes. Feinere Rechte (z. B. nur eigene Maßnahmen ändern) bräuchten einzelne

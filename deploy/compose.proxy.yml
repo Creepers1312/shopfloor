@@ -1,0 +1,17 @@
+# Betriebsart „proxy“: Der web-Container hängt sich zusätzlich in das Docker-Netz eines
+# vorhandenen Reverse Proxys (z. B. Nginx Proxy Manager, Traefik). Dort ist er unter
+#   http://<COMPOSE_PROJECT_NAME>-web:8080
+# erreichbar — im Proxy einfach diesen Namen als Ziel eintragen, keine IP nötig.
+# Wird von deploy.sh über COMPOSE_FILE in der .env eingebunden.
+services:
+  web:
+    networks:
+      frontend: {}
+      proxy:
+        aliases:
+          - ${COMPOSE_PROJECT_NAME:-shopfloor}-web
+
+networks:
+  proxy:
+    external: true
+    name: ${PROXY_NETWORK:?PROXY_NETWORK fehlt - bitte ./deploy.sh config ausführen}
