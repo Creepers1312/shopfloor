@@ -63,15 +63,75 @@ set -- "${ARGS[@]+"${ARGS[@]}"}"
 
 # ---------- Docker -----------------------------------------------------------
 DC=()
-detect_compose() {
-  command -v docker >/dev/null 2>&1 || die "Docker ist nicht installiert (https://docs.docker.com/engine/install/)."
-  if ! docker info >/dev/null 2>&1; then
-    die "Kein Zugriff auf Docker. Skript mit sudo starten oder Benutzer zur Gruppe 'docker' hinzufügen."
-  fi
-  if docker compose version >/dev/null 2>&1; then DC=(docker compose)
-  elif command -v docker-compose >/dev/null 2>&1; then DC=(docker-compose)
-  else die "Docker Compose (v2) fehlt — Paket docker-compose-plugin installieren."; fi
+# ---------- Docker ------------------------------------------------------------
+# Fehlt Docker, wird es bei der Installation (./deploy.sh) auf Wunsch mit dem offiziellen
+# Skript get.docker.com eingerichtet — wie beim E-Rechnung-Konverter. Ist der Benutzer nicht
+# in der Gruppe "docker", läuft Docker für diesen Lauf über sudo.
+SUDO=""
+DOCKER=(docker)
+DOCKER_GROUP_ADDED=false
+COMPOSE_MIN="2.20.0"
+
+install_pkg() {   # Paketname → mit dem vorhandenen Paketmanager installieren
+  if command -v apt-get >/dev/null 2>&1; then $SUDO apt-get update -qq && $SUDO apt-get install -y -qq "$1"
+  elif command -v dnf >/dev/null 2>&1; then $SUDO dnf install -y -q "$1"
+  elif command -v yum >/dev/null 2>&1; then $SUDO yum install -y -q "$1"
+  elif command -v zypper >/dev/null 2>&1; then $SUDO zypper -q install -y "$1"
+  else return 1; fi
 }
+
+ensure_docker() {   # $1 = true: fehlendes Docker darf installiert werden
+  local allow_install="${1:-false}" v
+  if [[ "$(id -u)" -ne 0 ]] && command -v sudo >/dev/null 2>&1; then SUDO="sudo"; fi
+
+  if ! command -v docker >/dev/null 2>&1; then
+    [[ "$allow_install" == true ]] || die "Docker ist nicht installiert — zuerst ./deploy.sh ausführen (richtet Docker auf Wunsch ein)."
+    [[ "$(uname -s)" == Linux ]] || die "Docker bitte von Hand installieren: https://docs.docker.com/engine/install/"
+    [[ "$(id -u)" -eq 0 || -n "$SUDO" ]] || die "Für die Docker-Installation als root ausführen oder sudo installieren."
+    warn "Docker ist nicht installiert."
+    confirm "Docker jetzt mit dem offiziellen Installationsskript (get.docker.com) installieren?" \
+      || die "Ohne Docker geht es nicht. Anleitung: https://docs.docker.com/engine/install/"
+    if ! command -v curl >/dev/null 2>&1; then
+      info "Installiere curl …"
+      install_pkg curl >>"$LOG_FILE" 2>&1 || die "curl fehlt und ließ sich nicht installieren — bitte von Hand nachinstallieren."
+    fi
+    info "Installiere Docker (dauert einige Minuten, Details in $LOG_FILE) …"
+    if ! curl -fsSL https://get.docker.com | $SUDO sh >>"$LOG_FILE" 2>&1; then
+      die "Docker-Installation fehlgeschlagen — Details in $LOG_FILE. Anleitung: https://docs.docker.com/engine/install/"
+    fi
+    $SUDO systemctl enable --now docker >>"$LOG_FILE" 2>&1 || true
+    # Damit es beim nächsten Mal ohne sudo geht (wirkt nach erneuter Anmeldung)
+    local who="${SUDO_USER:-${USER:-}}"
+    if [[ -n "$who" && "$who" != root ]] && $SUDO usermod -aG docker "$who" 2>/dev/null; then DOCKER_GROUP_ADDED=true; fi
+    ok "Docker installiert."
+  fi
+
+  DOCKER=(docker)
+  if ! docker info >/dev/null 2>&1; then
+    $SUDO systemctl start docker >/dev/null 2>&1 || true
+    if docker info >/dev/null 2>&1; then :
+    elif [[ -n "$SUDO" ]] && $SUDO docker info >/dev/null 2>&1; then
+      DOCKER=(sudo docker)
+      [[ "$allow_install" == true ]] && warn "Docker läuft für diesen Lauf über sudo (Benutzer ist nicht in der Gruppe 'docker')."
+    else
+      die "Kein Zugriff auf den Docker-Dienst. Läuft er? (sudo systemctl status docker)"
+    fi
+  fi
+
+  v="$("${DOCKER[@]}" compose version --short 2>/dev/null || true)"
+  if [[ -z "$v" ]]; then
+    [[ "$allow_install" == true ]] && install_pkg docker-compose-plugin >>"$LOG_FILE" 2>&1 || true
+    v="$("${DOCKER[@]}" compose version --short 2>/dev/null || true)"
+  fi
+  [[ -n "$v" ]] || die "Docker Compose v2 fehlt (Paket docker-compose-plugin)."
+  printf '%s\n%s\n' "$COMPOSE_MIN" "${v#v}" | sort -V -C \
+    || die "Docker Compose $v ist zu alt (mindestens $COMPOSE_MIN nötig) — bitte Docker aktualisieren."
+  DC=("${DOCKER[@]}" compose)
+  if [[ "$allow_install" == true ]]; then
+    ok "Docker $("${DOCKER[@]}" version --format '{{.Server.Version}}' 2>/dev/null) · Compose $v"
+  fi
+}
+detect_compose() { ensure_docker false; }
 dc() { "${DC[@]}" --env-file "$ENV_FILE" "$@"; }
 api_running() { [[ -n "$(dc ps --status running -q api 2>/dev/null)" ]]; }
 cli() { dc exec -T api node src/cli.js "$@"; }
@@ -279,7 +339,7 @@ confirm() {
 
 db_volume_exists() {
   local project="${VAL[COMPOSE_PROJECT_NAME]:-${CUR[COMPOSE_PROJECT_NAME]:-shopfloor}}"
-  docker volume inspect "${project}_db-data" >/dev/null 2>&1
+  "${DOCKER[@]}" volume inspect "${project}_db-data" >/dev/null 2>&1
 }
 
 # ---------- Schritte ---------------------------------------------------------
@@ -379,7 +439,8 @@ summary() {
 do_deploy() {
   title "Shopfloor Board — Deploy $SCRIPT_VERSION"
   _log INFO "===== deploy ($COMMAND) gestartet ====="
-  detect_compose
+  title "Voraussetzungen"
+  ensure_docker true
   if [[ "$ASSUME_YES" == true ]]; then configure false; else configure true; fi
   prepare_backup_dir
   pre_backup
@@ -389,8 +450,11 @@ do_deploy() {
   wait_healthy
   ensure_admin
   # Nur verwaiste (dangling) Images der alten Builds entfernen
-  docker image prune -f >/dev/null 2>&1 && ok "Alte Image-Schichten aufgeräumt." || true
+  "${DOCKER[@]}" image prune -f >/dev/null 2>&1 && ok "Alte Image-Schichten aufgeräumt." || true
   summary
+  if [[ "$DOCKER_GROUP_ADDED" == true ]]; then
+    info "Benutzer ${SUDO_USER:-$USER} ist jetzt in der Gruppe 'docker' — nach erneuter Anmeldung geht ./deploy.sh ohne sudo."
+  fi
   _log INFO "===== deploy beendet ====="
 }
 

@@ -43,7 +43,8 @@ deploy.sh   Installation, Update, Verwaltung
 
 ## Installation
 
-Voraussetzung: Linux-Server mit Docker und dem Compose-Plugin.
+Voraussetzung: Linux-Server mit Git und `sudo` (oder als root). Docker muss nicht vorinstalliert sein —
+fehlt es, richtet das Skript es auf Wunsch mit dem offiziellen Installationsskript (`get.docker.com`) ein.
 
 ```bash
 git clone https://github.com/Creepers1312/shopfloor.git
@@ -53,12 +54,15 @@ cd shopfloor
 
 Das Skript
 
-1. fragt alle Einstellungen ab (Enter übernimmt den Vorschlag) und schreibt sie nach `.env` (Rechte 600),
-2. erzeugt ein zufälliges Datenbank-Passwort,
-3. legt den Sicherungsordner an,
-4. baut die Images und startet die Container,
-5. wartet, bis Board und Datenbank antworten,
-6. legt beim ersten Mal das Administrator-Konto an.
+1. prüft Docker und Docker Compose (mind. 2.20) und installiert Docker bei Bedarf nach Rückfrage
+   (ist der Benutzer nicht in der Gruppe `docker`, läuft dieser Lauf über `sudo`; die Gruppe wird für
+   die nächste Anmeldung eingetragen),
+2. fragt alle Einstellungen ab (Enter übernimmt den Vorschlag) und schreibt sie nach `.env` (Rechte 600),
+3. erzeugt ein zufälliges Datenbank-Passwort,
+4. legt den Sicherungsordner an,
+5. baut die Images und startet die Container,
+6. wartet, bis Board und Datenbank antworten,
+7. legt beim ersten Mal das Administrator-Konto an.
 
 Ein Protokoll jedes Laufs landet in `logs/deploy.log`.
 
