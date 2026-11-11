@@ -13,6 +13,7 @@ COPY --from=csp /build/shopfloor-csp.conf /etc/nginx/shopfloor-csp.conf
 COPY --chmod=755 05-shopfloor-proxy.sh /docker-entrypoint.d/05-shopfloor-proxy.sh
 COPY index.html /usr/share/nginx/html/index.html
 COPY fonts /usr/share/nginx/html/fonts
+COPY favicon.ico apple-touch-icon.png /usr/share/nginx/html/
 
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
