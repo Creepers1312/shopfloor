@@ -1,5 +1,5 @@
 # Stufe 1: Content-Security-Policy aus den Inline-Skripten von index.html berechnen
-FROM node:22-alpine AS csp
+FROM node:26-alpine AS csp
 WORKDIR /build
 COPY csp-hashes.js index.html ./
 RUN node csp-hashes.js index.html shopfloor-csp.conf
