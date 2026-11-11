@@ -33,6 +33,16 @@ module.exports = {
   sessionIdleHours: int(env.SESSION_IDLE_HOURS, 12, 0, 720),
   passwordMinLength: int(env.PASSWORD_MIN_LENGTH, 10, 8, 128),
   auditDays: int(env.AUDIT_DAYS, 365, 30, 3650),
+  resetMinutes: int(env.RESET_LINK_MINUTES, 60, 10, 1440),
+  // E-Mail-Versand für „Passwort vergessen“ (leer = aus, Anfragen gehen an die Administration)
+  smtp: {
+    host: String(env.SMTP_HOST || "").trim(),
+    port: int(env.SMTP_PORT, 587, 1, 65535),
+    security: ["starttls", "tls", "none"].includes(String(env.SMTP_SECURITY || "").toLowerCase()) ? String(env.SMTP_SECURITY).toLowerCase() : "starttls",
+    user: String(env.SMTP_USER || "").trim(),
+    password: String(env.SMTP_PASSWORD || ""),
+    from: String(env.SMTP_FROM || "").trim()
+  },
   // Erlaubte Herkunft schreibender Anfragen zusätzlich zur eigenen Adresse (z. B. https://shopfloor.trobox.de)
   publicUrl: String(env.PUBLIC_URL || "").replace(/\/+$/, ""),
   cookieSecure: bool(env.COOKIE_SECURE, false),

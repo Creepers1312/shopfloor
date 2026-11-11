@@ -1,6 +1,7 @@
 "use strict";
 // Verwaltung auf der Kommandozeile, z. B.:
-//   docker compose exec -T api node src/cli.js create-admin "Max Muster" <<< "geheim"
+//   docker compose exec -T api node src/cli.js create-admin "Max Muster" [Rolle] [Anmeldename] [E-Mail] <<< "geheim"
+//   docker compose exec api node src/cli.js mail-test it@firma.de
 //   docker compose exec api node src/cli.js reset-password "Max Muster"
 //   docker compose exec api node src/cli.js list-users
 //   docker compose exec api node src/cli.js backup "vor Update"
@@ -41,16 +42,18 @@ async function askNewPassword(name) {
 }
 
 const commands = {
-  async "create-admin"(name, role) {
-    if (!name) throw new Error("Aufruf: create-admin <Name> [Rolle]");
+  async "create-admin"(name, role, username, email) {
+    if (!name) throw new Error("Aufruf: create-admin <Name> [Rolle] [Anmeldename] [E-Mail]");
     const clientHash = await askNewPassword(name);
-    await db.tx(async (c) => {
+    const row = await db.tx(async (c) => {
       await db.lockRevision(c);
-      await users.createUser(c, { name, role: role || "Administration", perm: "admin", clientHash });
+      const created = await users.createUser(c, { name, username: username || undefined, email: email || undefined,
+        role: role || "Administration", perm: "admin", clientHash });
       await db.bumpRevision(c, ["users"], "cli");
+      return created;
     });
     await audit.log(null, "user.create", { name, perm: "admin", user: "Kommandozeile" });
-    console.log(`Administrator „${name}“ angelegt.`);
+    console.log(`Administrator „${name}“ angelegt (Anmeldename: ${row.username}).`);
   },
 
   async "reset-password"(name) {
@@ -59,17 +62,30 @@ const commands = {
     const clientHash = await askNewPassword(name);
     await users.setPassword(db.pool, name, clientHash);
     await db.pool.query("UPDATE users SET disabled = false WHERE lower(name) = lower($1)", [name]);
+    await db.pool.query("DELETE FROM reset_requests WHERE lower(user_name) = lower($1)", [name]);
     const ended = await sessions.destroyForUser(name, null);
     await audit.log(null, "user.password", { name, sessionsEnded: ended, user: "Kommandozeile" });
     console.log(`Passwort für „${name}“ gesetzt (Konto ist aktiv, ${ended} Sitzung(en) beendet).`);
   },
 
   async "list-users"() {
-    const r = await db.pool.query("SELECT name, role, perm, disabled, last_login, pw_hash IS NOT NULL AS has_pw FROM users ORDER BY position, id");
+    const r = await db.pool.query("SELECT name, username, email, role, perm, disabled, last_login, pw_hash IS NOT NULL AS has_pw FROM users ORDER BY position, id");
     if (!r.rows.length) { console.log("(keine Konten)"); return; }
     r.rows.forEach((u) => console.log(
-      `${u.name.padEnd(28)} ${u.perm.padEnd(7)} ${u.disabled ? "gesperrt" : "aktiv   "} ${u.has_pw ? "" : "(kein Passwort) "}${u.role}`
+      `${u.name.padEnd(26)} ${String(u.username || "").padEnd(20)} ${String(u.email || "-").padEnd(30)} ${u.perm.padEnd(7)} ${u.disabled ? "gesperrt" : "aktiv   "} ${u.has_pw ? "" : "(kein Passwort) "}${u.role}`
     ));
+  },
+
+  // SMTP-Verbindung prüfen und optional eine Test-E-Mail senden
+  async "mail-test"(to) {
+    const mailer = require("./mailer");
+    await mailer.verify();
+    console.log("Verbindung zum Mailserver erfolgreich.");
+    if (to) {
+      await mailer.getTransport().sendMail({ from: require("./config").smtp.from, to,
+        subject: "Shopfloor Board: Test-E-Mail", text: "Der E-Mail-Versand des Shopfloor Boards funktioniert." });
+      console.log(`Test-E-Mail an ${to} gesendet.`);
+    }
   },
 
   // Letzte Einträge des Sicherheitsprotokolls

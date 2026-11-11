@@ -1625,6 +1625,15 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .done-title:hover { color: var(--accent); text-decoration: underline; }
 .done-meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
 
+/* ============ Konten: Passwort vergessen, Anfragen ============ */
+.login-title-sm { font-weight: 600; font-size: 17px; }
+.login-ok { background: color-mix(in srgb, var(--good) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--good) 40%, var(--line));
+  color: var(--ink); border-radius: 8px; padding: 10px 12px; font-size: 13.5px; }
+.reset-req-list { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 14px; }
+.reset-req-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--line)); border-radius: 8px; background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.reset-req-name { font-weight: 600; margin-right: auto; }
+
 /* ============ Sicherheit ============ */
 .user-chip.clickable { cursor: pointer; border-radius: 10px; padding: 2px 6px; margin: -2px -6px; }
 .user-chip.clickable:hover { background: var(--surface-2); }
@@ -2153,6 +2162,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           </div>
           <button class="btn primary" id="newUserBtn" type="button">+ Benutzer anlegen</button>
         </div>
+        <div class="card set-card reset-req-card" id="resetReqCard" hidden>
+          <div class="set-card-title">Offene Passwort-Anfragen</div>
+          <div class="set-desc">Diese Benutzer haben „Passwort vergessen“ gewählt, konnten aber keinen E-Mail-Link bekommen (kein Mailserver eingerichtet oder keine E-Mail-Adresse hinterlegt). Neues Passwort setzen und persönlich mitteilen.</div>
+          <div class="reset-req-list" id="resetReqList"></div>
+        </div>
         <div class="card set-card">
           <div class="users-list" id="usersList"></div>
         </div>
@@ -2293,9 +2307,17 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <form class="login-form" id="loginForm">
       <div class="login-error" id="loginError" hidden></div>
+      <div class="field" id="fullField" hidden>
+        <label for="lFull">Name</label>
+        <input id="lFull" autocomplete="name" placeholder="Vor- und Nachname">
+      </div>
       <div class="field">
-        <label for="lName">Name</label>
-        <input id="lName" required autocomplete="username" placeholder="Vor- und Nachname">
+        <label for="lName" id="lNameLabel">Anmeldename oder E-Mail</label>
+        <input id="lName" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="z. B. max.muster">
+      </div>
+      <div class="field" id="emailField" hidden>
+        <label for="lEmail">E-Mail (für „Passwort vergessen“)</label>
+        <input id="lEmail" type="email" autocomplete="email" placeholder="optional">
       </div>
       <div class="field" id="roleField" hidden>
         <label for="lRole">Rolle</label>
@@ -2316,11 +2338,40 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <input id="lPass2" type="password" autocomplete="new-password">
       </div>
       <button class="btn primary" type="submit" id="loginSubmit">Anmelden</button>
+      <div class="login-alt" id="forgotBox" hidden><button type="button" class="linklike" id="forgotLink">Passwort vergessen?</button></div>
       <div class="login-alt"><span id="altText">Noch kein Konto?</span> <button type="button" class="linklike" id="modeToggle">Registrieren</button></div>
       <div class="login-demo" id="loginDemoBox">
         <button type="button" class="btn" id="demoLogin">Ohne Konto ausprobieren (Demo)</button>
         <div class="login-hint" id="loginHint">Konten werden nur lokal in diesem Browser gespeichert.</div>
       </div>
+    </form>
+    <!-- Passwort vergessen: Link anfordern -->
+    <form class="login-form" id="forgotForm" hidden>
+      <div class="login-title-sm">Passwort vergessen</div>
+      <p class="login-hint" id="forgotIntro">Anmeldename oder E-Mail eingeben. Ist eine E-Mail-Adresse hinterlegt, kommt ein Link zum Vergeben eines neuen Passworts.</p>
+      <div class="login-error" id="forgotError" hidden></div>
+      <div class="login-ok" id="forgotOk" hidden></div>
+      <div class="field">
+        <label for="fLogin">Anmeldename oder E-Mail</label>
+        <input id="fLogin" required autocomplete="username" autocapitalize="none" spellcheck="false">
+      </div>
+      <button class="btn primary" type="submit" id="forgotSubmit">Link anfordern</button>
+      <div class="login-alt"><button type="button" class="linklike" id="forgotBack">Zurück zur Anmeldung</button></div>
+    </form>
+    <!-- Neues Passwort über den Link aus der E-Mail -->
+    <form class="login-form" id="resetForm" hidden>
+      <div class="login-title-sm">Neues Passwort vergeben</div>
+      <div class="login-error" id="resetError" hidden></div>
+      <div class="field">
+        <label for="rPass">Neues Passwort</label>
+        <input id="rPass" type="password" required autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="rPass2">Neues Passwort wiederholen</label>
+        <input id="rPass2" type="password" required autocomplete="new-password">
+      </div>
+      <button class="btn primary" type="submit" id="resetSubmit">Passwort speichern</button>
+      <div class="login-alt"><button type="button" class="linklike" id="resetBack">Zurück zur Anmeldung</button></div>
     </form>
   </div>
 </div>
@@ -2337,6 +2388,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <div class="field">
         <label for="uName">Name</label>
         <input id="uName" required placeholder="Vor- und Nachname">
+      </div>
+      <div class="field-row" id="uIdRow">
+        <div class="field">
+          <label for="uLogin">Anmeldename</label>
+          <input id="uLogin" autocapitalize="none" spellcheck="false" placeholder="z. B. max.muster">
+        </div>
+        <div class="field">
+          <label for="uEmail">E-Mail <span class="mini-hint">(optional)</span></label>
+          <input id="uEmail" type="email" placeholder="für „Passwort vergessen“">
+        </div>
       </div>
       <div class="field-row">
         <div class="field" id="uRoleField">
@@ -2358,9 +2419,9 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           </select>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="uPassField">
         <label for="uPass">Passwort</label>
-        <input id="uPass" type="password" required autocomplete="new-password" placeholder="Mindestens 4 Zeichen">
+        <input id="uPass" type="password" autocomplete="new-password" placeholder="Mindestens 10 Zeichen">
       </div>
     </div>
     <div class="dlg-foot">
@@ -2374,28 +2435,38 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 <dialog id="pwDialog">
   <form method="dialog" id="pwForm">
     <div class="dlg-head">
-      <h2>Eigenes Passwort ändern</h2>
+      <h2>Mein Konto</h2>
       <button type="button" class="btn ghost sm" id="pwClose" aria-label="Schließen">✕</button>
     </div>
     <div class="dlg-body">
       <div class="login-error" id="pwError" hidden></div>
-      <div class="field">
-        <label for="pwCurrent">Bisheriges Passwort</label>
-        <input id="pwCurrent" type="password" required autocomplete="current-password">
+      <div class="field-row">
+        <div class="field">
+          <label for="acLogin">Anmeldename</label>
+          <input id="acLogin" disabled>
+        </div>
+        <div class="field">
+          <label for="acEmail">E-Mail</label>
+          <input id="acEmail" type="email" autocomplete="email" placeholder="für „Passwort vergessen“">
+        </div>
       </div>
       <div class="field">
-        <label for="pwNew">Neues Passwort</label>
-        <input id="pwNew" type="password" required autocomplete="new-password">
+        <label for="pwNew">Neues Passwort <span class="mini-hint">(leer lassen = unverändert)</span></label>
+        <input id="pwNew" type="password" autocomplete="new-password">
       </div>
       <div class="field">
         <label for="pwNew2">Neues Passwort wiederholen</label>
-        <input id="pwNew2" type="password" required autocomplete="new-password">
+        <input id="pwNew2" type="password" autocomplete="new-password">
       </div>
-      <p class="mini-hint">Alle anderen Geräte, auf denen Sie angemeldet sind, werden danach abgemeldet.</p>
+      <div class="field">
+        <label for="pwCurrent">Bisheriges Passwort <span class="mini-hint">(zur Bestätigung jeder Änderung)</span></label>
+        <input id="pwCurrent" type="password" required autocomplete="current-password">
+      </div>
+      <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
     </div>
     <div class="dlg-foot">
       <button type="button" class="btn" id="pwCancel">Abbrechen</button>
-      <button type="submit" class="btn primary">Passwort ändern</button>
+      <button type="submit" class="btn primary">Speichern</button>
     </div>
   </form>
 </dialog>
@@ -3036,8 +3107,8 @@ window.SFM = (function () {
     // Anmeldung läuft im Server-Modus über die Datenbank. Das Passwort geht über die
     // (HTTPS-)Verbindung zum Server, der Mindestlänge und Regeln prüft und es nur als
     // scrypt-Hash speichert.
-    login: function (name, password) { return api("/api/login", { method: "POST", body: { name: name, password: password } }); },
-    register: function (name, role, password) { return api("/api/register", { method: "POST", body: { name: name, role: role, password: password } }); },
+    login: function (login, password) { return api("/api/login", { method: "POST", body: { login: login, password: password } }); },
+    register: function (data) { return api("/api/register", { method: "POST", body: data }); },
     demoLogin: function () { return api("/api/login/demo", { method: "POST" }); },
     logout: function () { return api("/api/logout", { method: "POST" }).catch(function () { return null; }); }
   };
@@ -8117,6 +8188,8 @@ window.SFM = (function () {
       setSyncChip("Datenbank verbunden", "");
       // Demo-Zugang nur, wenn der Server ihn erlaubt
       $("#loginDemoBox").hidden = !h.allowDemo;
+      $("#forgotBox").hidden = registerMode;
+      checkResetLink();
       if (!h.allowRegister) $("#modeToggle").hidden = true;
     } else {
       $("#syncChip").hidden = true;
@@ -8154,10 +8227,14 @@ window.SFM = (function () {
     "user.create": "Konto angelegt", "user.password": "Passwort neu gesetzt (Administration)",
     "user.password.self": "Eigenes Passwort geändert", "user.password.self.failed": "Passwortänderung abgelehnt",
     "users.update": "Benutzerliste geändert", "document.save": "Gespeichert",
+    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert",
+    "user.reset.mail": "Passwort-Link per E-Mail verschickt", "user.reset.requested": "Passwort-Anfrage an die Administration",
+    "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
+    "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
     "backup.create": "Sicherung erstellt", "backup.restore": "Sicherung wiederhergestellt",
     "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert"
   };
-  var AUDIT_WARN = /failed|blocked|disabled|restore|delete/;
+  var AUDIT_WARN = /failed|blocked|disabled|restore|delete|unknown/;
   var DOC_NAMES = { state: "Board und Kennzahlen", settings: "Einstellungen", users: "Benutzerliste" };
   function auditDetail(e) {
     var d = e.detail || {};
@@ -8170,6 +8247,13 @@ window.SFM = (function () {
         return (d.name || "") + (d.sessionsEnded ? " · " + d.sessionsEnded + " Sitzung(en) beendet" : "");
       case "user.password.self":
         return d.sessionsEnded ? d.sessionsEnded + " andere Sitzung(en) beendet" : "";
+      case "user.update":
+        return (d.name || "") + (d.fields && d.fields.length ? " · " + d.fields.map(function (f) {
+          return { username: "Anmeldename", email: "E-Mail", role: "Rolle" }[f] || f; }).join(", ") : "");
+      case "user.reset.mail": case "user.reset.requested": case "user.reset.dismissed": case "user.reset.unknown": case "user.reset.blocked":
+        return d.name ? (/unknown|blocked/.test(e.action) ? "Eingabe: " : "") + d.name : "";
+      case "user.password.reset":
+        return (d.name || "") + (d.sessionsEnded ? " · " + d.sessionsEnded + " Sitzung(en) beendet" : "");
       case "users.update":
         var parts = [];
         if (d.created && d.created.length) parts.push("angelegt: " + d.created.join(", "));
@@ -8258,6 +8342,7 @@ window.SFM = (function () {
       renderSettingsPanes();
       if (settingsPane === "db") { renderDbStatus(); loadBackups(); }
       if (settingsPane === "audit") loadAudit(false);
+      if (settingsPane === "users") loadResetRequests();
     });
   });
   $("#settingsSearch").addEventListener("input", function () {
@@ -8510,10 +8595,12 @@ window.SFM = (function () {
       ["Demo zurücksetzen", "Das Kreispfeil-Symbol lädt die Demo-Daten neu; Benutzerkonten und Einstellungen bleiben erhalten."],
       ["Testdaten nachfüllen", "Das Datenbank-Symbol daneben ergänzt fehlende und unvollständige Tageswerte vom 1. Januar bis gestern. Bereits erfasste Werte, Maßnahmen und Begründungen bleiben erhalten, heute bleibt offen. Beide Symbole sehen nur Administratoren."]] },
     { title: "Sicherheit & Konten", intro: "Am Server prüft die Datenbank jede Anmeldung und jede Berechtigung. Passwörter werden nur als scrypt-Hash gespeichert.", tip: "Das Board sollte nur über HTTPS erreichbar sein — sonst gehen Passwörter ungeschützt über das Netz.", steps: [
-      ["Eigenes Passwort", "Auf den eigenen Namen oben rechts klicken. Nach der Änderung werden alle anderen Geräte abgemeldet."],
+      ["Anmelden", "Mit dem Anmeldenamen (z. B. „max.mustermann“) oder der hinterlegten E-Mail-Adresse — Groß-/Kleinschreibung egal. Der Anzeigename erscheint nur in Listen und Protokollen."],
+      ["Passwort vergessen", "Auf der Anmeldeseite „Passwort vergessen?“ wählen und Anmeldename oder E-Mail eingeben. Mit hinterlegter E-Mail kommt ein Link, der 60 Minuten und nur einmal gilt. Ohne E-Mail (oder ohne Mailserver) geht eine Anfrage an die Administration, die ein neues Passwort setzt."],
+      ["Mein Konto", "Auf den eigenen Namen oben rechts klicken: E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet."],
       ["Passwortregeln", "Mindestens 10 Zeichen (vom Server einstellbar), nicht gleich dem Namen. Nach mehreren Fehlversuchen ist die Anmeldung für 15 Minuten gesperrt."],
       ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],
-      ["Konten verwalten", "Administratoren legen Konten an, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen."],
+      ["Konten verwalten", "Administratoren legen Konten mit Anzeigename, Anmeldename und optionaler E-Mail an, ändern sie über „Bearbeiten“, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen. Offene Passwort-Anfragen stehen oben in der Benutzerverwaltung."],
       ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
     { title: "Dashboard anpassen", intro: "Das Dashboard und die Detaillierte Auswertung bestehen aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet beide Ansichten für sich ein (in der Detaillierten Auswertung über „Auswertung anpassen“).", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe)."],
@@ -8981,8 +9068,28 @@ window.SFM = (function () {
     if (!msg) { e.hidden = true; e.textContent = ""; }
     else { e.hidden = false; e.textContent = msg; }
   }
+  // Anmeldename aus dem Namen vorschlagen: „Jörg Müller“ → „joerg.mueller“ (wie am Server)
+  function slugUsername(name) {
+    var map = { "ä": "ae", "ö": "oe", "ü": "ue", "ß": "ss" };
+    var v = String(name || "").toLowerCase().replace(/[äöüß]/g, function (c) { return map[c]; });
+    if (v.normalize) v = v.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+    v = v.replace(/\s+/g, ".").replace(/[^a-z0-9._-]/g, "").replace(/\.{2,}/g, ".").replace(/^[._-]+|[._-]+$/g, "");
+    return v.length >= 2 ? v.slice(0, 36) : "";
+  }
+  var USERNAME_RE = /^[a-z0-9][a-z0-9._-]{1,39}$/;
+  var EMAIL_RE = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[a-z0-9-]{2,}$/i;
+  function showLoginPanel(which) {
+    $("#loginForm").hidden = which !== "login";
+    $("#forgotForm").hidden = which !== "forgot";
+    $("#resetForm").hidden = which !== "reset";
+  }
   function setLoginMode(reg) {
     registerMode = reg;
+    $("#fullField").hidden = !reg;
+    $("#emailField").hidden = !reg;
+    $("#lFull").required = reg;
+    $("#lNameLabel").textContent = reg ? "Anmeldename" : "Anmeldename oder E-Mail";
+    $("#forgotBox").hidden = reg || !SFM.isServer();
     $("#roleField").hidden = !reg;
     $("#pass2Field").hidden = !reg;
     $("#lPass2").required = reg;
@@ -8996,7 +9103,7 @@ window.SFM = (function () {
         : "Konten werden nur lokal in diesem Browser gespeichert.";
   }
   function setUser(u, persist) {
-    currentUser = { name: u.name, role: u.role, perm: u.perm || "editor", demo: !!u.demo };
+    currentUser = { name: u.name, username: u.username || "", role: u.role, perm: u.perm || "editor", demo: !!u.demo };
     if (persist) {
       try { LS.setItem(SESSION_KEY, JSON.stringify(currentUser)); } catch (e) {}
     }
@@ -9008,7 +9115,7 @@ window.SFM = (function () {
     $("#userChip").classList.toggle("clickable", canPw);
     $("#userChip").tabIndex = canPw ? 0 : -1;
     $("#userChip").setAttribute("role", canPw ? "button" : "group");
-    $("#userChip").title = canPw ? "Eigenes Passwort ändern" : "";
+    $("#userChip").title = canPw ? "Mein Konto — E-Mail und Passwort" : "";
     $("#logoutBtn").hidden = false;
     lastActivity = Date.now();
     if (typeof fitTabs === "function") fitTabs();
@@ -9052,6 +9159,71 @@ window.SFM = (function () {
     $("#lName").focus();
   }
   $("#modeToggle").addEventListener("click", function () { showLoginError(null); setLoginMode(!registerMode); });
+  $("#lFull").addEventListener("input", function () {
+    if (registerMode && !$("#lName").dataset.touched) $("#lName").value = slugUsername(this.value);
+  });
+  $("#lName").addEventListener("input", function () { this.dataset.touched = this.value ? "1" : ""; });
+
+  /* ---------- Passwort vergessen / neues Passwort über den Link ---------- */
+  function showMsg(id, msg) { var e = $(id); e.hidden = !msg; e.textContent = msg || ""; }
+  $("#forgotLink").addEventListener("click", function () {
+    showMsg("#forgotError", null); showMsg("#forgotOk", null);
+    $("#fLogin").value = $("#lName").value.trim();
+    $("#forgotSubmit").disabled = false;
+    showLoginPanel("forgot");
+    $("#fLogin").focus();
+  });
+  $("#forgotBack").addEventListener("click", function () { showLoginPanel("login"); });
+  $("#forgotForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var login = $("#fLogin").value.trim();
+    if (!login) return;
+    showMsg("#forgotError", null);
+    $("#forgotSubmit").disabled = true;
+    SFM.api("/api/password/forgot", { method: "POST", body: { login: login } }).then(function (r) {
+      if (!r.ok) { showMsg("#forgotError", (r.data && r.data.error) || "Anfrage fehlgeschlagen."); $("#forgotSubmit").disabled = false; return; }
+      showMsg("#forgotOk", r.data.mailEnabled
+        ? "Wenn es ein Konto mit diesen Angaben gibt, ist eine E-Mail mit einem Link unterwegs (gültig 60 Minuten). Ist keine E-Mail-Adresse hinterlegt, wurde die Administration informiert."
+        : "Wenn es ein Konto mit diesen Angaben gibt, wurde die Administration informiert. Sie setzt ein neues Passwort und teilt es Ihnen mit.");
+    }).catch(function () { showMsg("#forgotError", "Der Server hat nicht geantwortet."); $("#forgotSubmit").disabled = false; });
+  });
+  var resetToken = null;
+  $("#resetBack").addEventListener("click", function () { resetToken = null; showLoginPanel("login"); });
+  $("#resetForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pw = $("#rPass").value;
+    var prob = pwProblem(pw, null);
+    if (prob) { showMsg("#resetError", prob); return; }
+    if (pw !== $("#rPass2").value) { showMsg("#resetError", "Die Passwörter stimmen nicht überein."); return; }
+    SFM.api("/api/password/reset", { method: "POST", body: { token: resetToken, password: pw } }).then(function (r) {
+      if (!r.ok) { showMsg("#resetError", (r.data && r.data.error) || "Speichern fehlgeschlagen."); return; }
+      resetToken = null;
+      $("#rPass").value = ""; $("#rPass2").value = "";
+      showLoginPanel("login");
+      setLoginMode(false);
+      if (r.data.username) $("#lName").value = r.data.username;
+      $("#lPass").value = "";
+      showLoginError(null);
+      toast("Neues Passwort gespeichert — bitte anmelden");
+      $("#lPass").focus();
+    }).catch(function () { showMsg("#resetError", "Der Server hat nicht geantwortet."); });
+  });
+  // Link aus der E-Mail: …/#reset=<token> → Formular für das neue Passwort
+  function checkResetLink() {
+    var m = /^#reset=([A-Za-z0-9_-]{20,})$/.exec(location.hash || "");
+    if (!m) return;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) { location.hash = ""; }
+    if (!SFM.isServer()) return;
+    resetToken = m[1];
+    if (currentUser) logoutUser();
+    $("#loginScreen").hidden = false;
+    showMsg("#resetError", null);
+    $("#rPass").placeholder = "Mindestens " + pwMin() + " Zeichen";
+    showLoginPanel("reset");
+    $("#rPass").focus();
+  }
+  // Link in einem schon offenen Board-Tab geöffnet: nur der Teil nach # ändert sich
+  window.addEventListener("hashchange", checkResetLink);
   $("#demoLogin").addEventListener("click", function () {
     if (!SFM.isServer()) {
       setUser({ name: "Demo-Nutzer", role: "Teamleitung", perm: "admin", demo: true }, true);
@@ -9064,15 +9236,28 @@ window.SFM = (function () {
     });
   });
   $("#logoutBtn").addEventListener("click", logoutUser);
+  // Registrierungsangaben prüfen (Name, Anmeldename, E-Mail, Passwort)
+  function registerProblem(full, login, email, pass) {
+    if (!full) return "Bitte den Namen angeben.";
+    if (!USERNAME_RE.test(login)) return "Anmeldename: 2–40 Zeichen, nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Unterstrich.";
+    if (email && !EMAIL_RE.test(email)) return "Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen.";
+    var prob = pwProblem(pass, full);
+    if (prob) return prob;
+    if (pass !== $("#lPass2").value) return "Die Passwörter stimmen nicht überein.";
+    return null;
+  }
   // Anmeldung gegen die Datenbank (Passwortprüfung am Server)
   function serverLogin(name, pass) {
+    var full = $("#lFull").value.trim(), email = $("#lEmail").value.trim();
     if (registerMode) {
-      var prob = pwProblem(pass, name);
+      name = name.toLowerCase();
+      var prob = registerProblem(full, name, email, pass);
       if (prob) { showLoginError(prob); return; }
-      if (pass !== $("#lPass2").value) { showLoginError("Die Passwörter stimmen nicht überein."); return; }
     }
     Promise.resolve().then(function () {
-      var call = registerMode ? SFM.register(name, $("#lRole").value, pass) : SFM.login(name, pass);
+      var call = registerMode
+        ? SFM.register({ name: full, username: name, email: email, role: $("#lRole").value, password: pass })
+        : SFM.login(name, pass);
       return call.then(function (r) {
         if (!r.ok) { showLoginError((r.data && r.data.error) || "Anmeldung fehlgeschlagen."); return; }
         // Benutzerliste und Daten frisch holen, dann anmelden
@@ -9080,6 +9265,7 @@ window.SFM = (function () {
           reloadFromStore();
           setUser(r.data.user, false);
           loadBackups();
+          loadResetRequests(true);
         });
       });
     }).catch(function () {
@@ -9092,19 +9278,25 @@ window.SFM = (function () {
     if (!name || !pass) return;
     if (SFM.isServer()) { serverLogin(name, pass); return; }
     var users = loadUsers();
-    var existing = users.filter(function (u) { return u.name.toLowerCase() === name.toLowerCase(); })[0];
+    var key = name.toLowerCase();
+    // Lokaler Testmodus: Anmeldung mit Anmeldename, E-Mail oder (ältere Konten) Name
+    var existing = users.filter(function (u) {
+      return (u.username || "").toLowerCase() === key || (u.email || "").toLowerCase() === key || (!u.username && u.name.toLowerCase() === key);
+    })[0];
     if (registerMode) {
-      if (existing) { showLoginError("Dieser Name ist bereits vergeben — bitte melden Sie sich an."); return; }
-      var lprob = pwProblem(pass, name);
+      var full = $("#lFull").value.trim(), email = $("#lEmail").value.trim();
+      var lprob = registerProblem(full, key, email, pass);
       if (lprob) { showLoginError(lprob); return; }
-      if (pass !== $("#lPass2").value) { showLoginError("Die Passwörter stimmen nicht überein."); return; }
+      if (existing || users.some(function (u) { return u.name.toLowerCase() === full.toLowerCase(); })) {
+        showLoginError("Name oder Anmeldename ist bereits vergeben — bitte melden Sie sich an."); return;
+      }
       sha256(pass).then(function (h) {
-        var u = { name: name, role: $("#lRole").value, hash: h, perm: users.length === 0 ? "admin" : "editor", lastLogin: Date.now() };
+        var u = { name: full, username: key, email: email, role: $("#lRole").value, hash: h, perm: users.length === 0 ? "admin" : "editor", lastLogin: Date.now() };
         users.push(u); saveUsers(users);
         setUser(u, true);
       });
     } else {
-      if (!existing) { showLoginError("Kein Konto mit diesem Namen gefunden. Bitte registrieren oder den Demo-Zugang nutzen."); return; }
+      if (!existing) { showLoginError("Kein Konto mit diesem Anmeldenamen gefunden. Bitte registrieren oder den Demo-Zugang nutzen."); return; }
       if (existing.disabled) { showLoginError("Dieses Konto ist deaktiviert — bitte an die Administration wenden."); return; }
       sha256(pass).then(function (h) {
         if (h !== existing.hash) { showLoginError("Falsches Passwort."); return; }
@@ -9117,22 +9309,59 @@ window.SFM = (function () {
   /* ---------- Benutzerverwaltung ---------- */
   // Am Server: Konto anlegen bzw. Passwort setzen über eigene Endpunkte — Passwörter laufen
   // nie über die gemeinsame Benutzerliste. Ein neues Passwort meldet das Konto überall ab.
-  function serverUserSave(pass) {
-    var creating = userDlgMode === "create";
+  function serverUserSave(pass, login, email) {
+    var mode = userDlgMode, creating = mode === "create";
     var name = creating ? $("#uName").value.trim() : userDlgTarget;
     if (!name) return;
     var call = creating
-      ? SFM.api("/api/users", { method: "POST", body: { name: name, role: $("#uRole").value, perm: $("#uPerm").value, password: pass } })
-      : SFM.api("/api/users/password", { method: "POST", body: { name: name, password: pass } });
+      ? SFM.api("/api/users", { method: "POST", body: { name: name, username: login, email: email, role: $("#uRole").value, perm: $("#uPerm").value, password: pass } })
+      : mode === "edit"
+        ? SFM.api("/api/users", { method: "PATCH", body: { name: name, username: login, email: email, role: $("#uRole").value } })
+        : SFM.api("/api/users/password", { method: "POST", body: { name: name, password: pass } });
     call.then(function (r) {
       if (!r.ok) { showUserError((r.data && r.data.error) || "Speichern fehlgeschlagen."); return; }
       return SFM.refresh().then(function () {
         reloadFromStore();
         userDlg.close(); renderUsers();
+        if (mode === "password") loadResetRequests();
         toast(creating ? "Konto „" + name + "“ angelegt"
+          : mode === "edit" ? "Konto „" + name + "“ gespeichert"
           : "Passwort aktualisiert" + (r.data.sessionsEnded ? " — " + r.data.sessionsEnded + (r.data.sessionsEnded === 1 ? " Gerät" : " Geräte") + " abgemeldet" : ""));
       });
     }).catch(function () { showUserError("Der Server hat nicht geantwortet."); });
+  }
+
+  /* ---------- Offene „Passwort vergessen“-Anfragen (Admin, Server) ---------- */
+  function loadResetRequests(announce) {
+    if (!SFM.isServer() || !can("manageUsers")) { $("#resetReqCard").hidden = true; return; }
+    SFM.api("/api/users/reset-requests").then(function (r) {
+      if (!r.ok) return;
+      var list = r.data.requests || [];
+      var box = $("#resetReqList");
+      box.innerHTML = "";
+      $("#resetReqCard").hidden = !list.length;
+      list.forEach(function (q) {
+        var row = el("div", "reset-req-row");
+        var d = new Date(q.at);
+        row.appendChild(el("span", "reset-req-name", q.name));
+        row.appendChild(el("span", "mini-hint", "seit " + fmtDate(isoOf(d)) + " " + pad2(d.getHours()) + ":" + pad2(d.getMinutes())));
+        var set = el("button", "btn sm primary", "Neues Passwort setzen");
+        set.type = "button";
+        set.addEventListener("click", function () { openUserDialog("password", q.name); });
+        var no = el("button", "btn sm", "Verwerfen");
+        no.type = "button";
+        no.addEventListener("click", function () {
+          SFM.api("/api/users/reset-requests/" + encodeURIComponent(q.name), { method: "DELETE" }).then(function () { loadResetRequests(); });
+        });
+        row.appendChild(set); row.appendChild(no);
+        box.appendChild(row);
+      });
+      if (announce && list.length) {
+        toast(list.length + (list.length === 1 ? " offene Passwort-Anfrage" : " offene Passwort-Anfragen"), "Ansehen", function () {
+          settingsPane = "users"; switchView("settings"); renderSettingsPanes();
+        });
+      }
+    }).catch(function () {});
   }
 
   /* ---------- Eigenes Passwort ändern (nur am Server) ---------- */
@@ -9141,24 +9370,56 @@ window.SFM = (function () {
     var e = $("#pwError");
     e.hidden = !msg; e.textContent = msg || "";
   }
+  var myEmail = "";
   function openPwDialog() {
     if (!SFM.isServer() || !currentUser || currentUser.demo) return;
     $("#pwCurrent").value = ""; $("#pwNew").value = ""; $("#pwNew2").value = "";
     $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
+    $("#acLogin").value = currentUser.username || ""; $("#acEmail").value = "";
     showPwError(null);
     pwDlg.showModal();
-    $("#pwCurrent").focus();
+    SFM.api("/api/me").then(function (r) {
+      if (!r.ok) return;
+      myEmail = r.data.email || "";
+      $("#acLogin").value = (r.data.user && r.data.user.username) || "";
+      $("#acEmail").value = myEmail;
+    }).catch(function () {});
+    $("#acEmail").focus();
   }
   $("#pwForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    var cur = $("#pwCurrent").value, nw = $("#pwNew").value;
-    var prob = pwProblem(nw, currentUser && currentUser.name);
-    if (prob) { showPwError(prob); return; }
-    if (nw !== $("#pwNew2").value) { showPwError("Die neuen Passwörter stimmen nicht überein."); return; }
-    SFM.api("/api/me/password", { method: "POST", body: { current: cur, password: nw } }).then(function (r) {
-      if (!r.ok) { showPwError((r.data && r.data.error) || "Ändern fehlgeschlagen."); return; }
+    var cur = $("#pwCurrent").value, nw = $("#pwNew").value, email = $("#acEmail").value.trim();
+    var emailChanged = email.toLowerCase() !== myEmail.toLowerCase();
+    if (!emailChanged && !nw) { showPwError("Es gibt nichts zu speichern."); return; }
+    if (emailChanged && email && !EMAIL_RE.test(email)) { showPwError("Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen."); return; }
+    if (nw) {
+      var prob = pwProblem(nw, currentUser && currentUser.name);
+      if (prob) { showPwError(prob); return; }
+      if (nw !== $("#pwNew2").value) { showPwError("Die neuen Passwörter stimmen nicht überein."); return; }
+    }
+    var done = [];
+    var step = Promise.resolve(true);
+    if (emailChanged) {
+      step = step.then(function () {
+        return SFM.api("/api/me/profile", { method: "POST", body: { current: cur, email: email } }).then(function (r) {
+          if (!r.ok) { showPwError((r.data && r.data.error) || "Speichern fehlgeschlagen."); return false; }
+          myEmail = r.data.email || ""; done.push("E-Mail gespeichert"); return true;
+        });
+      });
+    }
+    if (nw) {
+      step = step.then(function (go) {
+        if (!go) return false;
+        return SFM.api("/api/me/password", { method: "POST", body: { current: cur, password: nw } }).then(function (r) {
+          if (!r.ok) { showPwError((r.data && r.data.error) || "Ändern fehlgeschlagen."); return false; }
+          done.push("Passwort geändert" + (r.data.sessionsEnded ? " — andere Geräte wurden abgemeldet" : "")); return true;
+        });
+      });
+    }
+    step.then(function (go) {
+      if (!go) return;
       pwDlg.close();
-      toast("Passwort geändert" + (r.data.sessionsEnded ? " — andere Geräte wurden abgemeldet" : ""));
+      toast(done.join(" · "));
     }).catch(function () { showPwError("Der Server hat nicht geantwortet."); });
   });
   $("#pwCancel").addEventListener("click", function () { pwDlg.close(); });
@@ -9176,11 +9437,22 @@ window.SFM = (function () {
   }
   function openUserDialog(mode, name) {
     userDlgMode = mode; userDlgTarget = name || null;
-    $("#uDlgTitle").textContent = mode === "create" ? "Benutzer anlegen" : "Passwort zurücksetzen";
+    var u = name ? loadUsers().filter(function (x) { return x.name === name; })[0] || {} : {};
+    $("#uDlgTitle").textContent = mode === "create" ? "Benutzer anlegen" : mode === "edit" ? "Benutzer bearbeiten" : "Passwort zurücksetzen";
     $("#uName").value = mode === "create" ? "" : name;
     $("#uName").disabled = mode !== "create";
-    $("#uRoleField").hidden = mode !== "create";
+    $("#uIdRow").hidden = mode === "password";
+    $("#uLogin").value = mode === "create" ? "" : (u.username || "");
+    $("#uLogin").dataset.touched = "";
+    $("#uEmail").value = mode === "create" ? "" : (u.email || "");
+    $("#uRoleField").hidden = mode === "password";
+    if (mode === "edit" && u.role) {
+      var rs = $("#uRole");
+      if (![].some.call(rs.options, function (o) { return o.value === u.role; })) { var o = el("option", "", u.role); rs.appendChild(o); }
+      rs.value = u.role;
+    }
     $("#uPermField").hidden = mode !== "create";
+    $("#uPassField").hidden = mode === "edit";
     $("#uPass").value = "";
     $("#uPass").placeholder = "Mindestens " + pwMin() + " Zeichen";
     showUserError(null);
@@ -9203,7 +9475,7 @@ window.SFM = (function () {
       row.appendChild(el("span", "avatar", initials(u.name)));
       var idBox = el("div", "u-id");
       idBox.appendChild(el("div", "u-name", u.name + (isSelf(u.name) ? " (Sie)" : "")));
-      idBox.appendChild(el("div", "u-role", u.role));
+      idBox.appendChild(el("div", "u-role", [u.role, u.username ? "@" + u.username : "", u.email || ""].filter(Boolean).join(" · ")));
       row.appendChild(idBox);
       var sel = el("select", "perm-select");
       [["editor", "Bearbeiten"], ["admin", "Administrator"], ["viewer", "Nur Lesen"]].forEach(function (p) {
@@ -9239,6 +9511,10 @@ window.SFM = (function () {
       last.title = "Letzte Anmeldung";
       row.appendChild(last);
       var actions = el("div", "u-actions");
+      var ed = el("button", "btn sm", "Bearbeiten");
+      ed.title = "Anmeldename, E-Mail und Rolle ändern";
+      ed.addEventListener("click", function () { openUserDialog("edit", u.name); });
+      actions.appendChild(ed);
       var pw = el("button", "btn sm", "Passwort");
       pw.title = "Passwort zurücksetzen";
       pw.addEventListener("click", function () { openUserDialog("password", u.name); });
@@ -9285,13 +9561,35 @@ window.SFM = (function () {
   $("#newUserBtn").addEventListener("click", function () { openUserDialog("create"); });
   $("#uDlgCancel").addEventListener("click", function () { userDlg.close(); });
   $("#uDlgClose").addEventListener("click", function () { userDlg.close(); });
+  $("#uName").addEventListener("input", function () {
+    if (userDlgMode === "create" && !$("#uLogin").dataset.touched) $("#uLogin").value = slugUsername(this.value);
+  });
+  $("#uLogin").addEventListener("input", function () { this.dataset.touched = this.value ? "1" : ""; });
   $("#userForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var pass = $("#uPass").value;
-    var uprob = pwProblem(pass, userDlgMode === "create" ? $("#uName").value : userDlgTarget);
-    if (uprob) { showUserError(uprob); return; }
-    if (SFM.isServer()) { serverUserSave(pass); return; }
+    var login = $("#uLogin").value.trim().toLowerCase(), email = $("#uEmail").value.trim();
+    if (userDlgMode !== "password") {
+      if (!USERNAME_RE.test(login)) { showUserError("Anmeldename: 2–40 Zeichen, nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Unterstrich."); return; }
+      if (email && !EMAIL_RE.test(email)) { showUserError("Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen."); return; }
+    }
+    if (userDlgMode !== "edit") {
+      var uprob = pwProblem(pass, userDlgMode === "create" ? $("#uName").value : userDlgTarget);
+      if (uprob) { showUserError(uprob); return; }
+    }
+    if (SFM.isServer()) { serverUserSave(pass, login, email); return; }
     var users = loadUsers();
+    var clash = users.filter(function (x) {
+      return x.name !== userDlgTarget && ((x.username || "").toLowerCase() === login || (email && (x.email || "").toLowerCase() === email.toLowerCase()));
+    })[0];
+    if (userDlgMode !== "password" && clash) { showUserError("Anmeldename oder E-Mail gehört bereits zu „" + clash.name + "“."); return; }
+    if (userDlgMode === "edit") {
+      var t = users.filter(function (x) { return x.name === userDlgTarget; })[0];
+      if (t) { t.username = login; t.email = email; t.role = $("#uRole").value; saveUsers(users); }
+      userDlg.close(); renderUsers();
+      toast("Konto „" + userDlgTarget + "“ gespeichert");
+      return;
+    }
     if (userDlgMode === "create") {
       var name = $("#uName").value.trim();
       if (!name) return;
@@ -9299,7 +9597,7 @@ window.SFM = (function () {
         showUserError("Dieser Name ist bereits vergeben."); return;
       }
       sha256(pass).then(function (h) {
-        users.push({ name: name, role: $("#uRole").value, perm: $("#uPerm").value, hash: h });
+        users.push({ name: name, username: login, email: email, role: $("#uRole").value, perm: $("#uPerm").value, hash: h });
         saveUsers(users);
         userDlg.close(); renderUsers();
         toast("Konto „" + name + "“ angelegt");

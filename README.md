@@ -100,7 +100,7 @@ Danach ist allein die `.env` maßgeblich (Umgebungsvariablen überschreiben sie 
 
 ```bash
 DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.trobox.de \
-ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
+ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' ./deploy.sh -y
 ```
 
 ## Einstellungen (`.env`)
@@ -121,6 +121,11 @@ ADMIN_NAME="Luca" ADMIN_PASSWORD='…' ./deploy.sh -y
 | `SESSION_DAYS` | `14` | Höchstdauer einer Anmeldung |
 | `SESSION_IDLE_HOURS` | `12` | Abmeldung nach so vielen Stunden ohne Bedienung (`0` = aus; der TV-Modus zählt als aktiv) |
 | `PASSWORD_MIN_LENGTH` | `10` | Mindestlänge für Passwörter (8–128) |
+| `SMTP_HOST` | leer | Mailserver für „Passwort vergessen“-Links (leer = keine Mails, Anfragen gehen an die Administration) |
+| `SMTP_PORT` / `SMTP_SECURITY` | `587` / `starttls` | Port und Verschlüsselung (`starttls`, `tls` für Port 465, `none`) |
+| `SMTP_USER` / `SMTP_PASSWORD` | leer | Anmeldung am Mailserver (leer = ohne Anmeldung) |
+| `SMTP_FROM` | leer | Absender, z. B. `Shopfloor Board <shopfloor@firma.de>` |
+| `RESET_LINK_MINUTES` | `60` | Gültigkeit eines Links zum Zurücksetzen (10–1440 Minuten) |
 | `COOKIE_SECURE` | `true` bei `https://` | Sitzungs-Cookie nur über HTTPS (Name dann `__Host-sfm_session`) |
 | `TRUSTED_PROXIES` | leer | IP(s) des Reverse Proxys, dessen `X-Forwarded-For` als Client-IP gilt |
 | `AUDIT_DAYS` | `365` | Aufbewahrung des Sicherheitsprotokolls in Tagen (nur in `docker-compose.yml`/Umgebung) |
@@ -163,9 +168,23 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh users                # Konten auflisten
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
 ./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto, meldet es überall ab)
+./deploy.sh mail-test adresse    # Testmail über die SMTP-Einstellungen senden
 ./deploy.sh audit [50]           # letzte Einträge des Sicherheitsprotokolls
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
+
+### Konten und „Passwort vergessen“
+
+- Jedes Konto hat einen **Anzeigenamen** (in Listen und Protokollen), einen **Anmeldenamen** (Kleinbuchstaben, Ziffern,
+  `.`, `_`, `-`) und optional eine **E-Mail-Adresse**. Angemeldet wird mit Anmeldename oder E-Mail.
+- Bestehende Konten erhalten beim Update automatisch einen Anmeldenamen aus dem Namen (z. B. „Jörg Müller“ →
+  `joerg.mueller`); `./deploy.sh users` zeigt ihn an. Ändern unter *Einstellungen → Benutzerverwaltung → Bearbeiten*.
+- *Passwort vergessen?* auf der Anmeldeseite: Ist `SMTP_HOST` gesetzt und hat das Konto eine E-Mail, kommt ein Link
+  (gültig `RESET_LINK_MINUTES`, nur einmal nutzbar, beendet alle Sitzungen). Sonst landet eine Anfrage in der
+  Benutzerverwaltung, Administratoren werden nach der Anmeldung darauf hingewiesen.
+- Die Antwort ist immer gleich — ob ein Konto existiert, verrät die Seite nicht. Höchstens 3 Anfragen je Konto und Stunde.
+- Für korrekte Links `PUBLIC_URL` auf die Adresse setzen, unter der Benutzer das Board öffnen.
+- Einrichten: `./deploy.sh config` (SMTP-Fragen), `./deploy.sh`, dann `./deploy.sh mail-test adresse@firma.de`.
 
 ### Testdaten
 
@@ -200,6 +219,7 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Passwörter werden nur über eigene Endpunkte gesetzt (Konto anlegen, Passwort zurücksetzen, eigenes Passwort ändern),
   nie über die gemeinsame Benutzerliste. Ein neues Passwort beendet alle anderen Sitzungen des Kontos; gesperrte und
   gelöschte Konten verlieren ihre Sitzungen sofort.
+- Anmeldung mit Anmeldename oder E-Mail; der Anzeigename allein reicht nicht.
 - Login-Bremse: 10 Fehlversuche je IP und Name, 30 je IP, 50 je Name in 15 Minuten; dazu drosselt Nginx Anmeldungen auf
   10 pro Minute und IP. Die Client-IP ermittelt Nginx — ein vom Browser mitgeschickter `X-Forwarded-For` zählt nicht.
 
@@ -212,7 +232,10 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 **Rechte und Daten**
 - Rechte prüft der Server: *Nur Lesen* kann nichts speichern; Konten, Sicherungen und das Protokoll sind Administratoren
   vorbehalten. In den Einstellungen dürfen Bearbeiter nur die Unfallchronik (Huddle) und das Versandprotokoll ändern.
-- Das SMTP-Passwort wird am Server nicht gespeichert und nicht ausgeliefert.
+- Das SMTP-Passwort des Versandprotokolls (Oberfläche) wird am Server nicht gespeichert und nicht ausgeliefert;
+  das Server-Postfach für Passwort-Links (`SMTP_PASSWORD`) steht nur in der `.env` (Rechte `600`).
+- E-Mail-Adressen anderer Konten sehen nur Administratoren. Links zum Zurücksetzen sind zufällig (256 Bit), in der
+  Datenbank liegt nur ihr Hash.
 - Ohne Anmeldung liefert die API keine Daten aus. Größenlimit 25 MB nur für Dokumente, sonst 32 KB.
 - Sicherheitsprotokoll für Anmeldungen, Fehlversuche, Konten, Sicherungen und Speichervorgänge
   (*Einstellungen → Sicherheitsprotokoll* oder `./deploy.sh audit`).

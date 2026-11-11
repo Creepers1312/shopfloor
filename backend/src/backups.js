@@ -147,6 +147,8 @@ async function restore(filename, by) {
     if (r.code !== 0) {
       throw new HttpError(500, "pg_restore fehlgeschlagen: " + (r.err || "").trim().slice(0, 300));
     }
+    // Ältere Sicherungen kennen neuere Spalten nicht (z. B. Anmeldename) — Schema nachziehen
+    await db.migrate();
     // Alle Geräte sollen den wiederhergestellten Stand neu laden
     await db.tx(async (c) => {
       await db.lockRevision(c);

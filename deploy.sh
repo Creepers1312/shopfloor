@@ -14,6 +14,7 @@
 #  ./deploy.sh backup [notiz]     Sofort eine Datenbanksicherung anlegen
 #  ./deploy.sh admin              Weiteres Administrator-Konto anlegen
 #  ./deploy.sh audit [anzahl]     Letzte Einträge des Sicherheitsprotokolls
+#  ./deploy.sh mail-test [adresse] Mailserver prüfen, optional Test-E-Mail senden
 #  ./deploy.sh reset-password N   Passwort für Konto N neu setzen
 #  ./deploy.sh users              Konten auflisten
 #  ./deploy.sh stop               Container stoppen (Daten bleiben erhalten)
@@ -34,7 +35,7 @@
 #
 #  Ohne Rückfragen, z. B.:
 #    DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.firma.de \
-#    ADMIN_NAME="Luca" ADMIN_PASSWORD="…" ./deploy.sh -y
+#    ADMIN_NAME="Luca" ADMIN_USERNAME="luca" ADMIN_EMAIL="…" ADMIN_PASSWORD="…" ./deploy.sh -y
 # =============================================================================
 set -Eeuo pipefail
 
@@ -195,6 +196,12 @@ SETTINGS=(
   "BACKUP_ENABLED|true|bool|Standard für tägliche automatische Sicherung"
   "BACKUP_TIME|02:00|time|Uhrzeit der täglichen Sicherung (HH:MM)"
   "BACKUP_KEEP|14|int|Wie viele automatische Sicherungen aufbewahren?"
+  "SMTP_HOST||opthost|Mailserver für „Passwort vergessen“ (leer = kein Versand, Anfragen gehen an die Administration)"
+  "SMTP_PORT|587|port|Port des Mailservers (587 = STARTTLS, 465 = TLS, 25 = ohne)"
+  "SMTP_SECURITY|starttls|smtpsec|Verschlüsselung zum Mailserver: starttls, tls oder none"
+  "SMTP_USER||opttext|Benutzername am Mailserver (leer = ohne Anmeldung)"
+  "SMTP_PASSWORD||mailpass|Passwort am Mailserver"
+  "SMTP_FROM||mailfrom|Absender, z. B. Shopfloor Board <shopfloor@firma.de>"
   "COMPOSE_FILE|__auto__|derived|Compose-Dateien (ergibt sich aus der Betriebsart, nicht von Hand ändern)"
 )
 
@@ -269,6 +276,12 @@ validate() {   # typ wert → normalisierter Wert auf stdout, Fehler → return 
             [[ -z "$v" || "$v" =~ ^[0-9A-Fa-f.:/]+(,[0-9A-Fa-f.:/]+)*$ ]] || return 1 ;;
     time)   [[ "$v" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || return 1 ;;
     mode)   v="${v,,}"; [[ "$v" == port || "$v" == proxy ]] || return 1 ;;
+    opthost) [[ -z "$v" || "$v" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1 ;;
+    smtpsec) v="${v,,}"; [[ "$v" == starttls || "$v" == tls || "$v" == none ]] || return 1 ;;
+    opttext) [[ ! "$v" =~ [[:space:]] ]] || return 1 ;;
+    mailpass) [[ "$v" != *$'\n'* ]] || return 1 ;;
+    mailfrom) [[ -z "$v" || "$v" =~ @ ]] || return 1
+            case "$v" in *\"*|*\$*|*\`*|*\\*) return 1 ;; esac ;;
     network) [[ "$v" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || return 1
             "${DOCKER[@]}" network inspect "$v" >/dev/null 2>&1 || return 1 ;;
     bool)   v="$(to_bool "$v")" || return 1 ;;
@@ -292,6 +305,11 @@ hint_for() {
     iplist) echo "IP-Adressen oder Netze, mit Komma getrennt; - für keinen" ;;
     time) echo "Format HH:MM, z. B. 02:00" ;;
     mode) echo "port oder proxy" ;;
+    opthost) echo "Hostname wie mail.firma.de, oder leer" ;;
+    smtpsec) echo "starttls, tls oder none" ;;
+    opttext) echo "ohne Leerzeichen, oder leer" ;;
+    mailpass) echo "keine Zeilenumbrüche und kein '" ;;
+    mailfrom) echo "E-Mail-Adresse, z. B. Shopfloor Board <shopfloor@firma.de>" ;;
     network) echo "Name eines vorhandenen Docker-Netzes (docker network ls)" ;;
     bool) echo "ja oder nein" ;;
     url) echo "mit http:// oder https://" ;;
@@ -340,6 +358,9 @@ configure() {
     # Abgeleitetes und Einträge, die zur Betriebsart nicht passen, werden nicht gefragt
     if [[ "$type" == derived ]]; then VAL["$key"]="$(default_for "$key" "$dflt")"; continue; fi
     if [[ "$key" == PROXY_NETWORK && "${VAL[DEPLOY_MODE]}" != proxy ]]; then VAL["$key"]=""; continue; fi
+    if [[ "$key" == SMTP_* && "$key" != SMTP_HOST && -z "${VAL[SMTP_HOST]:-}" ]]; then
+      VAL["$key"]="$(validate "$type" "$start" 2>/dev/null || true)"; continue
+    fi
     # Wechsel der Betriebsart: Standards der Betriebsart neu vorschlagen
     if [[ "$key" == WEB_BIND || "$key" == TRUSTED_PROXIES ]] && [[ -z "$envval" && "${CUR[DEPLOY_MODE]:-}" != "${VAL[DEPLOY_MODE]}" ]]; then
       start="$(default_for "$key" "$dflt")"
@@ -351,7 +372,13 @@ configure() {
 
     if [[ "$interactive" == true ]]; then
       while true; do
-        if [[ "$type" == "secret" ]]; then
+        if [[ "$type" == "mailpass" ]]; then
+          shown="${C_DIM}[Enter = unverändert lassen, '-' = leeren]${C_RESET}"
+          [[ -z "$start" ]] && shown="${C_DIM}[nicht gesetzt]${C_RESET}"
+          printf '%s\n  %s%s%s %s: ' "$desc" "$C_BOLD" "$key" "$C_RESET" "$shown"
+          IFS= read -rs answer; echo
+          if [[ "$answer" == "-" ]]; then answer=""; start=""; fi
+        elif [[ "$type" == "secret" ]]; then
           shown="${C_DIM}[vorhanden – Enter behält ihn, 'neu' erzeugt einen neuen]${C_RESET}"
           [[ -z "${CUR[$key]:-}" ]] && shown="${C_DIM}[Enter = zufällig erzeugen]${C_RESET}"
           printf '%s\n  %s%s%s %s: ' "$desc" "$C_BOLD" "$key" "$C_RESET" "$shown"
@@ -411,6 +438,8 @@ configure() {
       IFS='|' read -r key _ type _ <<< "$entry"
       [[ "$type" == derived ]] && continue
       [[ "$key" == PROXY_NETWORK && "${VAL[DEPLOY_MODE]}" != proxy ]] && continue
+      [[ "$key" == SMTP_* && "$key" != SMTP_HOST && -z "${VAL[SMTP_HOST]}" ]] && continue
+      [[ "$type" == mailpass ]] && { printf '  %-22s %s\n' "$key" "$([[ -n "${VAL[$key]}" ]] && echo '••••••••' || echo '(leer)')"; continue; }
       [[ "$type" == "secret" ]] && printf '  %-22s %s\n' "$key" "••••••••" || printf '  %-22s %s\n' "$key" "${VAL[$key]}"
     done
     confirm "So übernehmen?" || die "Abgebrochen — nichts geändert."
@@ -503,8 +532,9 @@ ensure_admin() {
   [[ "${n:-0}" -gt 0 ]] && return 0
   title "Erstes Administrator-Konto"
   if [[ -n "${ADMIN_NAME:-}" && -n "${ADMIN_PASSWORD:-}" ]]; then
-    printf '%s' "$ADMIN_PASSWORD" | cli_in create-admin "$ADMIN_NAME" "${ADMIN_ROLE:-Administration}" >/dev/null
-    ok "Administrator „$ADMIN_NAME“ angelegt."
+    printf '%s' "$ADMIN_PASSWORD" | cli_in create-admin "$ADMIN_NAME" "${ADMIN_ROLE:-Administration}" \
+      "${ADMIN_USERNAME:-$(suggest_username "$ADMIN_NAME")}" "${ADMIN_EMAIL:-}" >/dev/null
+    ok "Administrator „$ADMIN_NAME“ angelegt (Anmeldename: ${ADMIN_USERNAME:-$(suggest_username "$ADMIN_NAME")})."
     return 0
   fi
   if [[ "$ASSUME_YES" == true ]]; then
@@ -515,9 +545,28 @@ ensure_admin() {
   create_admin_interactive
 }
 
+# Anmeldename aus dem Namen vorschlagen: „Jörg Müller“ → „joerg.mueller“
+suggest_username() {
+  local s
+  s="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | sed -e 's/ä/ae/g; s/ö/oe/g; s/ü/ue/g; s/ß/ss/g' \
+       -e 's/[[:space:]]\+/./g; s/[^a-z0-9._-]//g; s/\.\.*/./g; s/^[._-]*//; s/[._-]*$//')"
+  [[ ${#s} -ge 2 ]] || s="admin"
+  printf '%s' "${s:0:36}"
+}
 create_admin_interactive() {
-  local name role pw pw2 min="${VAL[PASSWORD_MIN_LENGTH]:-10}"
-  while true; do printf 'Name: '; IFS= read -r name; [[ -n "$name" ]] && break; done
+  local name role pw pw2 uname mail sug min="${VAL[PASSWORD_MIN_LENGTH]:-10}"
+  while true; do printf 'Name (Anzeigename): '; IFS= read -r name; [[ -n "$name" ]] && break; done
+  sug="$(suggest_username "$name")"
+  while true; do
+    printf 'Anmeldename [%s]: ' "$sug"; IFS= read -r uname; uname="${uname:-$sug}"; uname="${uname,,}"
+    [[ "$uname" =~ ^[a-z0-9][a-z0-9._-]{1,39}$ ]] && break
+    warn "Anmeldename: 2–40 Zeichen, nur Kleinbuchstaben, Ziffern, Punkt, Bindestrich und Unterstrich."
+  done
+  while true; do
+    printf 'E-Mail (für „Passwort vergessen“, optional): '; IFS= read -r mail
+    [[ -z "$mail" || "$mail" =~ ^[^[:space:]@]+@[^[:space:]@]+\.[A-Za-z0-9-]{2,}$ ]] && break
+    warn "Bitte eine gültige E-Mail-Adresse angeben oder leer lassen."
+  done
   printf 'Rolle [Administration]: '; IFS= read -r role; role="${role:-Administration}"
   while true; do
     printf 'Passwort (mind. %s Zeichen): ' "$min"; IFS= read -rs pw; echo
@@ -525,7 +574,7 @@ create_admin_interactive() {
     [[ ${#pw} -ge $min && "$pw" == "$pw2" ]] && break
     warn "Passwörter zu kurz oder nicht gleich — bitte erneut."
   done
-  printf '%s' "$pw" | cli_in create-admin "$name" "$role"
+  printf '%s' "$pw" | cli_in create-admin "$name" "$role" "$uname" "$mail"
 }
 
 summary() {
@@ -641,6 +690,8 @@ case "$COMMAND" in
   reset-password) detect_compose; load_env_for_run; [[ -n "${1:-}" ]] || die "Aufruf: ./deploy.sh reset-password <Name>"
                   dc exec api node src/cli.js reset-password "$1" ;;
   users)          detect_compose; load_env_for_run; cli list-users ;;
+  mail-test)      detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
+                  cli mail-test "${1:-}" ;;
   audit)          detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
                   cli audit "${1:-50}" ;;
   stop|down)      detect_compose; load_env_for_run; dc down; ok "Gestoppt — Daten und Sicherungen bleiben erhalten." ;;
