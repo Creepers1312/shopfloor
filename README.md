@@ -116,11 +116,13 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 | `TZ` | `Europe/Berlin` | Zeitzone |
 | `DB_NAME` / `DB_USER` | `shopfloor` | Datenbank und Benutzer |
 | `DB_PASSWORD` | zufällig | Datenbank-Passwort |
+| `APP_SECRET` | zufällig | Schlüssel für gespeicherte Zugangsdaten (SMB-Passwort); wird erzeugt und nicht abgefragt |
 | `ALLOW_REGISTER` | `false` | Selbstregistrierung (das allererste Konto ist immer möglich und wird Administrator) |
 | `ALLOW_DEMO` | `false` | Demo-Zugang mit Leserechten auf der Anmeldeseite |
 | `SESSION_DAYS` | `14` | Höchstdauer einer Anmeldung |
 | `SESSION_IDLE_HOURS` | `12` | Abmeldung nach so vielen Stunden ohne Bedienung (`0` = aus; der TV-Modus zählt als aktiv) |
 | `PASSWORD_MIN_LENGTH` | `10` | Mindestlänge für Passwörter (8–128) |
+| `CHECKMK` | `true`, wenn ein Checkmk-Agent installiert ist | Local Check für Board und Sicherungen einrichten (siehe „Überwachung mit Checkmk“) |
 | `SMTP_HOST` | leer | Mailserver für „Passwort vergessen“-Links (leer = keine Mails, Anfragen gehen an die Administration) |
 | `SMTP_PORT` / `SMTP_SECURITY` | `587` / `starttls` | Port und Verschlüsselung (`starttls`, `tls` für Port 465, `none`) |
 | `SMTP_USER` / `SMTP_PASSWORD` | leer | Anmeldung am Mailserver (leer = ohne Anmeldung) |
@@ -169,6 +171,8 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
 ./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto, meldet es überall ab)
 ./deploy.sh mail-test adresse    # Testmail über die SMTP-Einstellungen senden
+./deploy.sh checkmk              # Ausgabe des Checkmk-Local-Checks anzeigen
+./deploy.sh smb                  # Verbindung zur SMB-Freigabe prüfen, fehlende Sicherungen kopieren
 ./deploy.sh audit [50]           # letzte Einträge des Sicherheitsprotokolls
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
@@ -208,8 +212,55 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Von Hand in der Oberfläche unter *Einstellungen → Datenbank & Sicherung* oder per `./deploy.sh backup`.
 - Vor jedem `./deploy.sh` und vor jeder Wiederherstellung wird der aktuelle Stand automatisch gesichert.
 - Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents` und `users`).
-  Für den Ernstfall regelmäßig verschlüsselt auf ein NAS kopieren und die Wiederherstellung einmal ausprobieren.
+  Für den Ernstfall zusätzlich auf ein NAS kopieren (siehe unten) und die Wiederherstellung einmal ausprobieren.
 - Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
+- **Herunterladen:** In der Liste *Vorhandene Sicherungen* lädt „Herunterladen“ die `.dump`-Datei direkt im Browser
+  (nur Administratoren, wird protokolliert).
+- **Zurückspielen aus einer Datei:** Eine `.dump`-Datei in den Sicherungsordner kopieren — sie erscheint in der Liste
+  („im Sicherungsordner gefunden“) und lässt sich wiederherstellen.
+
+### Kopie auf eine SMB-Freigabe (NAS)
+
+Zusätzlich zum lokalen Ordner kann jede Sicherung auf eine Windows-/NAS-Freigabe kopiert werden. Eingestellt wird alles
+in der Oberfläche unter *Einstellungen → Datenbank & Sicherung → Kopie auf SMB-Freigabe*:
+
+1. Freigabe eintragen, z. B. `//nas.firma.local/backup/shopfloor` (`\\nas\backup\shopfloor` geht auch; fehlende
+   Ordner unterhalb der Freigabe werden beim Test angelegt), dazu Benutzer, Passwort und ggf. Domäne.
+2. „Verbindung testen“ — meldet verständlich, ob Server, Anmeldung, Ordner oder Rechte nicht passen.
+3. „Kopie aktiv“ einschalten und speichern — der Server gleicht sofort ab.
+
+Verhalten:
+- Der API-Container überträgt mit `smbclient` (SMB 2/3); auf dem Host muss nichts eingehängt oder installiert werden.
+  Der Server braucht Zugriff auf Port 445 des NAS.
+- Lokale Sicherungen laufen immer, auch wenn das NAS nicht erreichbar ist; fehlende Kopien werden nach jeder Sicherung
+  und stündlich nachgeholt. Der Status steht oben auf der Seite, Fehler zusätzlich im Sicherheitsprotokoll.
+- Auf der Freigabe bleiben die neuesten *n* automatischen (einstellbar) und alle manuellen Sicherungen. Löschen in der
+  Oberfläche entfernt nur die Datei auf dem Server.
+- Das Passwort wird AES-256-GCM-verschlüsselt in der Datenbank gespeichert (Schlüssel `APP_SECRET` aus der `.env`,
+  erzeugt von `deploy.sh`) und nie wieder ausgeliefert. Es steckt nicht in den Sicherungsdateien. Wird `APP_SECRET`
+  geändert, muss das Passwort neu eingegeben werden.
+- Der Benutzer an der Freigabe braucht Schreib- und Löschrechte im Zielordner.
+- `./deploy.sh smb` prüft die Verbindung von der Kommandozeile aus und kopiert fehlende Sicherungen.
+
+## Überwachung mit Checkmk
+
+Läuft auf dem Server ein Checkmk-Agent (`/usr/lib/check_mk_agent/local` vorhanden), richtet `./deploy.sh` einen
+Local Check ein (`CHECKMK=true`, Standard bei vorhandenem Agent). Danach in Checkmk beim Host die Service-Erkennung
+ausführen. Neue Dienste (bei anderem Projektnamen mit dem Namen dahinter, z. B. „Shopfloor linie2 Backup“):
+
+| Dienst | OK | WARN | CRIT |
+|--------|----|------|------|
+| **Shopfloor Board** | API und Datenbank erreichbar | – | API-Container läuft nicht, Datenbank nicht erreichbar, `pg_dump` fehlt |
+| **Shopfloor Backup** | letzte erfolgreiche Sicherung jünger als 26 h | älter als 26 h, automatische Sicherung ausgeschaltet, unter 10 % frei im Sicherungsordner | älter als 50 h, letzter Versuch fehlgeschlagen, Datei fehlt, noch nie gesichert, unter 5 % frei |
+| **Shopfloor Backup SMB** (nur wenn die Kopie eingeschaltet ist) | Abgleich jünger als 3 h | älter als 3 h, noch nie abgeglichen | Abgleich fehlgeschlagen oder älter als 26 h |
+
+Metriken für Graphen: Alter der letzten Sicherung, Größe, Anzahl, freier Platz in %, Alter des letzten Abgleichs.
+
+- Das Skript liegt unter `/usr/lib/check_mk_agent/local/300/shopfloor_<projekt>` und läuft alle 5 Minuten. Es fragt
+  den Status per `docker exec` im API-Container ab — kein offener Port, kein Token.
+- Ausgabe prüfen: `./deploy.sh checkmk`.
+- Anderes Agent-Verzeichnis: `CHECKMK_LOCAL_DIR=/pfad ./deploy.sh`. Abschalten: `CHECKMK=false` (`./deploy.sh config`),
+  dann `./deploy.sh` — das Skript wird entfernt.
 
 ## Sicherheit
 

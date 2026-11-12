@@ -72,6 +72,8 @@ services:
       DB_NAME: ${DB_NAME:-shopfloor}
       DB_USER: ${DB_USER:-shopfloor}
       DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD fehlt - bitte ./deploy.sh ausführen}
+      # Schlüssel für gespeicherte Zugangsdaten (SMB-Passwort der Sicherungskopie)
+      APP_SECRET: ${APP_SECRET:-}
       TZ: ${TZ:-Europe/Berlin}
       ALLOW_REGISTER: ${ALLOW_REGISTER:-false}
       ALLOW_DEMO: ${ALLOW_DEMO:-false}

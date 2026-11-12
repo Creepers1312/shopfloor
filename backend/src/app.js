@@ -5,6 +5,7 @@ const db = require("./db");
 const users = require("./users");
 const sessions = require("./sessions");
 const backups = require("./backups");
+const smb = require("./smb");
 const audit = require("./audit");
 const mailer = require("./mailer");
 const crypto = require("crypto");
@@ -496,7 +497,40 @@ function createApp() {
   /* ---------- Sicherungen (nur Admin) ---------- */
   app.get("/api/backups", wrap(async (req, res) => {
     requireAdmin(req);
-    res.json({ config: await backups.getConfig(), backups: await backups.list() });
+    res.json({ config: await backups.getConfig(), backups: await backups.list(), smb: await backups.smbStatus() });
+  }));
+
+  // SMB-Freigabe: Einstellungen (Passwort wird nie ausgeliefert)
+  app.put("/api/backups/smb", wrap(async (req, res) => {
+    requireAdmin(req);
+    const r = await smb.setConfig(req.body || {});
+    if (r.changed.length) await audit.log(req, "backup.smb.config", { changed: r.changed, enabled: r.config.enabled, share: r.config.share });
+    // Nach dem Einschalten gleich abgleichen, damit der Status stimmt
+    if (r.config.enabled && r.changed.length) await backups.syncSmb().catch(() => {});
+    res.json({ smb: await backups.smbStatus() });
+  }));
+
+  // Verbindung mit den Werten aus dem Formular prüfen, ohne zu speichern
+  app.post("/api/backups/smb/test", wrap(async (req, res) => {
+    requireAdmin(req);
+    let result;
+    try {
+      result = await smb.test(req.body || {});
+    } catch (e) {
+      if (!(e instanceof HttpError) || e.status === 500) throw e;
+      result = { ok: false, error: e.message };
+    }
+    await audit.log(req, "backup.smb.test", { ok: result.ok, error: result.error || undefined });
+    res.json({ result });
+  }));
+
+  // Fehlende Sicherungen jetzt auf die SMB-Freigabe kopieren
+  app.post("/api/backups/smb-sync", wrap(async (req, res) => {
+    requireAdmin(req);
+    const r = await backups.syncSmb();
+    if (r.configured === false) throw new HttpError(400, "Die Kopie auf eine Freigabe ist ausgeschaltet.");
+    await audit.log(req, "backup.smb", { copied: r.copied, removed: r.removed, error: r.error || undefined });
+    res.json({ result: r, smb: await backups.smbStatus() });
   }));
 
   app.put("/api/backups/config", wrap(async (req, res) => {
@@ -512,7 +546,8 @@ function createApp() {
     const r = await backups.create("manual", note + (note ? " · " : "") + req.user.name);
     if (!r.ok) throw new HttpError(500, "Sicherung fehlgeschlagen: " + r.error);
     await audit.log(req, "backup.create", { file: r.filename });
-    res.json({ filename: r.filename });
+    const smb = await backups.syncSmb().catch((e) => ({ ok: false, error: e.message }));
+    res.json({ filename: r.filename, smb });
   }));
 
   app.get("/api/backups/:file/download", wrap(async (req, res) => {
@@ -527,6 +562,7 @@ function createApp() {
     requireAdmin(req);
     await backups.restore(req.params.file, req.user.name);
     await audit.log(req, "backup.restore", { file: req.params.file });
+    backups.syncSmb().catch(() => {});   // Sicherung „vor Wiederherstellung“ auf die Freigabe
     res.json({ ok: true, revision: await db.getRevision() });
   }));
 

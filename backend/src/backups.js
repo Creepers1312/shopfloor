@@ -8,6 +8,7 @@ const { spawn } = require("child_process");
 const config = require("./config");
 const db = require("./db");
 const { HttpError } = require("./users");
+const smb = require("./smb");
 
 const FILE_RE = /^shopfloor_[0-9_-]+_(auto|manual)\.dump$/;
 const TABLES = ["documents", "users"];
@@ -71,9 +72,81 @@ function stamp(d) {
 }
 function todayKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
+/* ---------- Kopie auf die SMB-Freigabe (Einstellungen in der Oberfläche, siehe smb.js) ----------
+   Lokale Sicherungen funktionieren immer unabhängig davon. Die Liste der Dateien auf der
+   Freigabe merkt sich der Server vom letzten Abgleich — die Oberfläche fragt das NAS nicht
+   bei jedem Aufruf ab. */
+let smbBusy = false;
+let smbKnown = null;   // Set der Dateinamen auf der Freigabe (Stand letzter Abgleich)
+
+async function smbStatus() {
+  const cfg = await smb.getConfig();
+  return Object.assign(cfg, { last: (await db.getMeta("backup_smb_last")) || null });
+}
+
+// Fehlende Sicherungen auf die Freigabe kopieren und alte automatische dort aufräumen
+async function syncSmb({ force = false } = {}) {
+  const raw = await smb.getRaw();
+  if (!raw.enabled && !force) return { configured: false };
+  if (smbBusy) throw new HttpError(409, "Der Abgleich mit der Freigabe läuft bereits.");
+  smbBusy = true;
+  const result = { at: Date.now(), ok: true, copied: 0, removed: 0, error: null };
+  try {
+    const remote = new Set(await smb.listFiles(raw));
+    const r = await db.pool.query("SELECT filename FROM backups WHERE ok ORDER BY created_at");
+    for (const { filename } of r.rows) {
+      if (remote.has(filename)) continue;
+      const src = path.join(config.backupDir, filename);
+      if (!fs.existsSync(src)) continue;
+      await smb.putFile(raw, src, filename);
+      remote.add(filename);
+      result.copied++;
+    }
+    // Automatische Sicherungen auf der Freigabe: die neuesten behalten
+    // (Zeitstempel im Namen → alphabetisch = chronologisch); manuelle bleiben immer
+    const autos = [...remote].filter((f) => f.endsWith("_auto.dump")).sort().reverse();
+    for (const f of autos.slice(raw.keep || 30)) {
+      try { await smb.deleteFile(raw, f); remote.delete(f); result.removed++; } catch (e) { /* beim nächsten Mal */ }
+    }
+    smbKnown = remote;
+  } catch (e) {
+    result.ok = false;
+    result.error = e.message;
+  } finally {
+    smbBusy = false;
+  }
+  await db.setMeta("backup_smb_last", result).catch(() => {});
+  if (result.ok) await db.setMeta("backup_smb_ok_at", result.at).catch(() => {});
+  if (result.copied || result.removed) console.log(`[backup] Freigabe: ${result.copied} kopiert, ${result.removed} alte entfernt`);
+  if (!result.ok) console.error(`[backup] Freigabe: ${result.error}`);
+  return result;
+}
+
+// Sicherungsdateien, die von Hand in den Ordner gelegt wurden (z. B. von der Freigabe
+// zurückkopiert), in die Liste aufnehmen — so lassen sie sich wiederherstellen
+async function adoptFiles() {
+  let files;
+  try { files = (await fs.promises.readdir(config.backupDir)).filter((f) => FILE_RE.test(f)); } catch (e) { return; }
+  if (!files.length) return;
+  const known = new Set((await db.pool.query("SELECT filename FROM backups")).rows.map((r) => r.filename));
+  for (const f of files) {
+    if (known.has(f)) continue;
+    let st;
+    try { st = await fs.promises.stat(path.join(config.backupDir, f)); } catch (e) { continue; }
+    if (!st.isFile() || !st.size) continue;
+    await db.pool.query(
+      "INSERT INTO backups (filename, kind, note, ok, size_bytes, created_at) VALUES ($1, $2, $3, true, $4, $5) ON CONFLICT DO NOTHING",
+      [f, f.endsWith("_auto.dump") ? "auto" : "manual", "im Sicherungsordner gefunden", st.size, st.mtime]
+    );
+  }
+}
+
 async function list() {
+  await adoptFiles();
+  const onSmb = (await smb.getRaw()).enabled ? smbKnown : null;
   const r = await db.pool.query("SELECT * FROM backups ORDER BY created_at DESC");
   return r.rows.map((b) => ({
+    onSmb: onSmb ? onSmb.has(b.filename) : null,   // null = unbekannt bzw. keine Freigabe
     filename: b.filename,
     createdAt: new Date(b.created_at).getTime(),
     kind: b.kind,
@@ -185,14 +258,18 @@ function startScheduler() {
       await db.setMeta("backup_last_auto", today);
       await create("auto", "tägliche Sicherung");
       await prune(cfg.keep);
+      await syncSmb().catch((e) => console.error("[backup] Freigabe:", e.message));
     } catch (err) {
       console.error("[backup] Zeitplan:", err.message);
     }
   };
   setInterval(tick, 30 * 1000).unref();
+  // War die Freigabe zeitweise weg, holt der stündliche Abgleich fehlende Kopien nach
+  setInterval(() => { syncSmb().catch(() => {}); }, 60 * 60 * 1000).unref();
+  setTimeout(() => { syncSmb().catch(() => {}); }, 20 * 1000).unref();
 }
 
 module.exports = {
   checkTools, tool: () => toolInfo, getConfig, setConfig, list, create, remove, restore, prune,
-  resolveFile, startScheduler
+  resolveFile, startScheduler, smbStatus, syncSmb
 };
