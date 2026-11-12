@@ -1240,6 +1240,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .perm-pill { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 4px 10px; min-width: 92px; text-align: center; }
 .u-status { display: flex; align-items: center; gap: 7px; font-size: 13px; min-width: 68px; }
 .u-last { color: var(--muted); font-size: 12.5px; margin-left: auto; font-variant-numeric: tabular-nums; }
+.u-locked { font-size: 12px; color: var(--muted); }
 .u-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ============ Anwenderdoku ============ */
@@ -2474,6 +2475,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <label for="uPerm">Berechtigung</label>
           <select id="uPerm">
             <option value="editor">Bearbeiten</option>
+            <option value="manager">Teamleitung</option>
             <option value="admin">Administrator</option>
             <option value="viewer">Nur Lesen</option>
           </select>
@@ -7567,7 +7569,7 @@ window.SFM = (function () {
     t.addEventListener("click", function () {
       var v = t.dataset.view;
       if (v === "doku") { settingsPane = "doc"; switchView("settings"); return; }
-      if (v === "settings" && settingsPane === "doc") settingsPane = can("manageUsers") ? "stamm" : "doc";
+      if (v === "settings" && settingsPane === "doc") settingsPane = can("stamm") ? "stamm" : "doc";
       switchView(v);
     });
   });
@@ -8522,17 +8524,26 @@ window.SFM = (function () {
   /* ---------- Einstellungen: Seitenleiste (ein Bereich zur Zeit) ---------- */
   var settingsPane = "stamm";
   var SETTINGS_PANES = { stamm: "stammCard", mail: "mailCard", users: "usersCard", db: "dbCard", audit: "auditCard", doc: "docCard" };
+  // Welche Einstellungsbereiche die angemeldete Person sieht
+  function paneAllowed(key) {
+    if (key === "doc") return true;
+    if (key === "stamm") return can("stamm");
+    if (key === "users") return can("users");
+    return can("manageUsers");
+  }
   function renderSettingsPanes() {
-    var admin = can("manageUsers");
-    if (!admin && settingsPane !== "doc") settingsPane = "doc";
-    $("#sideAdmin").hidden = !admin;
-    $("#settingsLocked").hidden = admin;
+    var any = ["stamm", "users", "mail", "db"].some(paneAllowed);
+    if (!paneAllowed(settingsPane)) settingsPane = "doc";
+    $("#sideAdmin").hidden = !any;
+    $("#settingsLocked").hidden = any;
     document.querySelectorAll(".side-item").forEach(function (b) {
       b.classList.toggle("active", b.dataset.spane === settingsPane);
+      if (b.dataset.spane !== "doc" && b.id !== "sideAudit") b.hidden = !paneAllowed(b.dataset.spane);
     });
+    if (!can("manageUsers")) $("#sideAudit").hidden = true;
+    else $("#sideAudit").hidden = !SFM.isServer();
     Object.keys(SETTINGS_PANES).forEach(function (key) {
-      var allowed = admin || key === "doc";
-      $("#" + SETTINGS_PANES[key]).hidden = !(allowed && key === settingsPane);
+      $("#" + SETTINGS_PANES[key]).hidden = !(paneAllowed(key) && key === settingsPane);
     });
     // Doku- und Einstellungen-Tab in der Kopfzeile passend markieren
     var onSettings = $("#view-settings").classList.contains("active");
@@ -8748,7 +8759,7 @@ window.SFM = (function () {
     $("#hudVal").textContent = pendingHudMin + " min";
   });
   $("#stammSave").addEventListener("click", function () {
-    if (!can("manageUsers")) return;
+    if (!can("stamm")) return;
     settings.lineName = $("#setLine").value.trim() || DEFAULT_SETTINGS.lineName;
     settings.huddleMinutes = pendingHudMin;
     if (/^\d\d:\d\d$/.test($("#setHuddleTime").value)) settings.huddleTime = $("#setHuddleTime").value;
@@ -8868,10 +8879,11 @@ window.SFM = (function () {
       ["Starten", "Monitor-Symbol oben rechts in der Kopfzeile anklicken."],
       ["Vollbild", "Im Browser F11 drücken, damit nur das Board sichtbar ist."],
       ["Beenden", "Esc drücken oder das ✕ oben rechts antippen."]] },
-    { title: "Rollen & Rechte", intro: "Drei Berechtigungsstufen steuern den Zugriff auf alle Bereiche.", tip: "Die Anwenderdoku ist für alle Rollen sichtbar — die übrigen Einstellungen nur für Administratoren.", steps: [
+    { title: "Rollen & Rechte", intro: "Vier Berechtigungsstufen steuern den Zugriff auf alle Bereiche.", tip: "Die Anwenderdoku ist für alle Rollen sichtbar — Stammdaten und Benutzerverwaltung zusätzlich für die Teamleitung, die übrigen Einstellungen nur für Administratoren.", steps: [
       ["Nur Lesen", "Sieht Dashboard, Board, Maßnahmen, Huddle und Tagesbericht ohne Änderungsrechte."],
       ["Bearbeiten", "Pflegt zusätzlich Board-Status, Abweichungen und die Huddle-Agenda."],
-      ["Administrator", "Verwaltet darüber hinaus Stammdaten, E-Mail-Versand, Benutzer und darf löschen und wiederherstellen."]] },
+      ["Teamleitung", "Darf zusätzlich Abweichungen löschen, die Stammdaten pflegen und Benutzer verwalten (anlegen, bearbeiten, Passwort setzen, sperren) — außer Administrator-Konten. E-Mail-Versand, Datenbank & Sicherung und das Sicherheitsprotokoll bleiben der Administration vorbehalten."],
+      ["Administrator", "Darf alles: zusätzlich E-Mail-Versand, Datenbank & Sicherung, Sicherheitsprotokoll und Administrator-Konten."]] },
     { title: "Datenbank & Sicherung", intro: "Läuft das Board über den Server im Docker-Container, liegen Board, Maßnahmen, Konten und Einstellungen in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand.", tip: "Ob Datenbank oder nur Browser: Einstellungen → Datenbank & Sicherung zeigt es oben unter „Speicherort“. Gespeichert wird automatisch; nur wenn etwas nicht gespeichert werden konnte, erscheint ein Hinweis in der Kopfzeile.", steps: [
       ["Starten", "Auf dem Server im Projektordner ./deploy.sh ausführen. Das Skript fragt die Einstellungen ab, legt beim ersten Start die Datenbank und das erste Administrator-Konto an und startet die Container."],
       ["Automatisch sichern", "Schalter „Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Der Server legt die Sicherung selbstständig an — dafür muss der Container laufen, nicht der Browser."],
@@ -9306,15 +9318,28 @@ window.SFM = (function () {
     return list;
   }
   function permName(k) {
-    var m = { admin: "Administrator", editor: "Bearbeiten", viewer: "Nur Lesen" };
+    var m = { admin: "Administrator", manager: "Teamleitung", editor: "Bearbeiten", viewer: "Nur Lesen" };
     return m[k] || "Bearbeiten";
   }
+  // Berechtigungen: admin = alles; manager (Teamleitung) = Bearbeiten, Löschen, Stammdaten,
+  // Benutzerverwaltung (ohne Administrator-Konten); editor = Bearbeiten; viewer = nur Lesen.
+  // „manageUsers“ steht für die reine Administration (E-Mail-Server, Sicherungen, Protokoll).
+  var MANAGER_CAN = { edit: 1, "delete": 1, stamm: 1, users: 1 };
   function can(action) {
     if (!currentUser) return false;
     var p = currentUser.perm || "editor";
     if (p === "admin") return true;
+    if (p === "manager") return !!MANAGER_CAN[action];
     if (p === "editor") return action === "edit";
     return false;
+  }
+  // Darf die angemeldete Person dieses Konto verwalten? (Teamleitung: keine Administratoren)
+  function canManageAccount(u) {
+    return can("manageUsers") || (can("users") && (!u || u.perm !== "admin"));
+  }
+  function permOptions() {
+    var all = [["editor", "Bearbeiten"], ["manager", "Teamleitung"], ["admin", "Administrator"], ["viewer", "Nur Lesen"]];
+    return can("manageUsers") ? all : all.filter(function (p) { return p[0] !== "admin"; });
   }
   function applyPermissions() {
     $("#newDevBtn").hidden = !can("edit");
@@ -9624,7 +9649,7 @@ window.SFM = (function () {
 
   /* ---------- Offene „Passwort vergessen“-Anfragen (Admin, Server) ---------- */
   function loadResetRequests(announce) {
-    if (!SFM.isServer() || !can("manageUsers")) { $("#resetReqCard").hidden = true; return; }
+    if (!SFM.isServer() || !can("users")) { $("#resetReqCard").hidden = true; return; }
     SFM.api("/api/users/reset-requests").then(function (r) {
       if (!r.ok) return;
       var list = r.data.requests || [];
@@ -9743,6 +9768,11 @@ window.SFM = (function () {
       rs.value = u.role;
     }
     $("#uPermField").hidden = mode !== "create";
+    if (mode === "create") {
+      var ps = $("#uPerm"); ps.innerHTML = "";
+      permOptions().forEach(function (p) { var o = el("option", "", p[1]); o.value = p[0]; ps.appendChild(o); });
+      ps.value = "editor";
+    }
     $("#uPassField").hidden = mode === "edit";
     $("#uPass").value = "";
     $("#uPass").placeholder = "Mindestens " + pwMin() + " Zeichen";
@@ -9768,11 +9798,14 @@ window.SFM = (function () {
       idBox.appendChild(el("div", "u-name", u.name + (isSelf(u.name) ? " (Sie)" : "")));
       idBox.appendChild(el("div", "u-role", [u.role, u.username ? "@" + u.username : "", u.email || ""].filter(Boolean).join(" · ")));
       row.appendChild(idBox);
+      var mine = canManageAccount(u);
       var sel = el("select", "perm-select");
-      [["editor", "Bearbeiten"], ["admin", "Administrator"], ["viewer", "Nur Lesen"]].forEach(function (p) {
+      (mine ? permOptions() : [["admin", "Administrator"]]).forEach(function (p) {
         var o = el("option", "", p[1]); o.value = p[0]; sel.appendChild(o);
       });
       sel.value = u.perm || "editor";
+      sel.disabled = !mine;
+      if (!mine) sel.title = "Administrator-Konten können nur Administratoren ändern";
       sel.setAttribute("aria-label", "Berechtigung für " + u.name);
       sel.addEventListener("change", function () {
         var list = loadUsers();
@@ -9802,6 +9835,12 @@ window.SFM = (function () {
       last.title = "Letzte Anmeldung";
       row.appendChild(last);
       var actions = el("div", "u-actions");
+      if (!mine) {
+        actions.appendChild(el("span", "u-locked", "Nur durch Administratoren änderbar"));
+        row.appendChild(actions);
+        wrap.appendChild(row);
+        return;
+      }
       var ed = el("button", "btn sm", "Bearbeiten");
       ed.title = "Anmeldename, E-Mail und Rolle ändern";
       ed.addEventListener("click", function () { openUserDialog("edit", u.name); });

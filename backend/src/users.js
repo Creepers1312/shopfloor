@@ -10,7 +10,8 @@
 // email     E-Mail-Adresse (optional, eindeutig) — für „Passwort vergessen“
 const { hashPassword } = require("./passwords");
 
-const PERMS = ["admin", "editor", "viewer"];
+// admin = Administrator, manager = Teamleitung (Stammdaten, Benutzer), editor = Bearbeiten, viewer = Nur Lesen
+const PERMS = ["admin", "manager", "editor", "viewer"];
 const KNOWN = new Set(["name", "role", "perm", "disabled", "hash", "lastLogin", "username", "email", "password"]);
 
 const { HttpError } = require("./http");
@@ -156,7 +157,9 @@ async function backfillUsernames(q) {
 }
 
 // Gleicht die vom Admin gespeicherte Liste mit der Tabelle ab
-async function syncFromClient(q, list) {
+// actorPerm: Berechtigung der speichernden Person — die Teamleitung darf Administrator-Konten
+// weder ändern, entfernen noch neu vergeben
+async function syncFromClient(q, list, actorPerm = "admin") {
   if (!Array.isArray(list)) throw new HttpError(400, "Ungültige Benutzerliste.");
   if (list.length > 1000) throw new HttpError(400, "Zu viele Benutzerkonten.");
 
@@ -173,12 +176,27 @@ async function syncFromClient(q, list) {
     return { name, key, role: cleanRole(u.role), perm: cleanPerm(u.perm), disabled: !!u.disabled, extra, position: idx };
   });
 
+
+  const existing = await q.query("SELECT id, name, lower(name) AS key, role, perm, disabled FROM users");
+  const byKey = new Map(existing.rows.map((r) => [r.key, r]));
+  if (actorPerm !== "admin") {
+    const inByKey = new Map(incoming.map((u) => [u.key, u]));
+    for (const old of existing.rows.filter((r) => r.perm === "admin")) {
+      const u = inByKey.get(old.key);
+      if (!u || u.perm !== "admin" || u.disabled !== !!old.disabled || u.role !== old.role || u.name !== old.name) {
+        throw new HttpError(403, `Administrator-Konten (${old.name}) können nur Administratoren ändern.`);
+      }
+    }
+    for (const u of incoming) {
+      const old = byKey.get(u.key);
+      if (u.perm === "admin" && (!old || old.perm !== "admin")) {
+        throw new HttpError(403, "Die Berechtigung „Administrator“ können nur Administratoren vergeben.");
+      }
+    }
+  }
   if (!incoming.some((u) => u.perm === "admin" && !u.disabled)) {
     throw new HttpError(400, "Mindestens ein aktiver Administrator muss erhalten bleiben.");
   }
-
-  const existing = await q.query("SELECT id, name, lower(name) AS key, perm, disabled FROM users");
-  const byKey = new Map(existing.rows.map((r) => [r.key, r]));
   // Änderungen fürs Sicherheitsprotokoll
   const changes = { created: [], removed: [], perm: [], disabled: [], enabled: [] };
 

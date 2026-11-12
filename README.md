@@ -286,8 +286,20 @@ Metriken für Graphen: Alter der letzten Sicherung, Größe, Anzahl, freier Plat
   auch andere Subdomains derselben Domain sind ausgeschlossen.
 
 **Rechte und Daten**
-- Rechte prüft der Server: *Nur Lesen* kann nichts speichern; Konten, Sicherungen und das Protokoll sind Administratoren
-  vorbehalten. In den Einstellungen dürfen Bearbeiter nur die Unfallchronik (Huddle) und das Versandprotokoll ändern.
+- Vier Berechtigungen, geprüft vom Server:
+
+  | | Nur Lesen | Bearbeiten | Teamleitung | Administrator |
+  |---|:-:|:-:|:-:|:-:|
+  | Board, Huddle, Maßnahmen ansehen | ✓ | ✓ | ✓ | ✓ |
+  | Erfassen und bearbeiten | | ✓ | ✓ | ✓ |
+  | Abweichungen löschen | | | ✓ | ✓ |
+  | Stammdaten | | | ✓ | ✓ |
+  | Benutzer verwalten | | | ✓ (ohne Administrator-Konten) | ✓ |
+  | E-Mail-Versand, Datenbank & Sicherung, Sicherheitsprotokoll | | | | ✓ |
+
+  Die Teamleitung kann Administrator-Konten weder ändern, sperren, löschen noch ihr Passwort setzen und die
+  Berechtigung „Administrator“ nicht vergeben. In den Einstellungen dürfen Bearbeiter nur die Unfallchronik (Huddle)
+  und das Versandprotokoll ändern.
 - Gespeicherte Zugangsdaten (SMTP- und SMB-Passwort) liegen AES-256-GCM-verschlüsselt in der Datenbank, Schlüssel
   `APP_SECRET` nur in der `.env` (Rechte `600`). Sie werden nie ausgeliefert, nicht protokolliert und stecken nicht in
   den Sicherungsdateien.

@@ -3,23 +3,28 @@
 const db = require("../db");
 const users = require("../users");
 const audit = require("../audit");
-const { HttpError, wrap, requireAdmin, requireEdit } = require("../http");
+const { HttpError, wrap, requireManager, requireEdit } = require("../http");
 
 const DOCS = ["state", "settings", "users"];
 
 /* ---------- Einstellungen schützen ----------
    Zugangsdaten (SMTP-Passwort) werden nie gespeichert oder ausgeliefert — der Server
-   speichert das SMTP-Passwort getrennt (E-Mail-Versand). Nicht-Admins dürfen nur ändern, was der Huddle braucht:
-   die Unfallchronik (safety) und das Versandprotokoll (mail.log). Alles andere bleibt. */
+   speichert das SMTP-Passwort getrennt (E-Mail-Versand). Was gespeichert werden darf, hängt an der Berechtigung:
+   Administration alles; Teamleitung alles außer dem E-Mail-Versand (mail, bis auf das Protokoll);
+   Bearbeiten nur, was der Huddle braucht: Unfallchronik (safety) und Versandprotokoll (mail.log). */
 function stripSecrets(v) {
   if (v && v.mail && typeof v.mail === "object") delete v.mail.authPass;
   return v;
 }
-function mergeSettings(stored, incoming, isAdmin) {
+function mergeSettings(stored, incoming, perm) {
   const clean = stripSecrets(JSON.parse(JSON.stringify(incoming)));
-  if (isAdmin) return clean;
+  if (perm === "admin") return clean;
   const base = stored && typeof stored === "object" ? stripSecrets(JSON.parse(JSON.stringify(stored))) : {};
-  if (clean.safety !== undefined) base.safety = clean.safety;
+  if (perm === "manager") {
+    Object.keys(clean).forEach((k) => { if (k !== "mail") base[k] = clean[k]; });
+  } else if (clean.safety !== undefined) {
+    base.safety = clean.safety;
+  }
   if (clean.mail && Array.isArray(clean.mail.log)) {
     base.mail = base.mail && typeof base.mail === "object" ? base.mail : {};
     base.mail.log = clean.mail.log.slice(-200);
@@ -37,30 +42,8 @@ async function buildDocument(q, user) {
   r.rows.forEach((row) => { doc[row.name] = row.value; });
   stripSecrets(doc.settings);
   doc.users = await users.listForClient(q);
-  if (user.perm !== "admin") {
-    // Nicht-Admins sehen keine Anmeldezeitpunkte und E-Mail-Adressen anderer
-    doc.users = doc.users.map((u) => {
-      const c = Object.assign({}, u);
-      delete c.lastLogin;
-      if (c.name.toLowerCase() !== String(user.name).toLowerCase()) delete c.email;
-      return c;
-    });
-  }
-  return doc;
-}
-
-// Gesamtdokument für die Oberfläche. Ohne Anmeldung gibt es nur den Zähler —
-// Board, Einstellungen und Konten bleiben verborgen.
-async function buildDocument(q, user) {
-  const revision = await db.getRevision(q);
-  if (!user) return { revision, state: null, settings: null, users: [] };
-  const r = await q.query("SELECT name, value FROM documents WHERE name IN ('state', 'settings')");
-  const doc = { revision, state: null, settings: null, users: [] };
-  r.rows.forEach((row) => { doc[row.name] = row.value; });
-  stripSecrets(doc.settings);
-  doc.users = await users.listForClient(q);
-  if (user.perm !== "admin") {
-    // Nicht-Admins sehen keine Anmeldezeitpunkte und E-Mail-Adressen anderer
+  if (user.perm !== "admin" && user.perm !== "manager") {
+    // Nur Administration und Teamleitung sehen Anmeldezeitpunkte und E-Mail-Adressen anderer
     doc.users = doc.users.map((u) => {
       const c = Object.assign({}, u);
       delete c.lastLogin;
@@ -89,7 +72,7 @@ function register(app) {
   app.put("/api/document/:name", wrap(async (req, res) => {
     const name = req.params.name;
     if (!DOCS.includes(name)) throw new HttpError(404, "Unbekanntes Dokument.");
-    if (name === "users") requireAdmin(req); else requireEdit(req);
+    if (name === "users") requireManager(req); else requireEdit(req);
     const body = req.body || {};
     const clientRev = Number(body.revision);
     const value = body.value;
@@ -107,9 +90,9 @@ function register(app) {
         return { conflict: await buildDocument(c, req.user) };
       }
       if (name === "users") {
-        changes = await users.syncFromClient(c, value);
+        changes = await users.syncFromClient(c, value, req.user.perm);
       } else {
-        const toStore = name === "settings" ? mergeSettings(cur.rows[0].value, value, req.user.perm === "admin") : value;
+        const toStore = name === "settings" ? mergeSettings(cur.rows[0].value, value, req.user.perm) : value;
         await c.query("UPDATE documents SET value = $2::jsonb WHERE name = $1", [name, JSON.stringify(toStore)]);
       }
       return { revision: await db.bumpRevision(c, [name], req.user.name) };
