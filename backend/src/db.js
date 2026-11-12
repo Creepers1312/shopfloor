@@ -64,6 +64,25 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS audit_log_at ON audit_log (at DESC);
 
+-- Anmeldename und E-Mail (eindeutig ohne Groß-/Kleinschreibung); Anzeigename bleibt "name"
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email text;
+CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username)) WHERE username IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower ON users (lower(email)) WHERE email IS NOT NULL;
+
+-- „Passwort vergessen“: Einmal-Links (nur der Hash des Tokens) und Anfragen an die Administration
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash text PRIMARY KEY,
+  user_name  text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reset_requests (
+  user_name  text PRIMARY KEY,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  ip         text
+);
+
 CREATE TABLE IF NOT EXISTS backups (
   filename   text PRIMARY KEY,
   created_at timestamptz NOT NULL DEFAULT now(),
@@ -96,6 +115,9 @@ async function migrate() {
   try {
     await c.query("SELECT pg_advisory_lock(424242)");
     await c.query(SCHEMA);
+    // Ältere Konten ohne Anmeldenamen bekommen einen aus dem Namen
+    const n = await require("./users").backfillUsernames(c);
+    if (n) console.log(`[db] ${n} Anmeldename(n) aus dem Namen abgeleitet`);
   } finally {
     await c.query("SELECT pg_advisory_unlock(424242)").catch(() => {});
     c.release();

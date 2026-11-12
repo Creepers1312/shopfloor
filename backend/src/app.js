@@ -6,6 +6,8 @@ const users = require("./users");
 const sessions = require("./sessions");
 const backups = require("./backups");
 const audit = require("./audit");
+const mailer = require("./mailer");
+const crypto = require("crypto");
 const { verifyPassword, burn, passwordProblem, fromPlain } = require("./passwords");
 const { HttpError } = users;
 
@@ -38,7 +40,29 @@ function requireAdmin(req) {
   if (req.user.perm !== "admin") throw new HttpError(403, "Nur für Administratoren.");
 }
 function publicUser(u) {
-  return u ? { name: u.name, role: u.role, perm: u.perm, demo: !!u.demo } : null;
+  return u ? { name: u.name, username: u.username || "", role: u.role, perm: u.perm, demo: !!u.demo } : null;
+}
+
+/* ---------- „Passwort vergessen“ ----------
+   Einmal-Links: zufälliges Token, in der Datenbank nur dessen SHA-256, gültig RESET_LINK_MINUTES.
+   Antworten verraten nie, ob es ein Konto gibt. Bremse: je Anmeldename 3, je IP 10 Anfragen pro Stunde. */
+const RESET_WINDOW = 60 * 60 * 1000;
+const resetBuckets = new Map();
+function resetLimited(key, max) {
+  const now = Date.now();
+  const a = resetBuckets.get(key);
+  if (!a || now - a.first >= RESET_WINDOW) { resetBuckets.set(key, { first: now, count: 1 }); return false; }
+  a.count++;
+  return a.count > max;
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, a] of resetBuckets) if (now - a.first >= RESET_WINDOW) resetBuckets.delete(k);
+}, 10 * 60 * 1000).unref();
+function sha256(v) { return crypto.createHash("sha256").update(String(v)).digest("hex"); }
+function baseUrl(req) {
+  if (config.publicUrl) return config.publicUrl;
+  return `${req.protocol}://${req.headers.host}`;
 }
 
 /* ---------- Einstellungen schützen ----------
@@ -72,8 +96,13 @@ async function buildDocument(q, user) {
   stripSecrets(doc.settings);
   doc.users = await users.listForClient(q);
   if (user.perm !== "admin") {
-    // Nicht-Admins sehen keine Anmeldezeitpunkte anderer
-    doc.users = doc.users.map((u) => { const c = Object.assign({}, u); delete c.lastLogin; return c; });
+    // Nicht-Admins sehen keine Anmeldezeitpunkte und E-Mail-Adressen anderer
+    doc.users = doc.users.map((u) => {
+      const c = Object.assign({}, u);
+      delete c.lastLogin;
+      if (c.name.toLowerCase() !== String(user.name).toLowerCase()) delete c.email;
+      return c;
+    });
   }
   return doc;
 }
@@ -131,6 +160,7 @@ function createApp() {
       allowDemo: config.allowDemo,
       allowRegister: config.allowRegister || userCount === 0,
       passwordMinLength: config.passwordMinLength,
+      mailEnabled: mailer.configured(),
       sessionIdleHours: config.sessionIdleHours,
       revision: await db.getRevision(),
       user: publicUser(req.user)
@@ -195,19 +225,20 @@ function createApp() {
 
   /* ---------- Anmeldung ---------- */
   app.post("/api/login", wrap(async (req, res) => {
-    const { name, password } = req.body || {};
-    const nm = String(name || "").slice(0, 80);
+    const { login, name, password } = req.body || {};
+    // Anmeldung mit Anmeldename oder E-Mail ("name" nur noch für ältere Oberflächen)
+    const nm = String(login || name || "").trim().slice(0, 200);
     if (sessions.isLimited(req, nm)) {
       await audit.log(req, "auth.login.blocked", { name: nm });
       throw new HttpError(429, "Zu viele Fehlversuche — bitte in 15 Minuten erneut versuchen.");
     }
     const clientHash = fromPlain(password);
-    const row = clientHash ? await users.findByName(db.pool, nm) : null;
+    const row = clientHash ? await users.findByLogin(db.pool, nm) : null;
     const ok = row && row.pw_hash ? await verifyPassword(clientHash, row.pw_hash) : await burn(clientHash);
     if (!ok) {
       sessions.recordFailure(req, nm);
       await audit.log(req, "auth.login.failed", { name: nm });
-      throw new HttpError(401, "Name oder Passwort ist falsch.");
+      throw new HttpError(401, "Anmeldename oder Passwort ist falsch.");
     }
     if (row.disabled) {
       await audit.log(req, "auth.login.disabled", { name: row.name });
@@ -221,9 +252,10 @@ function createApp() {
   }));
 
   app.post("/api/register", wrap(async (req, res) => {
-    const { name, role, password } = req.body || {};
+    const { name, username, email, role, password } = req.body || {};
     const nm = String(name || "").slice(0, 80);
     if (sessions.isLimited(req, nm)) throw new HttpError(429, "Zu viele Versuche — bitte in 15 Minuten erneut versuchen.");
+    users.cleanUsername(username);
     const problem = passwordProblem(password, nm);
     if (problem) throw new HttpError(400, problem);
     let row;
@@ -234,7 +266,7 @@ function createApp() {
         if (n > 0 && !config.allowRegister) {
           throw new HttpError(403, "Selbstregistrierung ist abgeschaltet — bitte an die Administration wenden.");
         }
-        const created = await users.createUser(c, { name: nm, role, perm: n === 0 ? "admin" : "editor", clientHash: fromPlain(password) });
+        const created = await users.createUser(c, { name: nm, username, email, role, perm: n === 0 ? "admin" : "editor", clientHash: fromPlain(password) });
         await c.query("UPDATE users SET last_login = now() WHERE id = $1", [created.id]);
         await db.bumpRevision(c, ["users"], created.name);
         return created;
@@ -265,17 +297,46 @@ function createApp() {
   // Konto mit Passwort anlegen (Admin)
   app.post("/api/users", wrap(async (req, res) => {
     requireAdmin(req);
-    const { name, role, perm, password } = req.body || {};
+    const { name, username, email, role, perm, password } = req.body || {};
     const problem = passwordProblem(password, name);
     if (problem) throw new HttpError(400, problem);
+    users.cleanUsername(username);
     const row = await db.tx(async (c) => {
       await db.lockRevision(c);
-      const created = await users.createUser(c, { name, role, perm, clientHash: fromPlain(password) });
+      const created = await users.createUser(c, { name, username, email, role, perm, clientHash: fromPlain(password) });
       await db.bumpRevision(c, ["users"], req.user.name);
       return created;
     });
-    await audit.log(req, "user.create", { name: row.name, perm: row.perm });
+    await audit.log(req, "user.create", { name: row.name, username: row.username, perm: row.perm });
     res.json({ user: publicUser(row) });
+  }));
+
+  // Anmeldename, E-Mail und Rolle eines Kontos ändern (Admin)
+  app.patch("/api/users", wrap(async (req, res) => {
+    requireAdmin(req);
+    const { name, username, email, role } = req.body || {};
+    const r = await db.tx(async (c) => {
+      await db.lockRevision(c);
+      const out = await users.updateProfile(c, name, { username, email, role });
+      await db.bumpRevision(c, ["users"], req.user.name);
+      return out;
+    });
+    const changed = ["username", "email", "role"].filter((k) => (r.before[k] || "") !== (r.after[k] || ""));
+    if (changed.length) await audit.log(req, "user.update", { name: r.after.name, fields: changed });
+    res.json({ user: users.toClient(r.after) });
+  }));
+
+  // Offene „Passwort vergessen“-Anfragen (wenn keine E-Mail verschickt werden konnte)
+  app.get("/api/users/reset-requests", wrap(async (req, res) => {
+    requireAdmin(req);
+    const r = await db.pool.query("SELECT user_name, created_at FROM reset_requests ORDER BY created_at");
+    res.json({ requests: r.rows.map((x) => ({ name: x.user_name, at: new Date(x.created_at).getTime() })) });
+  }));
+  app.delete("/api/users/reset-requests/:name", wrap(async (req, res) => {
+    requireAdmin(req);
+    await db.pool.query("DELETE FROM reset_requests WHERE lower(user_name) = lower($1)", [req.params.name]);
+    await audit.log(req, "user.reset.dismissed", { name: req.params.name });
+    res.json({ ok: true });
   }));
 
   // Passwort eines Kontos neu setzen (Admin) — beendet alle Sitzungen dieses Kontos
@@ -287,6 +348,8 @@ function createApp() {
     const problem = passwordProblem(password, row.name);
     if (problem) throw new HttpError(400, problem);
     await users.setPassword(db.pool, row.name, fromPlain(password));
+    await db.pool.query("DELETE FROM reset_requests WHERE lower(user_name) = lower($1)", [row.name]);
+    await db.pool.query("DELETE FROM password_resets WHERE lower(user_name) = lower($1)", [row.name]);
     const self = row.name.toLowerCase() === req.user.name.toLowerCase();
     const ended = await sessions.destroyForUser(row.name, self ? sessions.currentTokenHash(req) : null);
     await audit.log(req, "user.password", { name: row.name, sessionsEnded: ended });
@@ -314,6 +377,95 @@ function createApp() {
     const ended = await sessions.destroyForUser(row.name, sessions.currentTokenHash(req));
     await audit.log(req, "user.password.self", { sessionsEnded: ended });
     res.json({ ok: true, sessionsEnded: ended });
+  }));
+
+  // Eigenes Konto: Anzeige von Anmeldename und E-Mail
+  app.get("/api/me", wrap(async (req, res) => {
+    requireUser(req);
+    if (req.user.demo) return res.json({ user: publicUser(req.user), email: "" });
+    const row = await users.findByName(db.pool, req.user.name);
+    res.json({ user: publicUser(row), email: row ? row.email || "" : "" });
+  }));
+
+  // Eigene E-Mail ändern — mit bisherigem Passwort, damit eine fremde offene Sitzung
+  // die Adresse für „Passwort vergessen“ nicht umbiegen kann
+  app.post("/api/me/profile", wrap(async (req, res) => {
+    requireUser(req);
+    if (req.user.demo) throw new HttpError(403, "Im Demo-Zugang nicht möglich.");
+    const { current, email } = req.body || {};
+    if (sessions.isLimited(req, req.user.name)) throw new HttpError(429, "Zu viele Fehlversuche — bitte in 15 Minuten erneut versuchen.");
+    const row = await users.findByName(db.pool, req.user.name);
+    const curHash = fromPlain(current);
+    const ok = row && row.pw_hash && curHash ? await verifyPassword(curHash, row.pw_hash) : await burn(curHash);
+    if (!ok) {
+      sessions.recordFailure(req, req.user.name);
+      throw new HttpError(400, "Das Passwort stimmt nicht.");
+    }
+    const r = await db.tx(async (c) => {
+      await db.lockRevision(c);
+      const out = await users.updateProfile(c, row.name, { email });
+      await db.bumpRevision(c, ["users"], req.user.name);
+      return out;
+    });
+    await audit.log(req, "user.email.self", {});
+    res.json({ email: r.after.email || "" });
+  }));
+
+  /* ---------- Passwort vergessen ---------- */
+  app.post("/api/password/forgot", wrap(async (req, res) => {
+    const login = String((req.body || {}).login || "").trim().slice(0, 200);
+    if (!login) throw new HttpError(400, "Bitte Anmeldename oder E-Mail angeben.");
+    // Immer dieselbe Antwort — ob es das Konto gibt, bleibt verborgen
+    const answer = { ok: true, mailEnabled: mailer.configured() };
+    if (resetLimited("ip:" + req.ip, 10) || resetLimited("login:" + login.toLowerCase(), 3)) {
+      await audit.log(req, "user.reset.blocked", { name: login });
+      return res.json(answer);
+    }
+    const row = await users.findByLogin(db.pool, login);
+    if (!row || row.disabled) {
+      await audit.log(req, "user.reset.unknown", { name: login });
+      return res.json(answer);
+    }
+    if (mailer.configured() && row.email) {
+      const token = crypto.randomBytes(32).toString("base64url");
+      await db.pool.query("DELETE FROM password_resets WHERE lower(user_name) = lower($1) OR expires_at <= now()", [row.name]);
+      await db.pool.query(
+        "INSERT INTO password_resets (token_hash, user_name, expires_at) VALUES ($1, $2, now() + make_interval(mins => $3))",
+        [sha256(token), row.name, config.resetMinutes]);
+      try {
+        await mailer.sendPasswordReset(row.email, row.name, `${baseUrl(req)}/#reset=${token}`, config.resetMinutes);
+        await audit.log(req, "user.reset.mail", { name: row.name });
+        return res.json(answer);
+      } catch (err) {
+        console.error("[mail] Versand fehlgeschlagen:", err.message);
+        await db.pool.query("DELETE FROM password_resets WHERE token_hash = $1", [sha256(token)]);
+        // weiter unten: Anfrage an die Administration
+      }
+    }
+    await db.pool.query(
+      "INSERT INTO reset_requests (user_name, ip) VALUES ($1, $2) ON CONFLICT (user_name) DO UPDATE SET created_at = now(), ip = EXCLUDED.ip",
+      [row.name, req.ip]);
+    await audit.log(req, "user.reset.requested", { name: row.name });
+    res.json(answer);
+  }));
+
+  app.post("/api/password/reset", wrap(async (req, res) => {
+    const { token, password } = req.body || {};
+    if (resetLimited("reset-ip:" + req.ip, 20)) throw new HttpError(429, "Zu viele Versuche — bitte später erneut versuchen.");
+    const r = typeof token === "string" && token.length >= 20
+      ? await db.pool.query("SELECT user_name FROM password_resets WHERE token_hash = $1 AND expires_at > now()", [sha256(token)])
+      : { rows: [] };
+    if (!r.rows.length) throw new HttpError(400, "Der Link ist ungültig oder abgelaufen — bitte neu anfordern.");
+    const row = await users.findByName(db.pool, r.rows[0].user_name);
+    if (!row || row.disabled) throw new HttpError(400, "Der Link ist ungültig oder abgelaufen — bitte neu anfordern.");
+    const problem = passwordProblem(password, row.name);
+    if (problem) throw new HttpError(400, problem);
+    await users.setPassword(db.pool, row.name, fromPlain(password));
+    await db.pool.query("DELETE FROM password_resets WHERE lower(user_name) = lower($1)", [row.name]);
+    await db.pool.query("DELETE FROM reset_requests WHERE lower(user_name) = lower($1)", [row.name]);
+    const ended = await sessions.destroyForUser(row.name, null);
+    await audit.log(req, "user.password.reset", { name: row.name, sessionsEnded: ended });
+    res.json({ ok: true, username: row.username });
   }));
 
   /* ---------- Persönliches Dashboard-Layout ---------- */
