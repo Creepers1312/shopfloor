@@ -16,13 +16,26 @@ function requireUser(req) {
 }
 function requireEdit(req) {
   requireUser(req);
-  if (req.user.perm !== "admin" && req.user.perm !== "editor") {
+  if (!["admin", "manager", "editor"].includes(req.user.perm)) {
     throw new HttpError(403, "Nur Leserechte — Änderung nicht gespeichert.");
   }
 }
 function requireAdmin(req) {
   requireUser(req);
   if (req.user.perm !== "admin") throw new HttpError(403, "Nur für Administratoren.");
+}
+// Teamleitung und Administration: Stammdaten und Benutzerverwaltung
+function requireManager(req) {
+  requireUser(req);
+  if (req.user.perm !== "admin" && req.user.perm !== "manager") {
+    throw new HttpError(403, "Nur für Teamleitung und Administration.");
+  }
+}
+// Die Teamleitung darf Administrator-Konten weder ändern noch vergeben
+function guardAdminAccount(req, targetPerm, newPerm) {
+  if (req.user.perm === "admin") return;
+  if (targetPerm === "admin") throw new HttpError(403, "Administrator-Konten können nur Administratoren ändern.");
+  if (newPerm === "admin") throw new HttpError(403, "Die Berechtigung „Administrator“ können nur Administratoren vergeben.");
 }
 
 function publicUser(u) {
@@ -35,4 +48,4 @@ async function passwordMatches(row, plain) {
   return row && row.pw_hash && h ? verifyPassword(h, row.pw_hash) : burn(h);
 }
 
-module.exports = { HttpError, wrap, requireUser, requireEdit, requireAdmin, publicUser, passwordMatches };
+module.exports = { HttpError, wrap, requireUser, requireEdit, requireAdmin, requireManager, guardAdminAccount, publicUser, passwordMatches };

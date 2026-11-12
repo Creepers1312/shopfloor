@@ -5,13 +5,15 @@ const users = require("../users");
 const sessions = require("../sessions");
 const audit = require("../audit");
 const { passwordProblem, fromPlain } = require("../passwords");
-const { HttpError, wrap, requireUser, requireAdmin, publicUser, passwordMatches } = require("../http");
+const { HttpError, wrap, requireUser, requireManager, guardAdminAccount, publicUser, passwordMatches } = require("../http");
 
 function register(app) {
-  // Konto mit Passwort anlegen (Admin)
+  // Konten verwalten: Administration und Teamleitung (die Teamleitung nicht für Administrator-Konten)
+  // Konto mit Passwort anlegen
   app.post("/api/users", wrap(async (req, res) => {
-    requireAdmin(req);
+    requireManager(req);
     const { name, username, email, role, perm, password } = req.body || {};
+    guardAdminAccount(req, null, perm);
     const problem = passwordProblem(password, name);
     if (problem) throw new HttpError(400, problem);
     users.cleanUsername(username);
@@ -25,10 +27,12 @@ function register(app) {
     res.json({ user: publicUser(row) });
   }));
 
-  // Anmeldename, E-Mail und Rolle eines Kontos ändern (Admin)
+  // Anmeldename, E-Mail und Rolle eines Kontos ändern
   app.patch("/api/users", wrap(async (req, res) => {
-    requireAdmin(req);
+    requireManager(req);
     const { name, username, email, role } = req.body || {};
+    const target = await users.findByName(db.pool, name);
+    if (target) guardAdminAccount(req, target.perm);
     const r = await db.tx(async (c) => {
       await db.lockRevision(c);
       const out = await users.updateProfile(c, name, { username, email, role });
@@ -42,23 +46,24 @@ function register(app) {
 
   // Offene „Passwort vergessen“-Anfragen (wenn keine E-Mail verschickt werden konnte)
   app.get("/api/users/reset-requests", wrap(async (req, res) => {
-    requireAdmin(req);
+    requireManager(req);
     const r = await db.pool.query("SELECT user_name, created_at FROM reset_requests ORDER BY created_at");
     res.json({ requests: r.rows.map((x) => ({ name: x.user_name, at: new Date(x.created_at).getTime() })) });
   }));
   app.delete("/api/users/reset-requests/:name", wrap(async (req, res) => {
-    requireAdmin(req);
+    requireManager(req);
     await db.pool.query("DELETE FROM reset_requests WHERE lower(user_name) = lower($1)", [req.params.name]);
     await audit.log(req, "user.reset.dismissed", { name: req.params.name });
     res.json({ ok: true });
   }));
 
-  // Passwort eines Kontos neu setzen (Admin) — beendet alle Sitzungen dieses Kontos
+  // Passwort eines Kontos neu setzen — beendet alle Sitzungen dieses Kontos
   app.post("/api/users/password", wrap(async (req, res) => {
-    requireAdmin(req);
+    requireManager(req);
     const { name, password } = req.body || {};
     const row = await users.findByName(db.pool, name);
     if (!row) throw new HttpError(404, "Konto nicht gefunden.");
+    guardAdminAccount(req, row.perm);
     const problem = passwordProblem(password, row.name);
     if (problem) throw new HttpError(400, problem);
     await users.setPassword(db.pool, row.name, fromPlain(password));
