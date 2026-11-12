@@ -1189,6 +1189,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .smb-result.ok { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good-text); }
 .smb-result.bad { background: color-mix(in srgb, var(--crit) 10%, transparent); color: var(--crit-text); }
 .set-desc.warn-text { color: var(--warn-text); }
+.mail-src { margin: -2px 0 6px; }
 .bk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .bk-smb { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
   color: var(--warn-text); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); }
@@ -2088,6 +2089,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         </div>
         <div class="card set-card">
           <div class="set-card-title">SMTP-Server</div>
+          <div class="set-desc mail-src" id="mailSrcHint" hidden></div>
           <div class="set-row">
             <div><div class="set-name">Server &amp; Port</div><div class="set-desc">Adresse des Postausgangsservers.</div></div>
             <div class="set-ctl host-port">
@@ -2111,7 +2113,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
               <div class="auth-off-hint" id="authOffHint" hidden>Entfällt bei Verschlüsselung „Keine“ — der Server akzeptiert nur anonymen Versand.</div>
               <div class="auth-fields" id="authFields">
                 <input id="setSmtpUser" autocomplete="off" placeholder="Benutzername">
-                <p class="set-desc" id="smtpPassServerHint" hidden>Das SMTP-Passwort wird auf dem Server aus Sicherheitsgründen nicht gespeichert. Es wird erst gebraucht, wenn ein Server-Versand eingerichtet ist — dann gehört es in dessen Konfiguration, nicht ins Board.</p>
+                <p class="set-desc" id="smtpPassServerHint" hidden>Das Passwort wird verschlüsselt auf dem Server gespeichert und nie wieder angezeigt. Feld leer lassen, um ein gespeichertes Passwort zu behalten.</p>
                 <div class="pw-row" id="smtpPassRow">
                   <input id="setSmtpPass" type="password" autocomplete="new-password" placeholder="Passwort">
                   <button class="btn" id="pwToggle" type="button">Anzeigen</button>
@@ -8365,15 +8367,17 @@ window.SFM = (function () {
     var server = SFM.isServer(), h = SFM.health() || {};
     $("#sideAudit").hidden = !server;
     $("#dbWipeCard").hidden = !server;
-    $("#smtpPassRow").hidden = server;
     $("#smtpPassServerHint").hidden = !server;
+    $("#pwToggle").hidden = server;   // ein gespeichertes Passwort gibt der Server nie zurück
     if (server) {
       var chip = $("#syncChip");
       chip.classList.add("clickable");
       chip.tabIndex = 0;
       chip.setAttribute("role", "button");
       chip.title = "Datenbank & Sicherung öffnen";
-      $("#mailPaneSub").textContent = "Absender, SMTP-Server und Verteiler für den Tagesbericht. Versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung den automatischen Versand übernimmt.";
+      $("#mailPaneSub").textContent = "Mailserver und Absender nutzt der Server für „Passwort vergessen“ und Test-E-Mails. Den Tagesbericht versenden Sie weiterhin über Ihr E-Mail-Programm; Verteiler und Betreff gelten dafür.";
+      $("#testMailBtn").textContent = "Test-E-Mail senden";
+      $("#testMailBtn").closest(".set-row").querySelector(".set-desc").textContent = "Der Server sendet eine Test-E-Mail an den Verteiler (ohne Verteiler an Ihre eigene Adresse).";
       chip.hidden = true;
       // Demo-Zugang nur, wenn der Server ihn erlaubt
       $("#loginDemoBox").hidden = !h.allowDemo;
@@ -8421,7 +8425,7 @@ window.SFM = (function () {
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
     "backup.create": "Sicherung erstellt", "backup.restore": "Sicherung wiederhergestellt",
-    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert", "backup.smb": "Abgleich mit SMB-Freigabe", "backup.smb.config": "SMB-Freigabe geändert", "backup.smb.test": "SMB-Verbindung getestet"
+    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert", "backup.smb": "Abgleich mit SMB-Freigabe", "backup.smb.config": "SMB-Freigabe geändert", "backup.smb.test": "SMB-Verbindung getestet", "mail.config": "Mailserver geändert", "mail.test": "Mailserver getestet"
   };
   var AUDIT_WARN = /failed|blocked|disabled|restore|delete|unknown/;
   var DOC_NAMES = { state: "Board und Kennzahlen", settings: "Einstellungen", users: "Benutzerliste" };
@@ -8458,6 +8462,11 @@ window.SFM = (function () {
       case "backup.smb.config":
         var SMB_F = { enabled: "aktiv", share: "Freigabe", user: "Benutzer", domain: "Domäne", protocol: "Version", keep: "Aufbewahrung", password: "Passwort" };
         return (d.enabled ? "an" : "aus") + (d.share ? " · " + d.share : "") + " · geändert: " + (d.changed || []).map(function (k) { return SMB_F[k] || k; }).join(", ");
+      case "mail.config":
+        var MAIL_F = { host: "Server", port: "Port", security: "Verschlüsselung", user: "Benutzer", fromName: "Absendername", fromAddress: "Absender", replyTo: "Antwort an", password: "Passwort" };
+        return (d.host || "kein Server") + " · geändert: " + (d.changed || []).map(function (k) { return MAIL_F[k] || k; }).join(", ");
+      case "mail.test":
+        return d.ok ? "erfolgreich" + (d.to ? " · Test-E-Mail an " + d.to + " Empfänger" : "") : "Fehler: " + (d.error || "");
       case "backup.smb.test":
         return d.ok ? "erfolgreich" : "Fehler: " + (d.error || "");
       case "backup.smb":
@@ -8539,6 +8548,7 @@ window.SFM = (function () {
       if (settingsPane === "db") { renderDbStatus(); loadBackups(); }
       if (settingsPane === "audit") loadAudit(false);
       if (settingsPane === "users") loadResetRequests();
+      if (settingsPane === "mail") loadServerMail();
     });
   });
   $("#settingsSearch").addEventListener("input", function () {
@@ -8671,7 +8681,53 @@ window.SFM = (function () {
     $("#setMailSubj").value = settings.mail.subject;
     pendingEnc = settings.mail.enc;
     pendingAuto = settings.mail.auto;
+    if (SFM.isServer() && serverMail) fillServerMail();
     renderEncSeg(); renderAutoSwitch(); renderRecipients(); renderMailLog();
+  }
+  /* ---- Mailserver des Servers (Server-Betrieb) ---- */
+  var serverMail = null;
+  var ENC_TO_SERVER = { TLS: "tls", STARTTLS: "starttls", Keine: "none" };
+  var ENC_FROM_SERVER = { tls: "TLS", starttls: "STARTTLS", none: "Keine" };
+  function fillServerMail() {
+    var m = serverMail;
+    $("#setMailSenderName").value = m.fromName;
+    $("#setMailSender").value = m.fromAddress;
+    $("#setMailReply").value = m.replyTo;
+    $("#setSmtpHost").value = m.host;
+    $("#setSmtpPort").value = m.port;
+    $("#setSmtpUser").value = m.user;
+    $("#setSmtpPass").value = "";
+    $("#setSmtpPass").placeholder = m.hasPassword ? "•••••••• gespeichert" : "Passwort";
+    pendingEnc = ENC_FROM_SERVER[m.security] || "STARTTLS";
+    var hint = $("#mailSrcHint");
+    hint.hidden = false;
+    hint.classList.toggle("warn-text", !!m.passwordUnreadable || !m.enabled);
+    hint.textContent = m.passwordUnreadable
+      ? "Das gespeicherte Passwort lässt sich nicht mehr entschlüsseln (Server-Schlüssel geändert) — bitte neu eingeben."
+      : !m.enabled ? "Noch kein Mailserver eingerichtet — „Passwort vergessen“ schickt Anfragen deshalb an die Administration."
+      : m.source === "env" ? "Diese Werte stammen aus der .env des Servers. Mit „Speichern“ werden sie hier übernommen und gelten ab dann aus der Oberfläche."
+      : "Aktiv — der Server versendet über " + m.host + ":" + m.port + ".";
+  }
+  function loadServerMail() {
+    if (!SFM.isServer() || !can("manageUsers")) return;
+    SFM.api("/api/mail/server").then(function (r) {
+      if (!r.ok) return;
+      serverMail = r.data.mail;
+      fillServerMail(); renderEncSeg();
+    }).catch(function () {});
+  }
+  function serverMailForm() {
+    var body = {
+      host: $("#setSmtpHost").value.trim(),
+      port: clampNum($("#setSmtpPort").value, 1, 65535, 587),
+      security: ENC_TO_SERVER[pendingEnc] || "starttls",
+      user: pendingEnc === "Keine" ? "" : $("#setSmtpUser").value.trim(),
+      fromName: $("#setMailSenderName").value.trim(),
+      fromAddress: $("#setMailSender").value.trim(),
+      replyTo: $("#setMailReply").value.trim()
+    };
+    if ($("#setSmtpPass").value) body.password = $("#setSmtpPass").value;
+    return body;
   }
   document.querySelectorAll(".seg button").forEach(function (b) {
     b.addEventListener("click", function () { pendingEnc = b.dataset.enc; renderEncSeg(); });
@@ -8725,16 +8781,52 @@ window.SFM = (function () {
     settings.mail.auto = pendingAuto;
     if (/^\d\d:\d\d$/.test($("#setSendTime").value)) settings.mail.sendTime = $("#setSendTime").value;
     settings.mail.subject = $("#setMailSubj").value.trim() || DEFAULT_SETTINGS.mail.subject;
-    saveSettings(); applySettings();
-    flash("emailSaved");
-    toast("E-Mail-Einstellungen gespeichert");
+    if (!SFM.isServer()) {
+      saveSettings(); applySettings();
+      flash("emailSaved");
+      toast("E-Mail-Einstellungen gespeichert");
+      return;
+    }
+    // Server: Mailserver und Passwort gehen an den Server, nicht in die gemeinsamen Einstellungen
+    settings.mail.authPass = "";
+    var body = serverMailForm();
+    SFM.api("/api/mail/server", { method: "PUT", body: body }).then(function (r) {
+      if (!r.ok) { appAlert("Nicht gespeichert", (r.data && r.data.error) || "Speichern fehlgeschlagen"); return; }
+      serverMail = r.data.mail;
+      saveSettings(); applySettings();
+      flash("emailSaved");
+      toast(serverMail.enabled ? "E-Mail-Einstellungen gespeichert — der Server versendet über " + serverMail.host : "E-Mail-Einstellungen gespeichert");
+    }).catch(function () { toast("Server nicht erreichbar"); });
   });
   $("#mailRevert").addEventListener("click", function () { applySettings(); });
+  // Test über den Server: Verbindung prüfen, optional Test-E-Mail an „to“
+  function serverMailTest(btn, to, label) {
+    var old = btn.textContent;
+    btn.disabled = true; btn.textContent = "Prüfe …";
+    SFM.api("/api/mail/server/test", { method: "POST", body: { settings: serverMailForm(), to: to } }).then(function (r) {
+      if (!r.ok) { appAlert("Test nicht möglich", (r.data && r.data.error) || "Unbekannter Fehler"); return; }
+      var x = r.data.result;
+      if (!x.ok) { appAlert("Verbindung fehlgeschlagen", x.error); return; }
+      appAlert(label, x.sent.length
+        ? "Verbindung in Ordnung. Die Test-E-Mail ging an: " + x.sent.join(", ") + "."
+        : "Verbindung und Anmeldung am Mailserver funktionieren. (Noch nicht gespeichert? Dann jetzt „Speichern“.)");
+      if (x.sent.length) logMail("Test-E-Mail über den Server an " + x.sent.length + " Empfänger gesendet");
+    }).catch(function () { toast("Server nicht erreichbar"); })
+      .then(function () { btn.disabled = false; btn.textContent = old; });
+  }
   $("#testConnBtn").addEventListener("click", function () {
+    if (SFM.isServer()) { serverMailTest(this, [], "Verbindung in Ordnung"); return; }
     appAlert("SMTP-Test nicht möglich",
       "Eine Browser-Anwendung kann keine direkte SMTP-Verbindung aufbauen. Die Zugangsdaten werden gespeichert und von der späteren Server-Anbindung (MES/Intranet) verwendet — dort lässt sich die Verbindung dann prüfen.");
   });
   $("#testMailBtn").addEventListener("click", function () {
+    if (SFM.isServer()) {
+      var me = currentUser && loadUsers().filter(function (u) { return u.name === currentUser.name; })[0];
+      var to = settings.mail.recipients.length ? settings.mail.recipients.slice() : (me && me.email ? [me.email] : []);
+      if (!to.length) { appAlert("Kein Empfänger", "Bitte einen Verteiler anlegen oder unter „Mein Konto“ eine eigene E-Mail-Adresse hinterlegen."); return; }
+      serverMailTest(this, to, "Test-E-Mail gesendet");
+      return;
+    }
     var a = document.createElement("a");
     a.href = "mailto:" + encodeURIComponent(settings.mail.recipients.join(",")).replace(/%2C/gi, ",") +
       "?subject=" + encodeURIComponent(mailSubject() + " (Test)") +
@@ -8767,7 +8859,7 @@ window.SFM = (function () {
       ["Agenda durchgehen", "Jeder Punkt zeigt links die zugehörigen Tageswerte als Eingabefelder und rechts die daraus erkannten Abweichungen. Werte lassen sich direkt dort ändern oder erst eintragen (Qualität: Mengen, Inventory: Bestand und Grenzwert, Lieferung: Aufträge, Produktivität: Ausfallzeiten nach Art) — sie werden sofort gespeichert und die Abweichungen sofort neu erkannt. Ungültige Werte werden rot markiert und nicht übernommen. Dazu lassen sich beliebig viele weitere Abweichungen erfassen. Die Karten in der Huddle-Ansicht öffnen weiterhin jeden Punkt einzeln. Die Minutenangaben sind Richtwerte."],
       ["Begründung ist Pflicht", "Jede Abweichung braucht eine Begründung — erkannte im Feld „Begründung (Pflicht)“, von Hand erfasste in der Beschreibung. Erst wenn alle begründet sind, lässt sich der Punkt als besprochen markieren."],
       ["Themen besprechen", "Die Liste daneben zeigt die offenen Abweichungen — ein Klick öffnet die Details direkt."]] },
-    { title: "Tagesbericht & E-Mail", intro: "Der Tagesbericht fasst SQIDP-Status, Kennzahlen, Grünquoten und offene Abweichungen des Tages zusammen.", tip: "Verteiler, Betreff-Vorlage und SMTP-Daten stehen unter Einstellungen → E-Mail-Versand. Automatischer Versand wird erst mit einer Server-Anbindung aktiv.", steps: [
+    { title: "Tagesbericht & E-Mail", intro: "Der Tagesbericht fasst SQIDP-Status, Kennzahlen, Grünquoten und offene Abweichungen des Tages zusammen.", tip: "Verteiler, Betreff-Vorlage und Mailserver stehen unter Einstellungen → E-Mail-Versand. Am Server nutzt das Board den Mailserver für „Passwort vergessen“ und Test-E-Mails; „Verbindung testen“ prüft ihn direkt.", steps: [
       ["Bericht öffnen", "Bereich Tagesbericht (Taste 5) — Kennzahlen und Listen füllen sich automatisch aus den echten Daten."],
       ["Tag auswählen", "Mit den Pfeilen oder dem Datumsfeld lässt sich ein früherer Tag wählen; der Bericht zeigt dann Kennzahlen und Abweichungen mit Begründung dieses Tages. „Heute“ springt zurück."],
       ["Per E-Mail senden", "Öffnet den Bericht als E-Mail in Ihrem E-Mail-Programm; alternativ lässt sich der Text kopieren (z. B. für Teams)."],
@@ -8795,7 +8887,7 @@ window.SFM = (function () {
       ["Testdaten nachfüllen", "Das Datenbank-Symbol daneben ergänzt fehlende und unvollständige Tageswerte vom 1. Januar bis gestern. Bereits erfasste Werte, Maßnahmen und Begründungen bleiben erhalten, heute bleibt offen. Beide Symbole sehen nur Administratoren."]] },
     { title: "Sicherheit & Konten", intro: "Am Server prüft die Datenbank jede Anmeldung und jede Berechtigung. Passwörter werden nur als scrypt-Hash gespeichert.", tip: "Das Board sollte nur über HTTPS erreichbar sein — sonst gehen Passwörter ungeschützt über das Netz.", steps: [
       ["Anmelden", "Mit dem Anmeldenamen (z. B. „max.mustermann“) oder der hinterlegten E-Mail-Adresse — Groß-/Kleinschreibung egal. Der Anzeigename erscheint nur in Listen und Protokollen."],
-      ["Passwort vergessen", "Auf der Anmeldeseite „Passwort vergessen?“ wählen und Anmeldename oder E-Mail eingeben. Mit hinterlegter E-Mail kommt ein Link, der 60 Minuten und nur einmal gilt. Ohne E-Mail (oder ohne Mailserver) geht eine Anfrage an die Administration, die ein neues Passwort setzt."],
+      ["Passwort vergessen", "Auf der Anmeldeseite „Passwort vergessen?“ wählen und Anmeldename oder E-Mail eingeben. Mit hinterlegter E-Mail (und eingerichtetem Mailserver unter Einstellungen → E-Mail-Versand) kommt ein Link, der 60 Minuten und nur einmal gilt. Ohne E-Mail (oder ohne Mailserver) geht eine Anfrage an die Administration, die ein neues Passwort setzt."],
       ["Mein Konto", "Auf den eigenen Namen oben rechts klicken: E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet."],
       ["Passwortregeln", "Mindestens 10 Zeichen (vom Server einstellbar), nicht gleich dem Namen. Nach mehreren Fehlversuchen ist die Anmeldung für 15 Minuten gesperrt."],
       ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],

@@ -161,7 +161,7 @@ function createApp() {
       allowDemo: config.allowDemo,
       allowRegister: config.allowRegister || userCount === 0,
       passwordMinLength: config.passwordMinLength,
-      mailEnabled: mailer.configured(),
+      mailEnabled: await mailer.isConfigured(),
       sessionIdleHours: config.sessionIdleHours,
       revision: await db.getRevision(),
       user: publicUser(req.user)
@@ -412,12 +412,38 @@ function createApp() {
     res.json({ email: r.after.email || "" });
   }));
 
+  /* ---------- E-Mail-Versand des Servers (nur Admin) ---------- */
+  app.get("/api/mail/server", wrap(async (req, res) => {
+    requireAdmin(req);
+    res.json({ mail: await mailer.getConfig() });
+  }));
+
+  app.put("/api/mail/server", wrap(async (req, res) => {
+    requireAdmin(req);
+    const r = await mailer.setConfig(req.body || {});
+    if (r.changed.length) await audit.log(req, "mail.config", { changed: r.changed, host: r.config.host });
+    res.json({ mail: r.config });
+  }));
+
+  // Verbindung mit den Formularwerten prüfen; optional Test-E-Mail an „to“ (Liste) senden
+  app.post("/api/mail/server/test", wrap(async (req, res) => {
+    requireAdmin(req);
+    const body = req.body || {};
+    let to = Array.isArray(body.to) ? body.to.map((x) => String(x).trim()).filter(Boolean) : [];
+    if (to.length > 50) throw new HttpError(400, "Höchstens 50 Empfänger für die Test-E-Mail.");
+    if (to.some((x) => !mailer.EMAIL_RE.test(x))) throw new HttpError(400, "Ungültige Empfängeradresse.");
+    const result = await mailer.test(body.settings || {}, to);
+    await audit.log(req, "mail.test", { ok: result.ok, to: to.length || undefined, error: result.error || undefined });
+    res.json({ result });
+  }));
+
   /* ---------- Passwort vergessen ---------- */
   app.post("/api/password/forgot", wrap(async (req, res) => {
     const login = String((req.body || {}).login || "").trim().slice(0, 200);
     if (!login) throw new HttpError(400, "Bitte Anmeldename oder E-Mail angeben.");
     // Immer dieselbe Antwort — ob es das Konto gibt, bleibt verborgen
-    const answer = { ok: true, mailEnabled: mailer.configured() };
+    const mailOn = await mailer.isConfigured();
+    const answer = { ok: true, mailEnabled: mailOn };
     if (resetLimited("ip:" + req.ip, 10) || resetLimited("login:" + login.toLowerCase(), 3)) {
       await audit.log(req, "user.reset.blocked", { name: login });
       return res.json(answer);
@@ -427,7 +453,7 @@ function createApp() {
       await audit.log(req, "user.reset.unknown", { name: login });
       return res.json(answer);
     }
-    if (mailer.configured() && row.email) {
+    if (mailOn && row.email) {
       const token = crypto.randomBytes(32).toString("base64url");
       await db.pool.query("DELETE FROM password_resets WHERE lower(user_name) = lower($1) OR expires_at <= now()", [row.name]);
       await db.pool.query(

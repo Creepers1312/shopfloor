@@ -26,7 +26,9 @@ async function main() {
 
   const server = createApp().listen(config.port, () => {
     console.log(`[api] lauscht auf Port ${config.port} · Registrierung: ${config.allowRegister ? "an" : "aus"} · Demo: ${config.allowDemo ? "an" : "aus"}`);
-    console.log(`[api] E-Mail-Versand: ${require("./mailer").configured() ? config.smtp.host + ":" + config.smtp.port : "aus (Passwort-Anfragen gehen an die Administration)"}`);
+    require("./mailer").effective().then((m) => console.log(`[api] E-Mail-Versand: ${m.host && m.fromAddress
+      ? `${m.host}:${m.port} (${m.source === "db" ? "eingestellt in der Oberfläche" : "aus der .env"})`
+      : "aus (Passwort-Anfragen gehen an die Administration)"}`)).catch(() => {});
     if (!config.cookieSecure) console.warn("[api] HINWEIS: COOKIE_SECURE ist aus — Passwörter und Sitzungen sind nur mit HTTPS geschützt.");
   });
 
