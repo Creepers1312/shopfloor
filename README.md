@@ -116,6 +116,7 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 | `TZ` | `Europe/Berlin` | Zeitzone |
 | `DB_NAME` / `DB_USER` | `shopfloor` | Datenbank und Benutzer |
 | `DB_PASSWORD` | zufällig | Datenbank-Passwort |
+| `APP_SECRET` | zufällig | Schlüssel für gespeicherte Zugangsdaten (SMB-Passwort); wird erzeugt und nicht abgefragt |
 | `ALLOW_REGISTER` | `false` | Selbstregistrierung (das allererste Konto ist immer möglich und wird Administrator) |
 | `ALLOW_DEMO` | `false` | Demo-Zugang mit Leserechten auf der Anmeldeseite |
 | `SESSION_DAYS` | `14` | Höchstdauer einer Anmeldung |
@@ -131,9 +132,6 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 | `AUDIT_DAYS` | `365` | Aufbewahrung des Sicherheitsprotokolls in Tagen (nur in `docker-compose.yml`/Umgebung) |
 | `BACKUP_PATH` | `./backups` | Sicherungsordner auf dem Host |
 | `BACKUP_ENABLED` / `BACKUP_TIME` / `BACKUP_KEEP` | `true` / `02:00` / `14` | Standard für die tägliche Sicherung (danach in der Oberfläche änderbar) |
-| `BACKUP_SMB_SHARE` | leer | SMB-Freigabe als zweiter Sicherungsort, z. B. `//nas.firma.local/backup/shopfloor` (leer = aus) |
-| `BACKUP_SMB_USER` / `BACKUP_SMB_PASSWORD` / `BACKUP_SMB_DOMAIN` | leer | Zugang zur Freigabe (leerer Benutzer = Gast) |
-| `BACKUP_SMB_VERSION` / `BACKUP_SMB_KEEP` | `3.0` / `30` | SMB-Version; automatische Sicherungen, die auf der Freigabe bleiben |
 
 Ändern: `./deploy.sh config`, danach `./deploy.sh`. `COMPOSE_FILE` ergibt sich aus der Betriebsart und wird nicht von Hand gepflegt.
 
@@ -172,7 +170,7 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
 ./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto, meldet es überall ab)
 ./deploy.sh mail-test adresse    # Testmail über die SMTP-Einstellungen senden
-./deploy.sh smb                  # SMB-Freigabe neu einhängen und fehlende Sicherungen kopieren
+./deploy.sh smb                  # Verbindung zur SMB-Freigabe prüfen, fehlende Sicherungen kopieren
 ./deploy.sh audit [50]           # letzte Einträge des Sicherheitsprotokolls
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
@@ -221,25 +219,26 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 
 ### Kopie auf eine SMB-Freigabe (NAS)
 
-Zusätzlich zum lokalen Ordner kann jede Sicherung auf eine Windows-/NAS-Freigabe kopiert werden:
+Zusätzlich zum lokalen Ordner kann jede Sicherung auf eine Windows-/NAS-Freigabe kopiert werden. Eingestellt wird alles
+in der Oberfläche unter *Einstellungen → Datenbank & Sicherung → Kopie auf SMB-Freigabe*:
 
-1. `./deploy.sh config` → `BACKUP_SMB_SHARE` z. B. `//nas.firma.local/backup/shopfloor` (auch `\\nas\backup\shopfloor`
-   wird angenommen), dazu Benutzer, Passwort, ggf. Domäne, SMB-Version und wie viele automatische Kopien dort bleiben.
-2. `./deploy.sh` — installiert bei Bedarf `cifs-utils`, legt die Zugangsdaten in `/etc/shopfloor/<projekt>-smb.credentials`
-   ab (nur root lesbar), trägt die Freigabe in `/etc/fstab` ein (mit `nofail`, ein fehlendes NAS hält den Server nicht auf)
-   und hängt sie unter `/mnt/<projekt>-backup-smb` ein.
-3. Prüfen in *Einstellungen → Datenbank & Sicherung* („Kopie auf Freigabe“) oder mit `./deploy.sh smb`
-   (hängt neu ein und kopiert fehlende Sicherungen).
+1. Freigabe eintragen, z. B. `//nas.firma.local/backup/shopfloor` (`\\nas\backup\shopfloor` geht auch; fehlende
+   Ordner unterhalb der Freigabe werden beim Test angelegt), dazu Benutzer, Passwort und ggf. Domäne.
+2. „Verbindung testen“ — meldet verständlich, ob Server, Anmeldung, Ordner oder Rechte nicht passen.
+3. „Kopie aktiv“ einschalten und speichern — der Server gleicht sofort ab.
 
 Verhalten:
-- Lokale Sicherungen laufen immer, auch wenn das NAS nicht erreichbar ist; fehlende Kopien werden stündlich und nach
-  jeder Sicherung nachgeholt.
-- Auf der Freigabe bleiben die neuesten `BACKUP_SMB_KEEP` automatischen und alle manuellen Sicherungen. Löschen in der
-  Oberfläche entfernt nur die lokale Datei.
-- Das SMB-Passwort gelangt nicht in die Container; die API sieht nur den eingehängten Ordner. Erst die Datei
-  `.shopfloor-backup` auf der Freigabe (legt `deploy.sh` an) zeigt ihr, dass wirklich das NAS eingehängt ist.
+- Der API-Container überträgt mit `smbclient` (SMB 2/3); auf dem Host muss nichts eingehängt oder installiert werden.
+  Der Server braucht Zugriff auf Port 445 des NAS.
+- Lokale Sicherungen laufen immer, auch wenn das NAS nicht erreichbar ist; fehlende Kopien werden nach jeder Sicherung
+  und stündlich nachgeholt. Der Status steht oben auf der Seite, Fehler zusätzlich im Sicherheitsprotokoll.
+- Auf der Freigabe bleiben die neuesten *n* automatischen (einstellbar) und alle manuellen Sicherungen. Löschen in der
+  Oberfläche entfernt nur die Datei auf dem Server.
+- Das Passwort wird AES-256-GCM-verschlüsselt in der Datenbank gespeichert (Schlüssel `APP_SECRET` aus der `.env`,
+  erzeugt von `deploy.sh`) und nie wieder ausgeliefert. Es steckt nicht in den Sicherungsdateien. Wird `APP_SECRET`
+  geändert, muss das Passwort neu eingegeben werden.
 - Der Benutzer an der Freigabe braucht Schreib- und Löschrechte im Zielordner.
-- Abschalten: `BACKUP_SMB_SHARE` leeren (`./deploy.sh config`), dann `./deploy.sh` — der fstab-Eintrag wird entfernt.
+- `./deploy.sh smb` prüft die Verbindung von der Kommandozeile aus und kopiert fehlende Sicherungen.
 
 ## Sicherheit
 

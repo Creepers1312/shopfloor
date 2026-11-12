@@ -1,7 +1,8 @@
 FROM node:22-alpine
 
-# pg_dump/pg_restore in derselben Hauptversion wie der Datenbank-Container (postgres:17)
-RUN apk add --no-cache postgresql17-client tzdata
+# pg_dump/pg_restore in derselben Hauptversion wie der Datenbank-Container (postgres:17),
+# smbclient für die Kopie der Sicherungen auf eine SMB-Freigabe
+RUN apk add --no-cache postgresql17-client tzdata samba-client
 
 WORKDIR /app
 COPY package.json package-lock.json ./

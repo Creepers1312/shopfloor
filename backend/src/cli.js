@@ -110,14 +110,16 @@ const commands = {
     await backups.syncSmb().catch(() => {});
   },
 
-  // Fehlende Sicherungen auf die SMB-Freigabe kopieren (./deploy.sh smb)
+  // Verbindung zur SMB-Freigabe prüfen und fehlende Sicherungen kopieren (./deploy.sh smb)
   async "smb-sync"() {
     const st = await backups.smbStatus();
-    if (!st.configured) throw new Error("Keine SMB-Freigabe eingerichtet.");
-    if (!st.connected) throw new Error(`Freigabe ${st.share} ist im Container nicht verbunden (fehlt .shopfloor-backup oder Schreibrecht?).`);
+    if (!st.share) throw new Error("Keine Freigabe eingestellt (Einstellungen → Datenbank & Sicherung).");
+    const t = await require("./smb").test({});
+    console.log(`Verbindung zu ${st.share}: ok (${t.files} Sicherung(en) auf der Freigabe)`);
+    if (!st.enabled) { console.log("Kopie ist ausgeschaltet — nichts kopiert."); return; }
     const r = await backups.syncSmb();
     if (!r.ok) throw new Error(r.error);
-    console.log(`Freigabe ${st.share}: ${r.copied} Sicherung(en) kopiert, ${r.removed} alte entfernt.`);
+    console.log(`${r.copied} Sicherung(en) kopiert, ${r.removed} alte entfernt.`);
   }
 };
 

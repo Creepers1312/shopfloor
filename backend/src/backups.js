@@ -8,6 +8,7 @@ const { spawn } = require("child_process");
 const config = require("./config");
 const db = require("./db");
 const { HttpError } = require("./users");
+const smb = require("./smb");
 
 const FILE_RE = /^shopfloor_[0-9_-]+_(auto|manual)\.dump$/;
 const TABLES = ["documents", "users"];
@@ -71,81 +72,46 @@ function stamp(d) {
 }
 function todayKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
-/* ---------- Kopie auf die SMB-Freigabe ----------
-   Der Host hängt die Freigabe ein (deploy.sh) und legt dort die Markierungsdatei an.
-   Fehlt sie, ist die Freigabe nicht verbunden — dann wird nichts in den leeren
-   Einhängepunkt geschrieben. Lokale Sicherungen funktionieren immer unabhängig davon. */
-const SMB_MARKER = ".shopfloor-backup";
+/* ---------- Kopie auf die SMB-Freigabe (Einstellungen in der Oberfläche, siehe smb.js) ----------
+   Lokale Sicherungen funktionieren immer unabhängig davon. Die Liste der Dateien auf der
+   Freigabe merkt sich der Server vom letzten Abgleich — die Oberfläche fragt das NAS nicht
+   bei jedem Aufruf ab. */
 let smbBusy = false;
-
-async function smbConnected() {
-  if (!config.smb.dir) return false;
-  try {
-    await fs.promises.access(path.join(config.smb.dir, SMB_MARKER), fs.constants.F_OK);
-    await fs.promises.access(config.smb.dir, fs.constants.W_OK);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
-
-async function smbFiles() {
-  try {
-    return (await fs.promises.readdir(config.smb.dir)).filter((f) => FILE_RE.test(f));
-  } catch (e) {
-    return [];
-  }
-}
+let smbKnown = null;   // Set der Dateinamen auf der Freigabe (Stand letzter Abgleich)
 
 async function smbStatus() {
-  if (!config.smb.dir) return { configured: false };
-  const last = await db.getMeta("backup_smb_last");
-  return {
-    configured: true,
-    share: config.smb.share,
-    keep: config.smb.keep,
-    connected: await smbConnected(),
-    last: last || null
-  };
+  const cfg = await smb.getConfig();
+  return Object.assign(cfg, { last: (await db.getMeta("backup_smb_last")) || null });
 }
 
 // Fehlende Sicherungen auf die Freigabe kopieren und alte automatische dort aufräumen
-async function syncSmb() {
-  if (!config.smb.dir) return { configured: false };
+async function syncSmb({ force = false } = {}) {
+  const raw = await smb.getRaw();
+  if (!raw.enabled && !force) return { configured: false };
   if (smbBusy) throw new HttpError(409, "Der Abgleich mit der Freigabe läuft bereits.");
   smbBusy = true;
   const result = { at: Date.now(), ok: true, copied: 0, removed: 0, error: null };
   try {
-    if (!(await smbConnected())) {
-      result.ok = false;
-      result.error = "Freigabe nicht verbunden";
-    } else {
-      const remote = new Set(await smbFiles());
-      const r = await db.pool.query("SELECT filename FROM backups WHERE ok ORDER BY created_at");
-      for (const { filename } of r.rows) {
-        if (remote.has(filename)) continue;
-        const src = path.join(config.backupDir, filename);
-        if (!fs.existsSync(src)) continue;
-        const part = path.join(config.smb.dir, "." + filename + ".part");
-        try {
-          await fs.promises.copyFile(src, part);
-          await fs.promises.rename(part, path.join(config.smb.dir, filename));
-          remote.add(filename);
-          result.copied++;
-        } catch (e) {
-          await fs.promises.unlink(part).catch(() => {});
-          result.ok = false;
-          result.error = `${filename}: ${e.message}`.slice(0, 300);
-          break;
-        }
-      }
-      // Automatische Sicherungen auf der Freigabe: die neuesten BACKUP_SMB_KEEP behalten
-      // (Zeitstempel im Namen → alphabetisch = chronologisch); manuelle bleiben immer
-      const autos = [...remote].filter((f) => f.endsWith("_auto.dump")).sort().reverse();
-      for (const f of autos.slice(config.smb.keep)) {
-        try { await fs.promises.unlink(path.join(config.smb.dir, f)); result.removed++; } catch (e) { /* später erneut */ }
-      }
+    const remote = new Set(await smb.listFiles(raw));
+    const r = await db.pool.query("SELECT filename FROM backups WHERE ok ORDER BY created_at");
+    for (const { filename } of r.rows) {
+      if (remote.has(filename)) continue;
+      const src = path.join(config.backupDir, filename);
+      if (!fs.existsSync(src)) continue;
+      await smb.putFile(raw, src, filename);
+      remote.add(filename);
+      result.copied++;
     }
+    // Automatische Sicherungen auf der Freigabe: die neuesten behalten
+    // (Zeitstempel im Namen → alphabetisch = chronologisch); manuelle bleiben immer
+    const autos = [...remote].filter((f) => f.endsWith("_auto.dump")).sort().reverse();
+    for (const f of autos.slice(raw.keep || 30)) {
+      try { await smb.deleteFile(raw, f); remote.delete(f); result.removed++; } catch (e) { /* beim nächsten Mal */ }
+    }
+    smbKnown = remote;
+  } catch (e) {
+    result.ok = false;
+    result.error = e.message;
   } finally {
     smbBusy = false;
   }
@@ -176,10 +142,10 @@ async function adoptFiles() {
 
 async function list() {
   await adoptFiles();
-  const onSmb = (await smbConnected()) ? new Set(await smbFiles()) : null;
+  const onSmb = (await smb.getRaw()).enabled ? smbKnown : null;
   const r = await db.pool.query("SELECT * FROM backups ORDER BY created_at DESC");
   return r.rows.map((b) => ({
-    onSmb: onSmb ? onSmb.has(b.filename) : null,
+    onSmb: onSmb ? onSmb.has(b.filename) : null,   // null = unbekannt bzw. keine Freigabe
     filename: b.filename,
     createdAt: new Date(b.created_at).getTime(),
     kind: b.kind,
@@ -298,10 +264,8 @@ function startScheduler() {
   };
   setInterval(tick, 30 * 1000).unref();
   // War die Freigabe zeitweise weg, holt der stündliche Abgleich fehlende Kopien nach
-  if (config.smb.dir) {
-    setInterval(() => { syncSmb().catch(() => {}); }, 60 * 60 * 1000).unref();
-    setTimeout(() => { syncSmb().catch(() => {}); }, 20 * 1000).unref();
-  }
+  setInterval(() => { syncSmb().catch(() => {}); }, 60 * 60 * 1000).unref();
+  setTimeout(() => { syncSmb().catch(() => {}); }, 20 * 1000).unref();
 }
 
 module.exports = {

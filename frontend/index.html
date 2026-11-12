@@ -1184,6 +1184,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .bk-meta { font-size: 11.5px; color: var(--muted); }
 .bk-size { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bk-actions { display: flex; gap: 6px; }
+.smb-auth { display: flex; flex-direction: column; gap: 8px; }
+.smb-result { margin: 4px 0 2px; padding: 9px 12px; border-radius: 9px; font-size: 13px; line-height: 1.45; }
+.smb-result.ok { background: color-mix(in srgb, var(--good) 12%, transparent); color: var(--good-text); }
+.smb-result.bad { background: color-mix(in srgb, var(--crit) 10%, transparent); color: var(--crit-text); }
+.set-desc.warn-text { color: var(--warn-text); }
 .bk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .bk-smb { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
   color: var(--warn-text); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); }
@@ -2215,6 +2220,50 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
             <span class="saved-flash" id="dbSaved" hidden>Gespeichert ✓</span>
             <button class="btn" id="dbBackupNow" type="button">Jetzt sichern</button>
             <button class="btn primary" id="dbSaveBtn" type="button">Speichern</button>
+          </div>
+        </div>
+
+        <div class="card set-card" id="dbSmbCard">
+          <div class="set-card-title">Kopie auf SMB-Freigabe</div>
+          <div class="set-row">
+            <div><div class="set-name">Kopie aktiv</div><div class="set-desc" id="smbText">Jede Sicherung wird zusätzlich auf eine Windows- oder NAS-Freigabe kopiert.</div></div>
+            <div class="set-ctl ctl-right"><button class="switch" id="smbSwitch" type="button" role="switch" aria-checked="false" aria-label="Kopie auf SMB-Freigabe"></button></div>
+          </div>
+          <div class="set-row">
+            <div><div class="set-name">Freigabe</div><div class="set-desc">Server, Freigabe und optional ein Ordner darin. <code>\\nas\backup</code> geht auch.</div></div>
+            <div class="set-ctl"><input id="smbShare" autocomplete="off" spellcheck="false" placeholder="//nas.firma.local/backup/shopfloor"></div>
+          </div>
+          <div class="set-row">
+            <div><div class="set-name">Anmeldung</div><div class="set-desc">Benutzer mit Schreib- und Löschrechten im Ordner. Leer lassen für Gastzugang.</div></div>
+            <div class="set-ctl smb-auth">
+              <input id="smbUser" autocomplete="off" spellcheck="false" placeholder="Benutzer">
+              <input id="smbDomain" autocomplete="off" spellcheck="false" placeholder="Domäne (optional)">
+              <div class="pw-row">
+                <input id="smbPass" type="password" autocomplete="new-password" placeholder="Passwort">
+                <button class="btn" id="smbPassClear" type="button" hidden>Entfernen</button>
+              </div>
+              <div class="set-desc" id="smbPassHint">Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt.</div>
+            </div>
+          </div>
+          <div class="set-row">
+            <div><div class="set-name">SMB-Version</div><div class="set-desc">„Automatisch“ passt fast immer; bei Verbindungsfehlern eine feste Version wählen.</div></div>
+            <div class="set-ctl ctl-right">
+              <select class="perm-select" id="smbProtocol" aria-label="SMB-Version">
+                <option value="auto">Automatisch (SMB 2/3)</option>
+                <option value="smb3">Nur SMB 3</option>
+                <option value="smb2">Höchstens SMB 2</option>
+              </select>
+            </div>
+          </div>
+          <div class="set-row">
+            <div><div class="set-name">Aufbewahrung auf der Freigabe</div><div class="set-desc">So viele automatische Sicherungen bleiben dort; manuelle werden nie gelöscht.</div></div>
+            <div class="set-ctl ctl-right"><input id="smbKeep" type="number" min="1" max="365" step="1" inputmode="numeric" style="width:110px"></div>
+          </div>
+          <div class="smb-result" id="smbResult" hidden></div>
+          <div class="pane-foot">
+            <span class="saved-flash" id="smbSaved" hidden>Gespeichert ✓</span>
+            <button class="btn" id="smbTestBtn" type="button">Verbindung testen</button>
+            <button class="btn primary" id="smbSaveBtn" type="button">Speichern</button>
           </div>
         </div>
 
@@ -7974,7 +8023,8 @@ window.SFM = (function () {
 
   /* ---------- Datenbank & Sicherung ---------- */
   var backupCfg = { enabled: false, time: "22:00", keep: 14 };
-  var backupSmb = { configured: false };
+  var backupSmb = {};
+  var smbDirty = false, smbEnabled = false;
 
   function fmtBytes(n) {
     if (!n) return "0 B";
@@ -8001,6 +8051,7 @@ window.SFM = (function () {
     var server = SFM.isServer(), h = SFM.health() || {};
     $("#dbAutoCard").hidden = !server;
     $("#dbListCard").hidden = !server;
+    $("#dbSmbCard").hidden = !server;
     var oldNote = $("#dbLocalNote");
     if (oldNote) oldNote.remove();
     if (!server) {
@@ -8022,28 +8073,28 @@ window.SFM = (function () {
       box.appendChild(dbStat("Hinweis", String(h.pgDumpInfo || "").slice(0, 120), "warn"));
     }
     var smb = backupSmb || {}, before = box.children.length;
-    if (!smb.configured) {
-      box.appendChild(dbStat("Kopie auf Freigabe", "Nicht eingerichtet"));
-    } else if (!smb.connected) {
-      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + " · nicht verbunden", "warn"));
+    var last = smb.last;
+    if (!smb.enabled) {
+      box.appendChild(dbStat("Kopie auf Freigabe", smb.share ? "Ausgeschaltet" : "Nicht eingerichtet"));
+    } else if (!last) {
+      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + " · noch nicht abgeglichen"));
     } else {
-      var last = smb.last;
-      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + (last && last.at
-        ? " · " + (last.ok ? "abgeglichen " : "Fehler ") + fmtStamp(last.at) : " · verbunden"), last && !last.ok ? "warn" : "ok"));
+      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + " · " + (last.ok ? "abgeglichen " : "Fehler ") + fmtStamp(last.at)
+        + (last.ok ? "" : " — " + last.error), last.ok ? "ok" : "warn"));
     }
     if (box.children[before]) box.children[before].classList.add("wide");
-    $("#dbSmbSync").hidden = !smb.configured;
-    $("#dbListHint").textContent = smb.configured
-      ? "Jede Sicherung liegt im Projektordner unter backups/ und wird zusätzlich auf die Freigabe " + smb.share + " kopiert "
-        + "(dort bleiben die neuesten " + smb.keep + " automatischen und alle manuellen). Fehlende Kopien holt der Server stündlich nach."
-      : "Die Dateien liegen im Projektordner unter backups/. Eine SMB-Freigabe (z. B. NAS) als zweiten Speicherort richtet ./deploy.sh config ein.";
+    $("#dbSmbSync").hidden = !smb.enabled;
+    $("#dbListHint").textContent = smb.enabled
+      ? "Jede Sicherung liegt im Projektordner unter backups/ und wird zusätzlich auf " + smb.share + " kopiert. "
+        + "Fehlende Kopien holt der Server stündlich nach. Löschen entfernt nur die Datei auf dem Server."
+      : "Die Dateien liegen im Projektordner unter backups/. Eine SMB-Freigabe (z. B. NAS) als zweiten Speicherort richten Sie oben ein.";
   }
   function renderBackupCfg() {
     $("#dbAutoSwitch").setAttribute("aria-checked", backupCfg.enabled ? "true" : "false");
     $("#dbBackupTime").value = backupCfg.time;
     $("#dbBackupKeep").value = backupCfg.keep;
     $("#dbAutoText").textContent = backupCfg.enabled
-      ? "Aktiv — der Server sichert täglich um " + backupCfg.time + " Uhr in den Ordner backups" + (backupSmb.configured ? " und kopiert auf die Freigabe." : ".")
+      ? "Aktiv — der Server sichert täglich um " + backupCfg.time + " Uhr in den Ordner backups" + (backupSmb.enabled ? " und kopiert auf die Freigabe." : ".")
       : "Aus — es wird nur gesichert, wenn Sie auf „Jetzt sichern“ klicken.";
   }
   function renderBackupList(items) {
@@ -8094,8 +8145,9 @@ window.SFM = (function () {
         return;
       }
       backupCfg = r.data.config;
-      backupSmb = r.data.smb || { configured: false };
+      backupSmb = r.data.smb || {};
       renderBackupCfg();
+      if (!smbDirty) renderSmbCfg();
       renderBackupList(r.data.backups);
       renderDbStatus();
     }).catch(function () {
@@ -8150,7 +8202,7 @@ window.SFM = (function () {
   }
   function deleteBackup(file) {
     appConfirm("Sicherung löschen?", file + " wird auf dem Server endgültig gelöscht."
-      + (backupSmb.configured ? " Eine Kopie auf der Freigabe bleibt erhalten." : ""), "Löschen", true, function () {
+      + (backupSmb.enabled ? " Eine Kopie auf der Freigabe bleibt erhalten." : ""), "Löschen", true, function () {
       SFM.api("/api/backups/" + encodeURIComponent(file), { method: "DELETE" }).then(function (r) {
         if (!r.ok) { toast((r.data && r.data.error) || "Löschen fehlgeschlagen"); return; }
         toast("Sicherung gelöscht");
@@ -8163,6 +8215,92 @@ window.SFM = (function () {
     renderBackupCfg();
   });
   $("#dbSaveBtn").addEventListener("click", saveBackupCfg);
+
+  /* ---- Kopie auf SMB-Freigabe ---- */
+  function renderSmbCfg() {
+    var c = backupSmb || {};
+    smbEnabled = !!c.enabled;
+    $("#smbSwitch").setAttribute("aria-checked", smbEnabled ? "true" : "false");
+    $("#smbShare").value = c.share || "";
+    $("#smbUser").value = c.user || "";
+    $("#smbDomain").value = c.domain || "";
+    $("#smbPass").value = "";
+    $("#smbPass").placeholder = c.hasPassword ? "•••••••• gespeichert" : "Passwort";
+    $("#smbPassClear").hidden = !c.hasPassword;
+    $("#smbPassHint").textContent = c.passwordUnreadable
+      ? "Das gespeicherte Passwort lässt sich nicht mehr entschlüsseln (Server-Schlüssel geändert) — bitte neu eingeben."
+      : c.hasPassword ? "Feld leer lassen, um das gespeicherte Passwort zu behalten. Es wird verschlüsselt gespeichert und nie angezeigt."
+      : "Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt.";
+    $("#smbPassHint").classList.toggle("warn-text", !!c.passwordUnreadable);
+    $("#smbProtocol").value = c.protocol || "auto";
+    $("#smbKeep").value = c.keep || 30;
+    $("#smbText").textContent = smbEnabled
+      ? "Aktiv — jede Sicherung wird zusätzlich auf " + c.share + " kopiert."
+      : "Jede Sicherung wird zusätzlich auf eine Windows- oder NAS-Freigabe kopiert.";
+    smbDirty = false;
+  }
+  function smbForm() {
+    var body = {
+      enabled: smbEnabled,
+      share: $("#smbShare").value.trim(),
+      user: $("#smbUser").value.trim(),
+      domain: $("#smbDomain").value.trim(),
+      protocol: $("#smbProtocol").value,
+      keep: clampNum($("#smbKeep").value, 1, 365, 30)
+    };
+    if ($("#smbPass").value) body.password = $("#smbPass").value;
+    return body;
+  }
+  function smbShowResult(ok, text) {
+    var box = $("#smbResult");
+    box.hidden = false;
+    box.className = "smb-result " + (ok ? "ok" : "bad");
+    box.textContent = text;
+  }
+  ["#smbShare", "#smbUser", "#smbDomain", "#smbPass", "#smbProtocol", "#smbKeep"].forEach(function (id) {
+    $(id).addEventListener("input", function () { smbDirty = true; });
+  });
+  $("#smbSwitch").addEventListener("click", function () {
+    smbEnabled = !smbEnabled; smbDirty = true;
+    this.setAttribute("aria-checked", smbEnabled ? "true" : "false");
+  });
+  $("#smbPassClear").addEventListener("click", function () {
+    appConfirm("Passwort entfernen?", "Das gespeicherte Passwort für die Freigabe wird gelöscht.", "Entfernen", true, function () {
+      SFM.api("/api/backups/smb", { method: "PUT", body: { clearPassword: true } }).then(function (r) {
+        if (!r.ok) { toast((r.data && r.data.error) || "Speichern fehlgeschlagen"); return; }
+        backupSmb = r.data.smb; renderSmbCfg(); renderDbStatus();
+        toast("Passwort entfernt");
+      });
+    });
+  });
+  $("#smbTestBtn").addEventListener("click", function () {
+    var btn = this, body = smbForm();
+    if (!body.share) { smbShowResult(false, "Bitte zuerst die Freigabe angeben."); return; }
+    btn.disabled = true; btn.textContent = "Prüfe …";
+    SFM.api("/api/backups/smb/test", { method: "POST", body: body }).then(function (r) {
+      if (!r.ok) { smbShowResult(false, (r.data && r.data.error) || "Test fehlgeschlagen"); return; }
+      var x = r.data.result;
+      smbShowResult(x.ok, x.ok
+        ? "✓ Verbindung in Ordnung — Anmeldung, Schreiben und Löschen funktionieren. Auf der Freigabe liegen " + x.files + " Sicherung(en)."
+        : "✗ " + x.error);
+    }).catch(function () { smbShowResult(false, "Server nicht erreichbar"); })
+      .then(function () { btn.disabled = false; btn.textContent = "Verbindung testen"; });
+  });
+  $("#smbSaveBtn").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    SFM.api("/api/backups/smb", { method: "PUT", body: smbForm() }).then(function (r) {
+      if (!r.ok) { smbShowResult(false, (r.data && r.data.error) || "Speichern fehlgeschlagen"); return; }
+      backupSmb = r.data.smb;
+      renderSmbCfg(); renderDbStatus(); flash("smbSaved");
+      var last = backupSmb.last;
+      if (backupSmb.enabled && last && !last.ok) smbShowResult(false, "Gespeichert, aber der Abgleich ist fehlgeschlagen: " + last.error);
+      else if (backupSmb.enabled) smbShowResult(true, "✓ Gespeichert und abgeglichen" + (last ? " — " + last.copied + " Sicherung(en) kopiert." : "."));
+      else $("#smbResult").hidden = true;
+      loadBackups();
+    }).catch(function () { toast("Server nicht erreichbar"); })
+      .then(function () { btn.disabled = false; });
+  });
   $("#dbBackupNow").addEventListener("click", backupNow);
   $("#dbSmbSync").addEventListener("click", function () {
     var btn = this;
@@ -8283,7 +8421,7 @@ window.SFM = (function () {
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
     "backup.create": "Sicherung erstellt", "backup.restore": "Sicherung wiederhergestellt",
-    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert", "backup.smb": "Abgleich mit SMB-Freigabe"
+    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert", "backup.smb": "Abgleich mit SMB-Freigabe", "backup.smb.config": "SMB-Freigabe geändert", "backup.smb.test": "SMB-Verbindung getestet"
   };
   var AUDIT_WARN = /failed|blocked|disabled|restore|delete|unknown/;
   var DOC_NAMES = { state: "Board und Kennzahlen", settings: "Einstellungen", users: "Benutzerliste" };
@@ -8317,6 +8455,11 @@ window.SFM = (function () {
         return (DOC_NAMES[d.doc] || d.doc || "") + (e.count > 1 ? " · " + e.count + "×" : "");
       case "backup.config":
         return (d.enabled ? "täglich " + d.time + " Uhr" : "aus") + (d.keep ? " · " + d.keep + " aufbewahren" : "");
+      case "backup.smb.config":
+        var SMB_F = { enabled: "aktiv", share: "Freigabe", user: "Benutzer", domain: "Domäne", protocol: "Version", keep: "Aufbewahrung", password: "Passwort" };
+        return (d.enabled ? "an" : "aus") + (d.share ? " · " + d.share : "") + " · geändert: " + (d.changed || []).map(function (k) { return SMB_F[k] || k; }).join(", ");
+      case "backup.smb.test":
+        return d.ok ? "erfolgreich" : "Fehler: " + (d.error || "");
       case "backup.smb":
         return d.error ? "Fehler: " + d.error : (d.copied || 0) + " kopiert" + (d.removed ? ", " + d.removed + " alte entfernt" : "");
       default:
@@ -8642,7 +8785,7 @@ window.SFM = (function () {
       ["Automatisch sichern", "Schalter „Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Der Server legt die Sicherung selbstständig an — dafür muss der Container laufen, nicht der Browser."],
       ["Wiederherstellen", "In der Liste „Vorhandene Sicherungen“ auf Wiederherstellen — nach Rückfrage wird der Datenbankinhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."],
       ["Herunterladen", "„Herunterladen“ in der Liste speichert die Sicherungsdatei (.dump) auf diesem Computer, z. B. vor größeren Änderungen."],
-      ["Kopie auf SMB-Freigabe", "Mit einer in ./deploy.sh config eingetragenen Freigabe (z. B. NAS) kopiert der Server jede Sicherung zusätzlich dorthin. Status und „Mit Freigabe abgleichen“ stehen auf dieser Seite; fehlende Kopien holt der Server stündlich nach. Gelöschte Sicherungen bleiben auf der Freigabe erhalten."],
+      ["Kopie auf SMB-Freigabe", "Unter „Kopie auf SMB-Freigabe“ Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern. Der Server kopiert dann jede Sicherung zusätzlich dorthin und holt fehlende Kopien stündlich nach. Gelöschte Sicherungen bleiben auf der Freigabe erhalten."],
       ["Ernstfall", "Eine Datei von der Freigabe zurück in den Ordner backups des Projekts kopieren — sie erscheint dann in der Liste und lässt sich wiederherstellen."]] },
     { title: "Datensicherung (Browser)", intro: "Alle Daten liegen lokal in diesem Browser — für Gerätewechsel oder Sicherungsstände gibt es die Datensicherung im Dashboard.", tip: "Regelmäßig sichern: Ein Browser-Reset oder Gerätetausch löscht lokale Daten unwiederbringlich.", steps: [
       ["Sichern", "„Datensicherung“ im Dashboard lädt Board, Maßnahmen, Benutzerkonten und Einstellungen als JSON-Datei herunter."],
