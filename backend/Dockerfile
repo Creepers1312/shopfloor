@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:25-alpine
 
 # pg_dump/pg_restore in derselben Hauptversion wie der Datenbank-Container (postgres:17),
 # smbclient für die Kopie der Sicherungen auf eine SMB-Freigabe
