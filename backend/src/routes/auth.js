@@ -121,7 +121,7 @@ function register(app) {
         "INSERT INTO password_resets (token_hash, user_name, expires_at) VALUES ($1, $2, now() + make_interval(mins => $3))",
         [sha256hex(token), row.name, config.resetMinutes]);
       try {
-        await mailer.sendPasswordReset(row.email, row.name, `${baseUrl(req)}/#reset=${token}`, config.resetMinutes);
+        await mailer.sendPasswordReset(row.email, row.name, `${baseUrl(req)}/#reset=${token}`, config.resetMinutes, row.username);
         await audit.log(req, "user.reset.mail", { name: row.name });
         return res.json(answer);
       } catch (err) {

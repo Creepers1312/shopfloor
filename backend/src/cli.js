@@ -82,7 +82,7 @@ const commands = {
     await mailer.verify();
     console.log("Verbindung zum Mailserver erfolgreich.");
     if (to) {
-      await mailer.send({ to, subject: "Shopfloor Board: Test-E-Mail", text: "Der E-Mail-Versand des Shopfloor Boards funktioniert." });
+      await mailer.sendTest(to, "Kommandozeile");
       console.log(`Test-E-Mail an ${to} gesendet.`);
     }
   },

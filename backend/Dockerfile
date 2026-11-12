@@ -8,6 +8,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 COPY src ./src
+COPY assets ./assets
 
 ENV NODE_ENV=production \
     PORT=3000 \

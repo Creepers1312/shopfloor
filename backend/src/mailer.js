@@ -8,6 +8,7 @@ const config = require("./config");
 const db = require("./db");
 const secrets = require("./secrets");
 const { HttpError } = require("./http");
+const templates = require("./mailtemplates");
 
 const META_KEY = "mail_server";
 const SECURITY = ["starttls", "tls", "none"];
@@ -81,20 +82,26 @@ async function send(message, c) {
   return t.sendMail(Object.assign({ from: fromHeader(c), replyTo: c.replyTo || undefined }, message));
 }
 
-async function sendPasswordReset(to, name, link, minutes) {
-  const text = [
-    `Hallo ${name},`,
-    "",
-    "für Ihr Konto im Shopfloor Board wurde ein neues Passwort angefordert.",
-    `Über diesen Link vergeben Sie ein neues Passwort (gültig ${minutes} Minuten, nur einmal nutzbar):`,
-    "",
-    link,
-    "",
-    "Haben Sie das nicht selbst angefordert, ignorieren Sie diese E-Mail — Ihr bisheriges Passwort bleibt gültig.",
-    "",
-    "— Shopfloor Board"
-  ].join("\n");
-  await send({ to, subject: "Shopfloor Board: neues Passwort vergeben", text });
+// Name der Linie aus den Stammdaten für Kopf und Fußzeile der Mails
+async function lineName() {
+  try {
+    const r = await db.pool.query("SELECT value->>'lineName' AS n FROM documents WHERE name = 'settings'");
+    return (r.rows[0] && r.rows[0].n) || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+async function sendPasswordReset(to, name, link, minutes, username) {
+  const m = templates.passwordReset({ name, username, link, minutes, lineName: await lineName() });
+  await send({ to, subject: m.subject, text: m.text, html: m.html, attachments: m.attachments });
+}
+
+// Test-E-Mail über die wirksamen Einstellungen (Kommandozeile)
+async function sendTest(to, by) {
+  const c = await effective();
+  const m = templates.testMail({ lineName: await lineName(), host: c.host, port: c.port, by });
+  await send({ to, subject: m.subject, text: m.text, html: m.html, attachments: m.attachments }, c);
 }
 
 /* ---------- Einstellungen aus der Oberfläche ---------- */
@@ -166,7 +173,7 @@ function explain(err) {
 }
 
 // Verbindung prüfen (mit Formularwerten, ohne zu speichern) und optional eine Test-E-Mail senden
-async function test(body, to) {
+async function test(body, to, by) {
   const { next } = await merge(body || {});
   if (!next.host) throw new HttpError(400, "Bitte zuerst den Mailserver angeben.");
   const c = Object.assign({}, next, { password: next.password ? secrets.decrypt("smtp", next.password) || "" : "" });
@@ -176,10 +183,10 @@ async function test(body, to) {
     const sent = [];
     if (to && to.length) {
       if (!c.fromAddress) throw new HttpError(400, "Bitte eine Absenderadresse angeben.");
+      const m = templates.testMail({ lineName: await lineName(), host: c.host, port: c.port, by });
       await t.sendMail({
         from: fromHeader(c), replyTo: c.replyTo || undefined, to,
-        subject: "Shopfloor Board: Test-E-Mail",
-        text: "Diese Test-E-Mail kommt vom Shopfloor Board. Der E-Mail-Versand funktioniert.\n\n— Shopfloor Board"
+        subject: m.subject, text: m.text, html: m.html, attachments: m.attachments
       });
       sent.push(...to);
     }
@@ -199,4 +206,4 @@ async function verify() {
   try { await t.verify(); } catch (e) { throw new Error(explain(e)); }
 }
 
-module.exports = { isConfigured, sendPasswordReset, send, verify, getConfig, setConfig, test, effective, EMAIL_RE };
+module.exports = { isConfigured, sendPasswordReset, sendTest, send, verify, getConfig, setConfig, test, effective, EMAIL_RE };
