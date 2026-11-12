@@ -131,6 +131,9 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 | `AUDIT_DAYS` | `365` | Aufbewahrung des Sicherheitsprotokolls in Tagen (nur in `docker-compose.yml`/Umgebung) |
 | `BACKUP_PATH` | `./backups` | Sicherungsordner auf dem Host |
 | `BACKUP_ENABLED` / `BACKUP_TIME` / `BACKUP_KEEP` | `true` / `02:00` / `14` | Standard für die tägliche Sicherung (danach in der Oberfläche änderbar) |
+| `BACKUP_SMB_SHARE` | leer | SMB-Freigabe als zweiter Sicherungsort, z. B. `//nas.firma.local/backup/shopfloor` (leer = aus) |
+| `BACKUP_SMB_USER` / `BACKUP_SMB_PASSWORD` / `BACKUP_SMB_DOMAIN` | leer | Zugang zur Freigabe (leerer Benutzer = Gast) |
+| `BACKUP_SMB_VERSION` / `BACKUP_SMB_KEEP` | `3.0` / `30` | SMB-Version; automatische Sicherungen, die auf der Freigabe bleiben |
 
 Ändern: `./deploy.sh config`, danach `./deploy.sh`. `COMPOSE_FILE` ergibt sich aus der Betriebsart und wird nicht von Hand gepflegt.
 
@@ -169,6 +172,7 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
 ./deploy.sh admin                # weiteres Admin-Konto anlegen
 ./deploy.sh reset-password Name  # Passwort neu setzen (entsperrt das Konto, meldet es überall ab)
 ./deploy.sh mail-test adresse    # Testmail über die SMTP-Einstellungen senden
+./deploy.sh smb                  # SMB-Freigabe neu einhängen und fehlende Sicherungen kopieren
 ./deploy.sh audit [50]           # letzte Einträge des Sicherheitsprotokolls
 ./deploy.sh stop                 # Container stoppen, Daten bleiben
 ```
@@ -208,8 +212,34 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Von Hand in der Oberfläche unter *Einstellungen → Datenbank & Sicherung* oder per `./deploy.sh backup`.
 - Vor jedem `./deploy.sh` und vor jeder Wiederherstellung wird der aktuelle Stand automatisch gesichert.
 - Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents` und `users`).
-  Für den Ernstfall regelmäßig verschlüsselt auf ein NAS kopieren und die Wiederherstellung einmal ausprobieren.
+  Für den Ernstfall zusätzlich auf ein NAS kopieren (siehe unten) und die Wiederherstellung einmal ausprobieren.
 - Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
+- **Herunterladen:** In der Liste *Vorhandene Sicherungen* lädt „Herunterladen“ die `.dump`-Datei direkt im Browser
+  (nur Administratoren, wird protokolliert).
+- **Zurückspielen aus einer Datei:** Eine `.dump`-Datei in den Sicherungsordner kopieren — sie erscheint in der Liste
+  („im Sicherungsordner gefunden“) und lässt sich wiederherstellen.
+
+### Kopie auf eine SMB-Freigabe (NAS)
+
+Zusätzlich zum lokalen Ordner kann jede Sicherung auf eine Windows-/NAS-Freigabe kopiert werden:
+
+1. `./deploy.sh config` → `BACKUP_SMB_SHARE` z. B. `//nas.firma.local/backup/shopfloor` (auch `\\nas\backup\shopfloor`
+   wird angenommen), dazu Benutzer, Passwort, ggf. Domäne, SMB-Version und wie viele automatische Kopien dort bleiben.
+2. `./deploy.sh` — installiert bei Bedarf `cifs-utils`, legt die Zugangsdaten in `/etc/shopfloor/<projekt>-smb.credentials`
+   ab (nur root lesbar), trägt die Freigabe in `/etc/fstab` ein (mit `nofail`, ein fehlendes NAS hält den Server nicht auf)
+   und hängt sie unter `/mnt/<projekt>-backup-smb` ein.
+3. Prüfen in *Einstellungen → Datenbank & Sicherung* („Kopie auf Freigabe“) oder mit `./deploy.sh smb`
+   (hängt neu ein und kopiert fehlende Sicherungen).
+
+Verhalten:
+- Lokale Sicherungen laufen immer, auch wenn das NAS nicht erreichbar ist; fehlende Kopien werden stündlich und nach
+  jeder Sicherung nachgeholt.
+- Auf der Freigabe bleiben die neuesten `BACKUP_SMB_KEEP` automatischen und alle manuellen Sicherungen. Löschen in der
+  Oberfläche entfernt nur die lokale Datei.
+- Das SMB-Passwort gelangt nicht in die Container; die API sieht nur den eingehängten Ordner. Erst die Datei
+  `.shopfloor-backup` auf der Freigabe (legt `deploy.sh` an) zeigt ihr, dass wirklich das NAS eingehängt ist.
+- Der Benutzer an der Freigabe braucht Schreib- und Löschrechte im Zielordner.
+- Abschalten: `BACKUP_SMB_SHARE` leeren (`./deploy.sh config`), dann `./deploy.sh` — der fstab-Eintrag wird entfernt.
 
 ## Sicherheit
 

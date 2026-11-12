@@ -1169,6 +1169,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .db-stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; font-weight: 600; color: var(--muted); }
 .db-stat-val { font-size: 14px; font-weight: 600; margin-top: 3px; overflow-wrap: anywhere; }
 .db-stat-val.ok { color: var(--good-text); }
+.db-stat.wide { grid-column: span 2; }
+@media (max-width: 560px) { .db-stat.wide { grid-column: auto; } }
 .db-stat-val.warn { color: var(--warn-text); }
 .db-note { font-size: 12.5px; color: var(--muted); margin-top: 12px; }
 .bk-list { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
@@ -1182,6 +1184,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .bk-meta { font-size: 11.5px; color: var(--muted); }
 .bk-size { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .bk-actions { display: flex; gap: 6px; }
+.bk-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.bk-smb { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 10.5px; font-weight: 600;
+  color: var(--warn-text); border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent); }
+.bk-smb.ok { color: var(--good-text); border-color: color-mix(in srgb, var(--good) 35%, transparent); }
 @media (max-width: 720px) {
   .bk-row { grid-template-columns: 1fr auto; }
   .bk-actions { grid-column: 1 / -1; justify-content: flex-end; }
@@ -2213,8 +2219,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         </div>
 
         <div class="card set-card" id="dbListCard">
-          <div class="set-card-title">Vorhandene Sicherungen</div>
-          <div class="set-desc">Die Dateien liegen im Projektordner unter <code>backups\</code> und lassen sich von dort auf ein Netzlaufwerk kopieren.</div>
+          <div class="bk-head">
+            <div class="set-card-title">Vorhandene Sicherungen</div>
+            <button class="btn sm" id="dbSmbSync" type="button" hidden>Mit Freigabe abgleichen</button>
+          </div>
+          <div class="set-desc" id="dbListHint">Die Dateien liegen im Projektordner unter backups/.</div>
           <div class="bk-list" id="dbBackupList"></div>
         </div>
       </div>
@@ -7965,6 +7974,7 @@ window.SFM = (function () {
 
   /* ---------- Datenbank & Sicherung ---------- */
   var backupCfg = { enabled: false, time: "22:00", keep: 14 };
+  var backupSmb = { configured: false };
 
   function fmtBytes(n) {
     if (!n) return "0 B";
@@ -8011,13 +8021,29 @@ window.SFM = (function () {
     if (!h.pgDump) {
       box.appendChild(dbStat("Hinweis", String(h.pgDumpInfo || "").slice(0, 120), "warn"));
     }
+    var smb = backupSmb || {}, before = box.children.length;
+    if (!smb.configured) {
+      box.appendChild(dbStat("Kopie auf Freigabe", "Nicht eingerichtet"));
+    } else if (!smb.connected) {
+      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + " · nicht verbunden", "warn"));
+    } else {
+      var last = smb.last;
+      box.appendChild(dbStat("Kopie auf Freigabe", smb.share + (last && last.at
+        ? " · " + (last.ok ? "abgeglichen " : "Fehler ") + fmtStamp(last.at) : " · verbunden"), last && !last.ok ? "warn" : "ok"));
+    }
+    if (box.children[before]) box.children[before].classList.add("wide");
+    $("#dbSmbSync").hidden = !smb.configured;
+    $("#dbListHint").textContent = smb.configured
+      ? "Jede Sicherung liegt im Projektordner unter backups/ und wird zusätzlich auf die Freigabe " + smb.share + " kopiert "
+        + "(dort bleiben die neuesten " + smb.keep + " automatischen und alle manuellen). Fehlende Kopien holt der Server stündlich nach."
+      : "Die Dateien liegen im Projektordner unter backups/. Eine SMB-Freigabe (z. B. NAS) als zweiten Speicherort richtet ./deploy.sh config ein.";
   }
   function renderBackupCfg() {
     $("#dbAutoSwitch").setAttribute("aria-checked", backupCfg.enabled ? "true" : "false");
     $("#dbBackupTime").value = backupCfg.time;
     $("#dbBackupKeep").value = backupCfg.keep;
     $("#dbAutoText").textContent = backupCfg.enabled
-      ? "Aktiv — der Server sichert täglich um " + backupCfg.time + " Uhr in den Ordner backups."
+      ? "Aktiv — der Server sichert täglich um " + backupCfg.time + " Uhr in den Ordner backups" + (backupSmb.configured ? " und kopiert auf die Freigabe." : ".")
       : "Aus — es wird nur gesichert, wenn Sie auf „Jetzt sichern“ klicken.";
   }
   function renderBackupList(items) {
@@ -8031,15 +8057,21 @@ window.SFM = (function () {
       var row = el("div", "bk-row" + (b.ok ? "" : " failed"));
       var main = el("div", "bk-main");
       main.appendChild(el("div", "bk-name", b.filename));
-      main.appendChild(el("div", "bk-meta",
+      var meta = el("div", "bk-meta",
         fmtStamp(b.createdAt) + " · " + (b.kind === "auto" ? "automatisch" : "manuell") +
-        (b.note ? " · " + b.note : "") + (b.ok ? "" : " · fehlgeschlagen")));
+        (b.note ? " · " + b.note : "") + (b.ok ? "" : " · fehlgeschlagen"));
+      if (b.ok && b.onSmb !== null && b.onSmb !== undefined) {
+        meta.appendChild(el("span", "bk-smb" + (b.onSmb ? " ok" : ""), b.onSmb ? "auf Freigabe" : "noch nicht auf Freigabe"));
+      }
+      main.appendChild(meta);
       row.appendChild(main);
       row.appendChild(el("span", "bk-size", fmtBytes(b.sizeBytes)));
       var acts = el("div", "bk-actions");
       var dl = el("a", "btn sm", "Herunterladen");
       dl.href = "/api/backups/" + encodeURIComponent(b.filename) + "/download";
       dl.setAttribute("download", b.filename);
+      dl.title = "Sicherungsdatei auf diesen Computer laden";
+      if (!b.ok) dl.hidden = true;
       acts.appendChild(dl);
       var rest = el("button", "btn sm", "Wiederherstellen");
       rest.type = "button";
@@ -8062,8 +8094,9 @@ window.SFM = (function () {
         return;
       }
       backupCfg = r.data.config;
+      backupSmb = r.data.smb || { configured: false };
       renderBackupCfg();
-      renderBackupList(r.data.items);
+      renderBackupList(r.data.backups);
       renderDbStatus();
     }).catch(function () {
       renderBackupList([]);
@@ -8089,7 +8122,9 @@ window.SFM = (function () {
     btn.textContent = "Sichert …";
     SFM.api("/api/backups", { method: "POST", body: { note: "von Hand ausgelöst" } }).then(function (r) {
       if (!r.ok) { toast((r.data && r.data.error) || "Sicherung fehlgeschlagen"); return; }
-      toast("Sicherung erstellt: " + r.data.filename);
+      var smb = r.data.smb || {};
+      toast("Sicherung erstellt: " + r.data.filename + (smb.configured === false ? ""
+        : smb.ok ? " · auf die Freigabe kopiert" : " · Kopie auf die Freigabe fehlgeschlagen"));
       loadBackups();
     }).catch(function () {
       toast("Server nicht erreichbar");
@@ -8114,7 +8149,8 @@ window.SFM = (function () {
       });
   }
   function deleteBackup(file) {
-    appConfirm("Sicherung löschen?", file + " wird endgültig gelöscht.", "Löschen", true, function () {
+    appConfirm("Sicherung löschen?", file + " wird auf dem Server endgültig gelöscht."
+      + (backupSmb.configured ? " Eine Kopie auf der Freigabe bleibt erhalten." : ""), "Löschen", true, function () {
       SFM.api("/api/backups/" + encodeURIComponent(file), { method: "DELETE" }).then(function (r) {
         if (!r.ok) { toast((r.data && r.data.error) || "Löschen fehlgeschlagen"); return; }
         toast("Sicherung gelöscht");
@@ -8128,6 +8164,18 @@ window.SFM = (function () {
   });
   $("#dbSaveBtn").addEventListener("click", saveBackupCfg);
   $("#dbBackupNow").addEventListener("click", backupNow);
+  $("#dbSmbSync").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    SFM.api("/api/backups/smb-sync", { method: "POST" }).then(function (r) {
+      if (!r.ok) { toast((r.data && r.data.error) || "Abgleich fehlgeschlagen"); return; }
+      var x = r.data.result;
+      toast(x.ok ? "Freigabe abgeglichen: " + x.copied + " kopiert" + (x.removed ? ", " + x.removed + " alte entfernt" : "")
+                 : "Abgleich fehlgeschlagen: " + x.error);
+      loadBackups();
+    }).catch(function () { toast("Server nicht erreichbar"); })
+      .then(function () { btn.disabled = false; });
+  });
 
   // Nach Änderungen von einem anderen Gerät: Daten neu einlesen und alles zeichnen
   function reloadFromStore() {
@@ -8137,21 +8185,24 @@ window.SFM = (function () {
     applyPermissions();
     renderAll();
   }
+  // Kopfzeile: nur sichtbar, wenn etwas nicht stimmt (nicht gespeichert, Server weg, neu geladen)
   function setSyncChip(text, kind) {
     var chip = $("#syncChip");
-    if (!SFM.isServer()) { chip.hidden = true; return; }
+    clearTimeout(chip._t);
+    if (!SFM.isServer() || (kind !== "warn" && kind !== "bad")) {
+      // Läuft gerade das Speichern nach einem Fehler, bleibt der Hinweis bis zum Erfolg stehen
+      if (kind !== "busy") chip.hidden = true;
+      return;
+    }
     chip.hidden = false;
     chip.textContent = text;
-    chip.className = "sync-chip" + (kind && kind !== "busy" ? " " + kind : "");
-    clearTimeout(chip._t);
-    if (kind === "ok") {
-      chip._t = setTimeout(function () { chip.textContent = "Datenbank verbunden"; chip.className = "sync-chip"; }, 2000);
-    }
+    chip.className = "sync-chip clickable " + kind;
+    if (kind === "warn") chip._t = setTimeout(function () { chip.hidden = true; }, 4000);
   }
   // Kopfzeile: Datenbank-Status öffnet „Datenbank & Sicherung“, das Datum den heutigen Huddle
   function openDbPane() {
     if (!SFM.isServer()) return;
-    if (!can("manageUsers")) { toast("Mit der Datenbank verbunden — Änderungen werden automatisch gespeichert"); return; }
+    if (!can("manageUsers")) { toast("Änderungen werden gespeichert, sobald der Server wieder erreichbar ist"); return; }
     settingsPane = "db"; switchView("settings"); renderSettingsPanes(); renderDbStatus(); loadBackups();
   }
   function openTodayHuddle() {
@@ -8185,7 +8236,7 @@ window.SFM = (function () {
       chip.setAttribute("role", "button");
       chip.title = "Datenbank & Sicherung öffnen";
       $("#mailPaneSub").textContent = "Absender, SMTP-Server und Verteiler für den Tagesbericht. Versendet wird über Ihr E-Mail-Programm, bis eine Server-Anbindung den automatischen Versand übernimmt.";
-      setSyncChip("Datenbank verbunden", "");
+      chip.hidden = true;
       // Demo-Zugang nur, wenn der Server ihn erlaubt
       $("#loginDemoBox").hidden = !h.allowDemo;
       $("#forgotBox").hidden = registerMode;
@@ -8232,7 +8283,7 @@ window.SFM = (function () {
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
     "backup.create": "Sicherung erstellt", "backup.restore": "Sicherung wiederhergestellt",
-    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert"
+    "backup.delete": "Sicherung gelöscht", "backup.download": "Sicherung heruntergeladen", "backup.config": "Sicherungsplan geändert", "backup.smb": "Abgleich mit SMB-Freigabe"
   };
   var AUDIT_WARN = /failed|blocked|disabled|restore|delete|unknown/;
   var DOC_NAMES = { state: "Board und Kennzahlen", settings: "Einstellungen", users: "Benutzerliste" };
@@ -8266,6 +8317,8 @@ window.SFM = (function () {
         return (DOC_NAMES[d.doc] || d.doc || "") + (e.count > 1 ? " · " + e.count + "×" : "");
       case "backup.config":
         return (d.enabled ? "täglich " + d.time + " Uhr" : "aus") + (d.keep ? " · " + d.keep + " aufbewahren" : "");
+      case "backup.smb":
+        return d.error ? "Fehler: " + d.error : (d.copied || 0) + " kopiert" + (d.removed ? ", " + d.removed + " alte entfernt" : "");
       default:
         return d.file || "";
     }
@@ -8584,11 +8637,13 @@ window.SFM = (function () {
       ["Nur Lesen", "Sieht Dashboard, Board, Maßnahmen, Huddle und Tagesbericht ohne Änderungsrechte."],
       ["Bearbeiten", "Pflegt zusätzlich Board-Status, Abweichungen und die Huddle-Agenda."],
       ["Administrator", "Verwaltet darüber hinaus Stammdaten, E-Mail-Versand, Benutzer und darf löschen und wiederherstellen."]] },
-    { title: "Datenbank & Sicherung", intro: "Läuft das Board über den Server im Docker-Container, liegen Board, Maßnahmen, Konten und Einstellungen in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand.", tip: "Ob Datenbank oder nur Browser: Einstellungen → Datenbank & Sicherung zeigt es oben unter „Speicherort“. In der Kopfzeile meldet ein kleines Feld jeden Speichervorgang.", steps: [
+    { title: "Datenbank & Sicherung", intro: "Läuft das Board über den Server im Docker-Container, liegen Board, Maßnahmen, Konten und Einstellungen in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand.", tip: "Ob Datenbank oder nur Browser: Einstellungen → Datenbank & Sicherung zeigt es oben unter „Speicherort“. Gespeichert wird automatisch; nur wenn etwas nicht gespeichert werden konnte, erscheint ein Hinweis in der Kopfzeile.", steps: [
       ["Starten", "Auf dem Server im Projektordner ./deploy.sh ausführen. Das Skript fragt die Einstellungen ab, legt beim ersten Start die Datenbank und das erste Administrator-Konto an und startet die Container."],
       ["Automatisch sichern", "Schalter „Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Der Server legt die Sicherung selbstständig an — dafür muss der Container laufen, nicht der Browser."],
       ["Wiederherstellen", "In der Liste „Vorhandene Sicherungen“ auf Wiederherstellen — nach Rückfrage wird der Datenbankinhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."],
-      ["Ablegen", "Die Dateien liegen im Ordner backups des Projekts. Für den Ernstfall regelmäßig auf ein Netzlaufwerk oder eine andere Maschine kopieren."]] },
+      ["Herunterladen", "„Herunterladen“ in der Liste speichert die Sicherungsdatei (.dump) auf diesem Computer, z. B. vor größeren Änderungen."],
+      ["Kopie auf SMB-Freigabe", "Mit einer in ./deploy.sh config eingetragenen Freigabe (z. B. NAS) kopiert der Server jede Sicherung zusätzlich dorthin. Status und „Mit Freigabe abgleichen“ stehen auf dieser Seite; fehlende Kopien holt der Server stündlich nach. Gelöschte Sicherungen bleiben auf der Freigabe erhalten."],
+      ["Ernstfall", "Eine Datei von der Freigabe zurück in den Ordner backups des Projekts kopieren — sie erscheint dann in der Liste und lässt sich wiederherstellen."]] },
     { title: "Datensicherung (Browser)", intro: "Alle Daten liegen lokal in diesem Browser — für Gerätewechsel oder Sicherungsstände gibt es die Datensicherung im Dashboard.", tip: "Regelmäßig sichern: Ein Browser-Reset oder Gerätetausch löscht lokale Daten unwiederbringlich.", steps: [
       ["Sichern", "„Datensicherung“ im Dashboard lädt Board, Maßnahmen, Benutzerkonten und Einstellungen als JSON-Datei herunter."],
       ["Wiederherstellen", "Administratoren spielen eine Sicherungsdatei über denselben Dialog wieder ein — nach Sicherheitsabfrage."],

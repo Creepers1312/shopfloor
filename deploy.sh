@@ -15,6 +15,7 @@
 #  ./deploy.sh admin              Weiteres Administrator-Konto anlegen
 #  ./deploy.sh audit [anzahl]     Letzte Einträge des Sicherheitsprotokolls
 #  ./deploy.sh mail-test [adresse] Mailserver prüfen, optional Test-E-Mail senden
+#  ./deploy.sh smb                SMB-Freigabe (neu) einhängen und Sicherungen abgleichen
 #  ./deploy.sh reset-password N   Passwort für Konto N neu setzen
 #  ./deploy.sh users              Konten auflisten
 #  ./deploy.sh stop               Container stoppen (Daten bleiben erhalten)
@@ -196,6 +197,14 @@ SETTINGS=(
   "BACKUP_ENABLED|true|bool|Standard für tägliche automatische Sicherung"
   "BACKUP_TIME|02:00|time|Uhrzeit der täglichen Sicherung (HH:MM)"
   "BACKUP_KEEP|14|int|Wie viele automatische Sicherungen aufbewahren?"
+  "BACKUP_SMB_SHARE||smbshare|SMB-Freigabe als zweiter Sicherungsort, z. B. //nas.firma.local/backup/shopfloor (leer = aus)"
+  "BACKUP_SMB_USER||opttext|Benutzer an der SMB-Freigabe (leer = Gastzugang)"
+  "BACKUP_SMB_PASSWORD||mailpass|Passwort an der SMB-Freigabe"
+  "BACKUP_SMB_DOMAIN||opttext|Domäne oder Arbeitsgruppe an der SMB-Freigabe (leer = keine)"
+  "BACKUP_SMB_VERSION|3.0|smbvers|SMB-Version: 3.1.1, 3.0, 2.1 oder 2.0"
+  "BACKUP_SMB_KEEP|30|int|Wie viele automatische Sicherungen auf der Freigabe aufbewahren?"
+  "BACKUP_SMB_MOUNT|__auto__|derived|Einhängepunkt der SMB-Freigabe auf dem Host (ergibt sich aus dem Projektnamen)"
+  "BACKUP_SMB_PROPAGATION|__auto__|derived|Mount-Propagation für die Freigabe im Container (ergibt sich aus dem System)"
   "SMTP_HOST||opthost|Mailserver für „Passwort vergessen“ (leer = kein Versand, Anfragen gehen an die Administration)"
   "SMTP_PORT|587|port|Port des Mailservers (587 = STARTTLS, 465 = TLS, 25 = ohne)"
   "SMTP_SECURITY|starttls|smtpsec|Verschlüsselung zum Mailserver: starttls, tls oder none"
@@ -276,6 +285,9 @@ validate() {   # typ wert → normalisierter Wert auf stdout, Fehler → return 
             [[ -z "$v" || "$v" =~ ^[0-9A-Fa-f.:/]+(,[0-9A-Fa-f.:/]+)*$ ]] || return 1 ;;
     time)   [[ "$v" =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || return 1 ;;
     mode)   v="${v,,}"; [[ "$v" == port || "$v" == proxy ]] || return 1 ;;
+    smbshare) v="${v//\\//}"; v="${v%/}"
+            [[ -z "$v" || "$v" =~ ^//[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?/[^[:space:]\"\$\`]+$ ]] || return 1 ;;
+    smbvers) [[ "$v" == 3.1.1 || "$v" == 3.0 || "$v" == 2.1 || "$v" == 2.0 ]] || return 1 ;;
     opthost) [[ -z "$v" || "$v" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$ ]] || return 1 ;;
     smtpsec) v="${v,,}"; [[ "$v" == starttls || "$v" == tls || "$v" == none ]] || return 1 ;;
     opttext) [[ ! "$v" =~ [[:space:]] ]] || return 1 ;;
@@ -306,6 +318,8 @@ hint_for() {
     time) echo "Format HH:MM, z. B. 02:00" ;;
     mode) echo "port oder proxy" ;;
     opthost) echo "Hostname wie mail.firma.de, oder leer" ;;
+    smbshare) echo "//server/freigabe oder //server/freigabe/ordner, ohne Leerzeichen; leer = aus" ;;
+    smbvers) echo "3.1.1, 3.0, 2.1 oder 2.0" ;;
     smtpsec) echo "starttls, tls oder none" ;;
     opttext) echo "ohne Leerzeichen, oder leer" ;;
     mailpass) echo "keine Zeilenumbrüche und kein '" ;;
@@ -333,10 +347,22 @@ default_for() {
         COOKIE_SECURE) [[ "${VAL[PUBLIC_URL]:-}" == https://* ]] && echo true || echo false ;;
         # Im Proxy-Netz kommt der Proxy aus dessen Subnetz — das gilt als vertrauenswürdig
         TRUSTED_PROXIES) [[ "${VAL[DEPLOY_MODE]:-port}" == proxy ]] && network_subnets "${VAL[PROXY_NETWORK]:-}" || true ;;
-        COMPOSE_FILE) [[ "${VAL[DEPLOY_MODE]:-port}" == proxy ]] && echo "docker-compose.yml:deploy/compose.proxy.yml" || echo "docker-compose.yml" ;;
+        BACKUP_SMB_MOUNT) echo "/mnt/${VAL[COMPOSE_PROJECT_NAME]:-shopfloor}-backup-smb" ;;
+        BACKUP_SMB_PROPAGATION) findmnt -no PROPAGATION / 2>/dev/null | grep -q shared && echo rslave || echo rprivate ;;
+        COMPOSE_FILE) local f="docker-compose.yml"
+          [[ "${VAL[DEPLOY_MODE]:-port}" == proxy ]] && f+=":deploy/compose.proxy.yml"
+          [[ -n "${VAL[BACKUP_SMB_SHARE]:-}" ]] && f+=":deploy/compose.smb.yml"
+          echo "$f" ;;
       esac ;;
     *) echo "$dflt" ;;
   esac
+}
+
+# Detailfragen entfallen, solange die übergeordnete Einstellung leer ist
+not_needed() {
+  [[ "$1" == SMTP_* && "$1" != SMTP_HOST && -z "${VAL[SMTP_HOST]:-}" ]] && return 0
+  [[ "$1" == BACKUP_SMB_* && "$1" != BACKUP_SMB_SHARE && -z "${VAL[BACKUP_SMB_SHARE]:-}" ]] && return 0
+  return 1
 }
 
 configure() {
@@ -358,7 +384,7 @@ configure() {
     # Abgeleitetes und Einträge, die zur Betriebsart nicht passen, werden nicht gefragt
     if [[ "$type" == derived ]]; then VAL["$key"]="$(default_for "$key" "$dflt")"; continue; fi
     if [[ "$key" == PROXY_NETWORK && "${VAL[DEPLOY_MODE]}" != proxy ]]; then VAL["$key"]=""; continue; fi
-    if [[ "$key" == SMTP_* && "$key" != SMTP_HOST && -z "${VAL[SMTP_HOST]:-}" ]]; then
+    if not_needed "$key"; then
       VAL["$key"]="$(validate "$type" "$start" 2>/dev/null || true)"; continue
     fi
     # Wechsel der Betriebsart: Standards der Betriebsart neu vorschlagen
@@ -438,7 +464,7 @@ configure() {
       IFS='|' read -r key _ type _ <<< "$entry"
       [[ "$type" == derived ]] && continue
       [[ "$key" == PROXY_NETWORK && "${VAL[DEPLOY_MODE]}" != proxy ]] && continue
-      [[ "$key" == SMTP_* && "$key" != SMTP_HOST && -z "${VAL[SMTP_HOST]}" ]] && continue
+      not_needed "$key" && continue
       [[ "$type" == mailpass ]] && { printf '  %-22s %s\n' "$key" "$([[ -n "${VAL[$key]}" ]] && echo '••••••••' || echo '(leer)')"; continue; }
       [[ "$type" == "secret" ]] && printf '  %-22s %s\n' "$key" "••••••••" || printf '  %-22s %s\n' "$key" "${VAL[$key]}"
     done
@@ -498,6 +524,75 @@ prepare_backup_dir() {
   fi
   # Sicherungen enthalten Passwort-Hashes — nur für den Besitzer lesbar
   chmod 700 "$p" 2>/dev/null || sudo chmod 700 "$p" || warn "Konnte Rechte von $p nicht auf 700 setzen."
+}
+
+# ---------- SMB-Freigabe für Sicherungen ------------------------------------
+# Der Host hängt die Freigabe per /etc/fstab ein (nofail: ein nicht erreichbares NAS hält
+# weder den Systemstart noch das Board auf). Zugangsdaten liegen in /etc/shopfloor/,
+# nur für root lesbar — nicht im Container. Die Datei .shopfloor-backup auf der Freigabe
+# zeigt der API, dass wirklich die Freigabe eingehängt ist und nicht der leere Ordner.
+as_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then "$@"
+  elif command -v sudo >/dev/null 2>&1; then sudo "$@"
+  else return 1; fi
+}
+smb_tag() { echo "# shopfloor-backup:${VAL[COMPOSE_PROJECT_NAME]} (von deploy.sh verwaltet)"; }
+smb_remove_fstab() {
+  local tag; tag="$(smb_tag)"
+  grep -qxF "$tag" /etc/fstab 2>/dev/null || return 1
+  # Markierungszeile und den Eintrag darunter entfernen
+  as_root awk -v t="$tag" '$0 == t { skip = 1; next } skip { skip = 0; next } { print }' /etc/fstab > "$LOG_DIR/fstab.new" \
+    && as_root cp /etc/fstab /etc/fstab.shopfloor.bak && as_root tee /etc/fstab < "$LOG_DIR/fstab.new" >/dev/null
+  rm -f "$LOG_DIR/fstab.new"
+}
+setup_smb() {
+  local share="${VAL[BACKUP_SMB_SHARE]:-}" mnt="${VAL[BACKUP_SMB_MOUNT]:-}"
+  local cred="/etc/shopfloor/${VAL[COMPOSE_PROJECT_NAME]}-smb.credentials" opts err
+  if [[ -z "$share" ]]; then
+    # Abgeschaltet: früher angelegten Eintrag wieder entfernen
+    if grep -qxF "$(smb_tag)" /etc/fstab 2>/dev/null; then
+      info "SMB-Freigabe abgeschaltet — entferne den Eintrag aus /etc/fstab …"
+      if [[ -n "$mnt" ]] && mountpoint -q "$mnt"; then as_root umount "$mnt" || warn "Konnte $mnt nicht aushängen."; fi
+      smb_remove_fstab || true; as_root rm -f "$cred"
+    fi
+    return 0
+  fi
+  title "SMB-Freigabe für Sicherungen"
+  as_root true || die "Für die SMB-Freigabe sind root-Rechte nötig (als root oder mit sudo ausführen)."
+  if ! command -v mount.cifs >/dev/null 2>&1 && [[ ! -x /sbin/mount.cifs ]]; then
+    info "Installiere cifs-utils …"
+    SUDO="$([[ "$(id -u)" -ne 0 ]] && echo sudo || true)" install_pkg cifs-utils >>"$LOG_FILE" 2>&1 \
+      || die "cifs-utils konnte nicht installiert werden — bitte von Hand installieren."
+  fi
+  as_root mkdir -p /etc/shopfloor "$mnt"
+  as_root chmod 700 /etc/shopfloor
+  if [[ -n "${VAL[BACKUP_SMB_USER]}" ]]; then
+    {
+      printf 'username=%s\n' "${VAL[BACKUP_SMB_USER]}"
+      printf 'password=%s\n' "${VAL[BACKUP_SMB_PASSWORD]}"
+      if [[ -n "${VAL[BACKUP_SMB_DOMAIN]}" ]]; then printf 'domain=%s\n' "${VAL[BACKUP_SMB_DOMAIN]}"; fi
+    } | as_root sh -c "umask 077; cat > '$cred'"
+    opts="credentials=$cred"
+  else
+    as_root rm -f "$cred"
+    opts="guest"
+  fi
+  # Der API-Container schreibt als UID 1000; Dateien nur für den Besitzer lesbar
+  opts+=",uid=1000,gid=1000,file_mode=0600,dir_mode=0700,vers=${VAL[BACKUP_SMB_VERSION]},soft,nofail,_netdev,x-systemd.mount-timeout=30"
+  smb_remove_fstab || true
+  printf '%s\n%s %s cifs %s 0 0\n' "$(smb_tag)" "$share" "$mnt" "$opts" | as_root tee -a /etc/fstab >/dev/null
+  as_root systemctl daemon-reload >/dev/null 2>&1 || true
+  if mountpoint -q "$mnt"; then as_root umount "$mnt" 2>/dev/null || true; fi
+  if ! err="$(as_root mount "$mnt" 2>&1)"; then
+    warn "Freigabe $share nicht eingehängt: ${err:-unbekannter Fehler}"
+    warn "Lokale Sicherungen laufen weiter. Prüfen und erneut versuchen mit: ./deploy.sh smb"
+    return 0
+  fi
+  if ! as_root touch "$mnt/.shopfloor-backup" 2>/dev/null; then
+    warn "Freigabe eingehängt, aber kein Schreibrecht für ${VAL[BACKUP_SMB_USER]:-Gast} — Kopien sind so nicht möglich."
+    return 0
+  fi
+  ok "Freigabe $share unter $mnt eingehängt (Kopien behalten: ${VAL[BACKUP_SMB_KEEP]} automatische, alle manuellen)."
 }
 
 pre_backup() {
@@ -586,6 +681,7 @@ summary() {
     [[ "${VAL[COOKIE_SECURE]}" == true ]] && echo "                    (Anmeldung dort nicht möglich, da COOKIE_SECURE=true — nur über HTTPS)"
   fi
   echo "  Sicherungen:      ${VAL[BACKUP_PATH]}"
+  [[ -n "${VAL[BACKUP_SMB_SHARE]:-}" ]] && echo "  Kopie auf:        ${VAL[BACKUP_SMB_SHARE]} (eingehängt unter ${VAL[BACKUP_SMB_MOUNT]})"
   echo "  Log:              $LOG_FILE"
   echo
   if [[ "${VAL[DEPLOY_MODE]}" == proxy ]]; then
@@ -645,6 +741,7 @@ do_deploy() {
     if [[ "$ASSUME_YES" == true ]]; then configure false; else configure true; fi
   fi
   prepare_backup_dir
+  setup_smb
 
   title "Bauen und starten"
   dc config -q 2>>"$LOG_FILE" || die "Compose-Konfiguration ungültig — Details in $LOG_FILE (./deploy.sh config)"
@@ -690,6 +787,14 @@ case "$COMMAND" in
   reset-password) detect_compose; load_env_for_run; [[ -n "${1:-}" ]] || die "Aufruf: ./deploy.sh reset-password <Name>"
                   dc exec api node src/cli.js reset-password "$1" ;;
   users)          detect_compose; load_env_for_run; cli list-users ;;
+  smb)            detect_compose; load_env_for_run
+                  [[ -n "${VAL[BACKUP_SMB_SHARE]:-}" ]] || die "Keine SMB-Freigabe eingerichtet — ./deploy.sh config, danach ./deploy.sh"
+                  setup_smb
+                  if api_running; then
+                    # Ohne Propagation sieht der Container eine neu eingehängte Freigabe erst nach einem Neustart
+                    [[ "${VAL[BACKUP_SMB_PROPAGATION]:-rslave}" == rslave ]] || { dc restart api >/dev/null; wait_healthy; }
+                    cli smb-sync
+                  fi ;;
   mail-test)      detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
                   cli mail-test "${1:-}" ;;
   audit)          detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."

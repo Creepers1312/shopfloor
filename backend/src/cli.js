@@ -107,6 +107,17 @@ const commands = {
     const r = await backups.create("manual", note || "per Kommandozeile");
     if (!r.ok) throw new Error("Sicherung fehlgeschlagen: " + r.error);
     console.log(r.filename);
+    await backups.syncSmb().catch(() => {});
+  },
+
+  // Fehlende Sicherungen auf die SMB-Freigabe kopieren (./deploy.sh smb)
+  async "smb-sync"() {
+    const st = await backups.smbStatus();
+    if (!st.configured) throw new Error("Keine SMB-Freigabe eingerichtet.");
+    if (!st.connected) throw new Error(`Freigabe ${st.share} ist im Container nicht verbunden (fehlt .shopfloor-backup oder Schreibrecht?).`);
+    const r = await backups.syncSmb();
+    if (!r.ok) throw new Error(r.error);
+    console.log(`Freigabe ${st.share}: ${r.copied} Sicherung(en) kopiert, ${r.removed} alte entfernt.`);
   }
 };
 

@@ -1,0 +1,22 @@
+# Zweiter Sicherungsort: SMB-Freigabe (z. B. NAS).
+# deploy.sh hängt die Freigabe auf dem Host unter BACKUP_SMB_MOUNT ein (/etc/fstab,
+# Zugangsdaten in /etc/shopfloor/, nur für root lesbar) und legt dort die Datei
+# .shopfloor-backup an. Die API kopiert jede gelungene Sicherung zusätzlich dorthin.
+# Das SMB-Passwort gelangt nie in einen Container.
+# Wird von deploy.sh über COMPOSE_FILE in der .env eingebunden.
+services:
+  api:
+    environment:
+      BACKUP_SMB_DIR: /backups-smb
+      BACKUP_SMB_SHARE: ${BACKUP_SMB_SHARE:-}
+      BACKUP_SMB_KEEP: ${BACKUP_SMB_KEEP:-30}
+    volumes:
+      - type: bind
+        source: ${BACKUP_SMB_MOUNT:?BACKUP_SMB_MOUNT fehlt - bitte ./deploy.sh ausführen}
+        target: /backups-smb
+        # rslave: Wird die Freigabe später (neu) eingehängt, sieht der Container das ohne
+        # Neustart. Geht nur, wenn / als „shared“ eingehängt ist (Standard bei systemd);
+        # deploy.sh prüft das und setzt sonst rprivate.
+        bind:
+          propagation: ${BACKUP_SMB_PROPAGATION:-rslave}
+          create_host_path: false

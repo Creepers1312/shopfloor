@@ -52,6 +52,12 @@ module.exports = {
   bodyLimit: env.BODY_LIMIT || "25mb",      // nur für Dokumente (Board, Wiederherstellung aus Datei)
   smallBodyLimit: "32kb",                   // alle übrigen Anfragen (Anmeldung, Konten, Sicherungen …)
   backupDir: env.BACKUP_DIR || "/backups",
+  // Zweiter Speicherort (SMB-Freigabe, vom Host eingehängt) — leer = aus
+  smb: {
+    dir: env.BACKUP_SMB_DIR || "",
+    share: env.BACKUP_SMB_SHARE || "",
+    keep: int(env.BACKUP_SMB_KEEP, 30, 1, 365)
+  },
   backupDefaults: {
     enabled: bool(env.BACKUP_ENABLED, true),
     time: time(env.BACKUP_TIME, "02:00"),

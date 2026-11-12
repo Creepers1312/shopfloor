@@ -71,9 +71,115 @@ function stamp(d) {
 }
 function todayKey(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
+/* ---------- Kopie auf die SMB-Freigabe ----------
+   Der Host hängt die Freigabe ein (deploy.sh) und legt dort die Markierungsdatei an.
+   Fehlt sie, ist die Freigabe nicht verbunden — dann wird nichts in den leeren
+   Einhängepunkt geschrieben. Lokale Sicherungen funktionieren immer unabhängig davon. */
+const SMB_MARKER = ".shopfloor-backup";
+let smbBusy = false;
+
+async function smbConnected() {
+  if (!config.smb.dir) return false;
+  try {
+    await fs.promises.access(path.join(config.smb.dir, SMB_MARKER), fs.constants.F_OK);
+    await fs.promises.access(config.smb.dir, fs.constants.W_OK);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function smbFiles() {
+  try {
+    return (await fs.promises.readdir(config.smb.dir)).filter((f) => FILE_RE.test(f));
+  } catch (e) {
+    return [];
+  }
+}
+
+async function smbStatus() {
+  if (!config.smb.dir) return { configured: false };
+  const last = await db.getMeta("backup_smb_last");
+  return {
+    configured: true,
+    share: config.smb.share,
+    keep: config.smb.keep,
+    connected: await smbConnected(),
+    last: last || null
+  };
+}
+
+// Fehlende Sicherungen auf die Freigabe kopieren und alte automatische dort aufräumen
+async function syncSmb() {
+  if (!config.smb.dir) return { configured: false };
+  if (smbBusy) throw new HttpError(409, "Der Abgleich mit der Freigabe läuft bereits.");
+  smbBusy = true;
+  const result = { at: Date.now(), ok: true, copied: 0, removed: 0, error: null };
+  try {
+    if (!(await smbConnected())) {
+      result.ok = false;
+      result.error = "Freigabe nicht verbunden";
+    } else {
+      const remote = new Set(await smbFiles());
+      const r = await db.pool.query("SELECT filename FROM backups WHERE ok ORDER BY created_at");
+      for (const { filename } of r.rows) {
+        if (remote.has(filename)) continue;
+        const src = path.join(config.backupDir, filename);
+        if (!fs.existsSync(src)) continue;
+        const part = path.join(config.smb.dir, "." + filename + ".part");
+        try {
+          await fs.promises.copyFile(src, part);
+          await fs.promises.rename(part, path.join(config.smb.dir, filename));
+          remote.add(filename);
+          result.copied++;
+        } catch (e) {
+          await fs.promises.unlink(part).catch(() => {});
+          result.ok = false;
+          result.error = `${filename}: ${e.message}`.slice(0, 300);
+          break;
+        }
+      }
+      // Automatische Sicherungen auf der Freigabe: die neuesten BACKUP_SMB_KEEP behalten
+      // (Zeitstempel im Namen → alphabetisch = chronologisch); manuelle bleiben immer
+      const autos = [...remote].filter((f) => f.endsWith("_auto.dump")).sort().reverse();
+      for (const f of autos.slice(config.smb.keep)) {
+        try { await fs.promises.unlink(path.join(config.smb.dir, f)); result.removed++; } catch (e) { /* später erneut */ }
+      }
+    }
+  } finally {
+    smbBusy = false;
+  }
+  await db.setMeta("backup_smb_last", result).catch(() => {});
+  if (result.copied || result.removed) console.log(`[backup] Freigabe: ${result.copied} kopiert, ${result.removed} alte entfernt`);
+  if (!result.ok) console.error(`[backup] Freigabe: ${result.error}`);
+  return result;
+}
+
+// Sicherungsdateien, die von Hand in den Ordner gelegt wurden (z. B. von der Freigabe
+// zurückkopiert), in die Liste aufnehmen — so lassen sie sich wiederherstellen
+async function adoptFiles() {
+  let files;
+  try { files = (await fs.promises.readdir(config.backupDir)).filter((f) => FILE_RE.test(f)); } catch (e) { return; }
+  if (!files.length) return;
+  const known = new Set((await db.pool.query("SELECT filename FROM backups")).rows.map((r) => r.filename));
+  for (const f of files) {
+    if (known.has(f)) continue;
+    let st;
+    try { st = await fs.promises.stat(path.join(config.backupDir, f)); } catch (e) { continue; }
+    if (!st.isFile() || !st.size) continue;
+    await db.pool.query(
+      "INSERT INTO backups (filename, kind, note, ok, size_bytes, created_at) VALUES ($1, $2, $3, true, $4, $5) ON CONFLICT DO NOTHING",
+      [f, f.endsWith("_auto.dump") ? "auto" : "manual", "im Sicherungsordner gefunden", st.size, st.mtime]
+    );
+  }
+}
+
 async function list() {
+  await adoptFiles();
+  const onSmb = (await smbConnected()) ? new Set(await smbFiles()) : null;
   const r = await db.pool.query("SELECT * FROM backups ORDER BY created_at DESC");
   return r.rows.map((b) => ({
+    onSmb: onSmb ? onSmb.has(b.filename) : null,
     filename: b.filename,
     createdAt: new Date(b.created_at).getTime(),
     kind: b.kind,
@@ -185,14 +291,20 @@ function startScheduler() {
       await db.setMeta("backup_last_auto", today);
       await create("auto", "tägliche Sicherung");
       await prune(cfg.keep);
+      await syncSmb().catch((e) => console.error("[backup] Freigabe:", e.message));
     } catch (err) {
       console.error("[backup] Zeitplan:", err.message);
     }
   };
   setInterval(tick, 30 * 1000).unref();
+  // War die Freigabe zeitweise weg, holt der stündliche Abgleich fehlende Kopien nach
+  if (config.smb.dir) {
+    setInterval(() => { syncSmb().catch(() => {}); }, 60 * 60 * 1000).unref();
+    setTimeout(() => { syncSmb().catch(() => {}); }, 20 * 1000).unref();
+  }
 }
 
 module.exports = {
   checkTools, tool: () => toolInfo, getConfig, setConfig, list, create, remove, restore, prune,
-  resolveFile, startScheduler
+  resolveFile, startScheduler, smbStatus, syncSmb
 };

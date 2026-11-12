@@ -496,7 +496,16 @@ function createApp() {
   /* ---------- Sicherungen (nur Admin) ---------- */
   app.get("/api/backups", wrap(async (req, res) => {
     requireAdmin(req);
-    res.json({ config: await backups.getConfig(), backups: await backups.list() });
+    res.json({ config: await backups.getConfig(), backups: await backups.list(), smb: await backups.smbStatus() });
+  }));
+
+  // Fehlende Sicherungen jetzt auf die SMB-Freigabe kopieren
+  app.post("/api/backups/smb-sync", wrap(async (req, res) => {
+    requireAdmin(req);
+    const r = await backups.syncSmb();
+    if (r.configured === false) throw new HttpError(400, "Keine SMB-Freigabe eingerichtet (./deploy.sh config).");
+    await audit.log(req, "backup.smb", { copied: r.copied, removed: r.removed, error: r.error || undefined });
+    res.json({ result: r, smb: await backups.smbStatus() });
   }));
 
   app.put("/api/backups/config", wrap(async (req, res) => {
@@ -512,7 +521,8 @@ function createApp() {
     const r = await backups.create("manual", note + (note ? " · " : "") + req.user.name);
     if (!r.ok) throw new HttpError(500, "Sicherung fehlgeschlagen: " + r.error);
     await audit.log(req, "backup.create", { file: r.filename });
-    res.json({ filename: r.filename });
+    const smb = await backups.syncSmb().catch((e) => ({ ok: false, error: e.message }));
+    res.json({ filename: r.filename, smb });
   }));
 
   app.get("/api/backups/:file/download", wrap(async (req, res) => {
@@ -527,6 +537,7 @@ function createApp() {
     requireAdmin(req);
     await backups.restore(req.params.file, req.user.name);
     await audit.log(req, "backup.restore", { file: req.params.file });
+    backups.syncSmb().catch(() => {});   // Sicherung „vor Wiederherstellung“ auf die Freigabe
     res.json({ ok: true, revision: await db.getRevision() });
   }));
 
