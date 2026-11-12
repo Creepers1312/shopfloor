@@ -120,8 +120,16 @@ const commands = {
     const r = await backups.syncSmb();
     if (!r.ok) throw new Error(r.error);
     console.log(`${r.copied} Sicherung(en) kopiert, ${r.removed} alte entfernt.`);
+  },
+
+  // Status für den Checkmk-Agenten (Local Check), siehe monitor.js
+  async checkmk(prefix) {
+    console.log(await require("./monitor").checkmk(prefix));
   }
 };
+
+// Nur lesende Befehle, die häufig laufen: ohne Schema-Abgleich
+const READ_ONLY = new Set(["checkmk", "count-users"]);
 
 (async () => {
   const [cmd, ...args] = process.argv.slice(2);
@@ -130,11 +138,18 @@ const commands = {
     process.exit(2);
   }
   try {
-    await db.waitForDb(5);
-    await db.migrate();
+    await db.waitForDb(READ_ONLY.has(cmd) ? 1 : 5);
+    if (!READ_ONLY.has(cmd)) await db.migrate();
     await commands[cmd](...args);
     await db.pool.end();
   } catch (err) {
+    if (cmd === "checkmk") {
+      // Für Checkmk immer eine auswertbare Zeile statt eines Programmfehlers
+      const p = args[0] || "Shopfloor";
+      console.log(`2 "${p} Board" - Statusabfrage fehlgeschlagen (!!): ${String(err.message).replace(/[\r\n|]+/g, " ")}`);
+      console.log(`3 "${p} Backup" - Status unbekannt, Datenbank nicht erreichbar`);
+      process.exit(0);
+    }
     console.error("Fehler: " + err.message);
     process.exit(1);
   }

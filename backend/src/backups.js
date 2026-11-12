@@ -116,6 +116,7 @@ async function syncSmb({ force = false } = {}) {
     smbBusy = false;
   }
   await db.setMeta("backup_smb_last", result).catch(() => {});
+  if (result.ok) await db.setMeta("backup_smb_ok_at", result.at).catch(() => {});
   if (result.copied || result.removed) console.log(`[backup] Freigabe: ${result.copied} kopiert, ${result.removed} alte entfernt`);
   if (!result.ok) console.error(`[backup] Freigabe: ${result.error}`);
   return result;

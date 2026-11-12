@@ -15,6 +15,7 @@
 #  ./deploy.sh admin              Weiteres Administrator-Konto anlegen
 #  ./deploy.sh audit [anzahl]     Letzte Einträge des Sicherheitsprotokolls
 #  ./deploy.sh mail-test [adresse] Mailserver prüfen, optional Test-E-Mail senden
+#  ./deploy.sh checkmk            Ausgabe des Checkmk-Local-Checks anzeigen
 #  ./deploy.sh smb                Verbindung zur SMB-Freigabe prüfen und Sicherungen abgleichen
 #  ./deploy.sh reset-password N   Passwort für Konto N neu setzen
 #  ./deploy.sh users              Konten auflisten
@@ -198,6 +199,7 @@ SETTINGS=(
   "BACKUP_ENABLED|true|bool|Standard für tägliche automatische Sicherung"
   "BACKUP_TIME|02:00|time|Uhrzeit der täglichen Sicherung (HH:MM)"
   "BACKUP_KEEP|14|int|Wie viele automatische Sicherungen aufbewahren?"
+  "CHECKMK|__auto__|bool|Checkmk-Überwachung (Local Check für Board und Sicherungen) einrichten?"
   "SMTP_HOST||opthost|Mailserver für „Passwort vergessen“ (leer = kein Versand, Anfragen gehen an die Administration)"
   "SMTP_PORT|587|port|Port des Mailservers (587 = STARTTLS, 465 = TLS, 25 = ohne)"
   "SMTP_SECURITY|starttls|smtpsec|Verschlüsselung zum Mailserver: starttls, tls oder none"
@@ -335,6 +337,7 @@ default_for() {
         COOKIE_SECURE) [[ "${VAL[PUBLIC_URL]:-}" == https://* ]] && echo true || echo false ;;
         # Im Proxy-Netz kommt der Proxy aus dessen Subnetz — das gilt als vertrauenswürdig
         TRUSTED_PROXIES) [[ "${VAL[DEPLOY_MODE]:-port}" == proxy ]] && network_subnets "${VAL[PROXY_NETWORK]:-}" || true ;;
+        CHECKMK) [[ -d "$CHECKMK_LOCAL_DIR" ]] && echo true || echo false ;;
         COMPOSE_FILE) [[ "${VAL[DEPLOY_MODE]:-port}" == proxy ]] && echo "docker-compose.yml:deploy/compose.proxy.yml" || echo "docker-compose.yml" ;;
       esac ;;
     *) echo "$dflt" ;;
@@ -504,6 +507,49 @@ prepare_backup_dir() {
   chmod 700 "$p" 2>/dev/null || sudo chmod 700 "$p" || warn "Konnte Rechte von $p nicht auf 700 setzen."
 }
 
+# ---------- Checkmk ---------------------------------------------------------
+# Local Check: Der Checkmk-Agent führt das Skript alle 5 Minuten aus (Unterordner 300).
+# Es fragt den Status per docker exec direkt im API-Container ab — kein Port, kein Token.
+CHECKMK_LOCAL_DIR="${CHECKMK_LOCAL_DIR:-/usr/lib/check_mk_agent/local}"
+as_root() {
+  if [[ "$(id -u)" -eq 0 ]]; then "$@"
+  elif command -v sudo >/dev/null 2>&1; then sudo "$@"
+  else return 1; fi
+}
+checkmk_script() { echo "$CHECKMK_LOCAL_DIR/300/shopfloor_${VAL[COMPOSE_PROJECT_NAME]}"; }
+checkmk_prefix() { [[ "${VAL[COMPOSE_PROJECT_NAME]}" == shopfloor ]] && echo "Shopfloor" || echo "Shopfloor ${VAL[COMPOSE_PROJECT_NAME]}"; }
+setup_checkmk() {
+  local target project="${VAL[COMPOSE_PROJECT_NAME]}" prefix
+  target="$(checkmk_script)"; prefix="$(checkmk_prefix)"
+  if [[ "${VAL[CHECKMK]:-false}" != true ]]; then
+    if [[ -f "$target" ]]; then as_root rm -f "$target" && info "Checkmk-Local-Check entfernt ($target)."; fi
+    return 0
+  fi
+  if [[ ! -d "$CHECKMK_LOCAL_DIR" ]]; then
+    warn "Checkmk-Agent nicht gefunden ($CHECKMK_LOCAL_DIR fehlt) — Local Check nicht eingerichtet."
+    return 0
+  fi
+  as_root true || { warn "Für den Checkmk-Local-Check sind root-Rechte nötig — übersprungen."; return 0; }
+  as_root mkdir -p "$CHECKMK_LOCAL_DIR/300"
+  as_root tee "$target" >/dev/null <<EOF_CMK
+#!/bin/sh
+# Shopfloor Board (Projekt $project) — Checkmk-Local-Check, von deploy.sh installiert.
+# Dienste: "$prefix Board", "$prefix Backup" und — wenn eingeschaltet — "$prefix Backup SMB".
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+C=\$(docker ps -q --filter label=com.docker.compose.project=$project --filter label=com.docker.compose.service=api --filter status=running 2>/dev/null | head -n 1)
+if [ -z "\$C" ]; then
+  echo '2 "$prefix Board" - API-Container läuft nicht (!!)'
+  echo '3 "$prefix Backup" - Status unbekannt, API-Container läuft nicht'
+  exit 0
+fi
+timeout 60 docker exec "\$C" node src/cli.js checkmk "$prefix" 2>/dev/null \\
+  || echo '2 "$prefix Board" - Statusabfrage fehlgeschlagen (!!)'
+EOF_CMK
+  as_root chmod 755 "$target"
+  ok "Checkmk-Local-Check eingerichtet: $target"
+  info "In Checkmk beim Host eine Service-Erkennung ausführen — neue Dienste: „$prefix Board“, „$prefix Backup“."
+}
+
 pre_backup() {
   api_running || return 0
   info "Sichere die Datenbank vor dem Update …"
@@ -664,6 +710,7 @@ do_deploy() {
   dc up -d --remove-orphans 2>&1 | tee -a "$LOG_FILE" || die "Start fehlgeschlagen — Details in $LOG_FILE"
   wait_healthy
   ensure_admin
+  setup_checkmk
 
   # Nur Abfall: nicht mehr benutzte, unbenannte Images und Build-Cache älter als 7 Tage —
   # nie Container, Volumes, Netze oder benannte Images anderer Projekte
@@ -694,6 +741,9 @@ case "$COMMAND" in
   reset-password) detect_compose; load_env_for_run; [[ -n "${1:-}" ]] || die "Aufruf: ./deploy.sh reset-password <Name>"
                   dc exec api node src/cli.js reset-password "$1" ;;
   users)          detect_compose; load_env_for_run; cli list-users ;;
+  checkmk)        detect_compose; load_env_for_run
+                  if [[ -x "$(checkmk_script)" ]]; then info "Ausgabe des Local Checks $(checkmk_script):"; as_root "$(checkmk_script)"
+                  else warn "Local Check nicht installiert (CHECKMK=${VAL[CHECKMK]:-?}) — Ausgabe direkt aus dem Container:"; cli checkmk "$(checkmk_prefix)"; fi ;;
   smb)            detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
                   cli smb-sync ;;
   mail-test)      detect_compose; load_env_for_run; api_running || die "Der API-Container läuft nicht."
