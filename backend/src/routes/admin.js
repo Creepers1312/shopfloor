@@ -28,7 +28,7 @@ function register(app) {
     let to = Array.isArray(body.to) ? body.to.map((x) => String(x).trim()).filter(Boolean) : [];
     if (to.length > 50) throw new HttpError(400, "Höchstens 50 Empfänger für die Test-E-Mail.");
     if (to.some((x) => !mailer.EMAIL_RE.test(x))) throw new HttpError(400, "Ungültige Empfängeradresse.");
-    const result = await mailer.test(body.settings || {}, to);
+    const result = await mailer.test(body.settings || {}, to, req.user.name);
     await audit.log(req, "mail.test", { ok: result.ok, to: to.length || undefined, error: result.error || undefined });
     res.json({ result });
   }));
