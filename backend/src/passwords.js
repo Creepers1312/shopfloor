@@ -14,16 +14,6 @@ function sha256hex(txt) {
   return crypto.createHash("sha256").update(String(txt), "utf8").digest("hex");
 }
 
-function normalizeClientHash(h) {
-  if (typeof h !== "string" || !h) return null;
-  if (h.startsWith("plain:")) {
-    const pw = h.slice(6);
-    return pw ? sha256hex(pw) : null;
-  }
-  if (/^[0-9a-f]{64}$/i.test(h)) return h.toLowerCase();
-  return null;
-}
-
 async function hashPassword(clientHash) {
   const salt = crypto.randomBytes(16);
   const key = await scrypt(clientHash, salt, KEYLEN, { N, r: R, p: P });
@@ -61,4 +51,4 @@ function passwordProblem(pw, name) {
 // Passwort aus einer Anfrage in die gespeicherte Form bringen (SHA-256-Hex)
 function fromPlain(pw) { return typeof pw === "string" && pw ? sha256hex(pw) : null; }
 
-module.exports = { sha256hex, normalizeClientHash, hashPassword, verifyPassword, burn, passwordProblem, fromPlain };
+module.exports = { sha256hex, hashPassword, verifyPassword, burn, passwordProblem, fromPlain };

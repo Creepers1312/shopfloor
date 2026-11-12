@@ -123,7 +123,7 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 | `SESSION_IDLE_HOURS` | `12` | Abmeldung nach so vielen Stunden ohne Bedienung (`0` = aus; der TV-Modus zählt als aktiv) |
 | `PASSWORD_MIN_LENGTH` | `10` | Mindestlänge für Passwörter (8–128) |
 | `CHECKMK` | `true`, wenn ein Checkmk-Agent installiert ist | Local Check für Board und Sicherungen einrichten (siehe „Überwachung mit Checkmk“) |
-| `SMTP_HOST` | leer | Mailserver für „Passwort vergessen“-Links (leer = keine Mails, Anfragen gehen an die Administration) |
+| `SMTP_HOST` | leer | Startwert für den Mailserver („Passwort vergessen“, Test-E-Mails). Gilt nur, bis die Einstellungen in der Oberfläche gespeichert werden (*Einstellungen → E-Mail-Versand*) |
 | `SMTP_PORT` / `SMTP_SECURITY` | `587` / `starttls` | Port und Verschlüsselung (`starttls`, `tls` für Port 465, `none`) |
 | `SMTP_USER` / `SMTP_PASSWORD` | leer | Anmeldung am Mailserver (leer = ohne Anmeldung) |
 | `SMTP_FROM` | leer | Absender, z. B. `Shopfloor Board <shopfloor@firma.de>` |
@@ -183,12 +183,17 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
   `.`, `_`, `-`) und optional eine **E-Mail-Adresse**. Angemeldet wird mit Anmeldename oder E-Mail.
 - Bestehende Konten erhalten beim Update automatisch einen Anmeldenamen aus dem Namen (z. B. „Jörg Müller“ →
   `joerg.mueller`); `./deploy.sh users` zeigt ihn an. Ändern unter *Einstellungen → Benutzerverwaltung → Bearbeiten*.
-- *Passwort vergessen?* auf der Anmeldeseite: Ist `SMTP_HOST` gesetzt und hat das Konto eine E-Mail, kommt ein Link
+- *Passwort vergessen?* auf der Anmeldeseite: Ist ein Mailserver eingerichtet und hat das Konto eine E-Mail, kommt ein Link
   (gültig `RESET_LINK_MINUTES`, nur einmal nutzbar, beendet alle Sitzungen). Sonst landet eine Anfrage in der
   Benutzerverwaltung, Administratoren werden nach der Anmeldung darauf hingewiesen.
 - Die Antwort ist immer gleich — ob ein Konto existiert, verrät die Seite nicht. Höchstens 3 Anfragen je Konto und Stunde.
 - Für korrekte Links `PUBLIC_URL` auf die Adresse setzen, unter der Benutzer das Board öffnen.
-- Einrichten: `./deploy.sh config` (SMTP-Fragen), `./deploy.sh`, dann `./deploy.sh mail-test adresse@firma.de`.
+- Einrichten in der Oberfläche unter *Einstellungen → E-Mail-Versand*: Absender, Mailserver, Port, Verschlüsselung,
+  Benutzer und Passwort eintragen, „Verbindung testen“, speichern. „Test-E-Mail senden“ schickt über den Server eine
+  Nachricht an den Verteiler (oder an die eigene Adresse). Das Passwort liegt AES-256-GCM-verschlüsselt in der
+  Datenbank (Schlüssel `APP_SECRET`) und wird nie wieder angezeigt.
+- Die `SMTP_*`-Werte aus der `.env` sind nur Startwerte: Sie gelten, solange in der Oberfläche nichts gespeichert ist,
+  und werden beim ersten Speichern übernommen. Prüfen von der Kommandozeile: `./deploy.sh mail-test adresse@firma.de`.
 
 ### Testdaten
 
@@ -283,8 +288,9 @@ Metriken für Graphen: Alter der letzten Sicherung, Größe, Anzahl, freier Plat
 **Rechte und Daten**
 - Rechte prüft der Server: *Nur Lesen* kann nichts speichern; Konten, Sicherungen und das Protokoll sind Administratoren
   vorbehalten. In den Einstellungen dürfen Bearbeiter nur die Unfallchronik (Huddle) und das Versandprotokoll ändern.
-- Das SMTP-Passwort des Versandprotokolls (Oberfläche) wird am Server nicht gespeichert und nicht ausgeliefert;
-  das Server-Postfach für Passwort-Links (`SMTP_PASSWORD`) steht nur in der `.env` (Rechte `600`).
+- Gespeicherte Zugangsdaten (SMTP- und SMB-Passwort) liegen AES-256-GCM-verschlüsselt in der Datenbank, Schlüssel
+  `APP_SECRET` nur in der `.env` (Rechte `600`). Sie werden nie ausgeliefert, nicht protokolliert und stecken nicht in
+  den Sicherungsdateien.
 - E-Mail-Adressen anderer Konten sehen nur Administratoren. Links zum Zurücksetzen sind zufällig (256 Bit), in der
   Datenbank liegt nur ihr Hash.
 - Ohne Anmeldung liefert die API keine Daten aus. Größenlimit 25 MB nur für Dokumente, sonst 32 KB.

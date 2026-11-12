@@ -37,11 +37,11 @@
 #
 #  Ohne Rückfragen, z. B.:
 #    DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.firma.de \
-#    ADMIN_NAME="Luca" ADMIN_USERNAME="luca" ADMIN_EMAIL="…" ADMIN_PASSWORD="…" ./deploy.sh -y
+#    ADMIN_NAME="Max Mustermann" ADMIN_USERNAME="max.mustermann" ADMIN_EMAIL="…" ADMIN_PASSWORD="…" ./deploy.sh -y
 # =============================================================================
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 cd "$(dirname "$(readlink -f "$0")")"
 
 ENV_FILE=".env"
@@ -200,7 +200,7 @@ SETTINGS=(
   "BACKUP_TIME|02:00|time|Uhrzeit der täglichen Sicherung (HH:MM)"
   "BACKUP_KEEP|14|int|Wie viele automatische Sicherungen aufbewahren?"
   "CHECKMK|__auto__|bool|Checkmk-Überwachung (Local Check für Board und Sicherungen) einrichten?"
-  "SMTP_HOST||opthost|Mailserver für „Passwort vergessen“ (leer = kein Versand, Anfragen gehen an die Administration)"
+  "SMTP_HOST||opthost|Mailserver für „Passwort vergessen“ — Startwert, später in der Oberfläche änderbar (leer = später dort einrichten)"
   "SMTP_PORT|587|port|Port des Mailservers (587 = STARTTLS, 465 = TLS, 25 = ohne)"
   "SMTP_SECURITY|starttls|smtpsec|Verschlüsselung zum Mailserver: starttls, tls oder none"
   "SMTP_USER||opttext|Benutzername am Mailserver (leer = ohne Anmeldung)"

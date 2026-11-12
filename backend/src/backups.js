@@ -7,10 +7,10 @@ const path = require("path");
 const { spawn } = require("child_process");
 const config = require("./config");
 const db = require("./db");
-const { HttpError } = require("./users");
+const { HttpError } = require("./http");
 const smb = require("./smb");
 
-const FILE_RE = /^shopfloor_[0-9_-]+_(auto|manual)\.dump$/;
+const FILE_RE = config.backupFileRe;
 const TABLES = ["documents", "users"];
 
 let busy = false;
