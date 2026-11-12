@@ -7,7 +7,7 @@ const nodemailer = require("nodemailer");
 const config = require("./config");
 const db = require("./db");
 const secrets = require("./secrets");
-const { HttpError } = require("./users");
+const { HttpError } = require("./http");
 
 const META_KEY = "mail_server";
 const SECURITY = ["starttls", "tls", "none"];
@@ -157,7 +157,7 @@ function explain(err) {
   if (code === "EAUTH" || /535|authentication/i.test(m)) return "Anmeldung am Mailserver abgelehnt — Benutzer und Passwort prüfen.";
   if (code === "EDNS" || /ENOTFOUND|EAI_AGAIN/.test(m)) return "Mailserver nicht gefunden — Name prüfen.";
   if (code === "ECONNREFUSED" || /ECONNREFUSED/.test(m)) return "Verbindung abgelehnt — Port prüfen (587 STARTTLS, 465 TLS, 25 ohne).";
-  if (code === "ETIMEDOUT" || code === "ESOCKET" && /timeout/i.test(m) || /timed? ?out/i.test(m)) return "Zeitüberschreitung — Server nicht erreichbar (Firewall, Port?).";
+  if (code === "ETIMEDOUT" || (code === "ESOCKET" && /timeout/i.test(m)) || /timed? ?out/i.test(m)) return "Zeitüberschreitung — Server nicht erreichbar (Firewall, Port?).";
   if (/wrong version number|SSL routines|ssl3_get_record/i.test(m)) return "Verschlüsselung passt nicht zum Port — z. B. 465 mit TLS, 587 mit STARTTLS.";
   if (/STARTTLS/i.test(m)) return "Der Server bietet kein STARTTLS an — andere Verschlüsselung wählen.";
   if (/certificate|self.signed|UNABLE_TO_VERIFY/i.test(m)) return "Das Zertifikat des Mailservers ist nicht vertrauenswürdig.";

@@ -4,7 +4,7 @@
 // Die Tabelle meta, in der die verschlüsselten Werte liegen, steckt nicht in den Sicherungen.
 const crypto = require("crypto");
 const config = require("./config");
-const { HttpError } = require("./users");
+const { HttpError } = require("./http");
 
 function keyFor(purpose) {
   const secret = config.appSecret || config.db.password;

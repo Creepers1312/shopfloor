@@ -11,12 +11,12 @@ const crypto = require("crypto");
 const { spawn } = require("child_process");
 const config = require("./config");
 const db = require("./db");
-const { HttpError } = require("./users");
+const { HttpError } = require("./http");
 
 const META_KEY = "backup_smb";
 const PROTOCOLS = ["auto", "smb3", "smb2"];
 const SHARE_RE = /^\/\/[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?\/[^\/\\:*?"<>|\x00-\x1f]+(\/[^\/\\:*?"<>|\x00-\x1f]+)*$/;
-const FILE_RE = /^shopfloor_[0-9_-]+_(auto|manual)\.dump$/;
+const FILE_RE = config.backupFileRe;
 const TIMEOUT_MS = 10 * 60 * 1000;
 
 const secrets = require("./secrets");
@@ -205,4 +205,4 @@ async function test(body) {
   }
 }
 
-module.exports = { getRaw, getConfig, setConfig, test, listFiles, putFile, deleteFile, FILE_RE, _test: { normShare, explain, encrypt, decrypt, SHARE_RE } };
+module.exports = { getRaw, getConfig, setConfig, test, listFiles, putFile, deleteFile };

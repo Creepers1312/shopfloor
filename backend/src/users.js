@@ -13,9 +13,7 @@ const { hashPassword } = require("./passwords");
 const PERMS = ["admin", "editor", "viewer"];
 const KNOWN = new Set(["name", "role", "perm", "disabled", "hash", "lastLogin", "username", "email", "password"]);
 
-class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
-}
+const { HttpError } = require("./http");
 
 function cleanName(v) {
   const name = typeof v === "string" ? v.trim().replace(/\s+/g, " ") : "";
@@ -226,6 +224,6 @@ async function syncFromClient(q, list) {
 }
 
 module.exports = {
-  HttpError, PERMS, toClient, listForClient, findByName, findByLogin, count, createUser, updateProfile,
-  setPassword, syncFromClient, cleanName, cleanUsername, cleanEmail, slugUsername, backfillUsernames
+  toClient, listForClient, findByName, findByLogin, count, createUser, updateProfile,
+  setPassword, syncFromClient, cleanUsername, backfillUsernames
 };

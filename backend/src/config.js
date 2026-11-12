@@ -52,6 +52,8 @@ module.exports = {
   bodyLimit: env.BODY_LIMIT || "25mb",      // nur für Dokumente (Board, Wiederherstellung aus Datei)
   smallBodyLimit: "32kb",                   // alle übrigen Anfragen (Anmeldung, Konten, Sicherungen …)
   backupDir: env.BACKUP_DIR || "/backups",
+  // Name einer Sicherungsdatei (auch Schutz gegen Pfadangaben in Anfragen)
+  backupFileRe: /^shopfloor_[0-9_-]+_(auto|manual)\.dump$/,
   // Schlüssel für gespeicherte Zugangsdaten (SMB-Passwort); erzeugt deploy.sh in der .env
   appSecret: env.APP_SECRET || "",
   smbclient: env.SMBCLIENT || "smbclient",

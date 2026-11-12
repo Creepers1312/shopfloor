@@ -37,11 +37,11 @@
 #
 #  Ohne Rückfragen, z. B.:
 #    DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.firma.de \
-#    ADMIN_NAME="Luca" ADMIN_USERNAME="luca" ADMIN_EMAIL="…" ADMIN_PASSWORD="…" ./deploy.sh -y
+#    ADMIN_NAME="Max Mustermann" ADMIN_USERNAME="max.mustermann" ADMIN_EMAIL="…" ADMIN_PASSWORD="…" ./deploy.sh -y
 # =============================================================================
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.0.0"
+SCRIPT_VERSION="1.1.0"
 cd "$(dirname "$(readlink -f "$0")")"
 
 ENV_FILE=".env"
