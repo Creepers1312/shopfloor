@@ -16,6 +16,9 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   „Abweichungen & Maßnahmen“ (Begründungen, wer macht was bis wann). Hinweis auf den nächsten Huddle (blinkt
   während des Huddles), dunkle oder helle Darstellung, Vollbild-Knopf, Pause; die Bedienleiste erscheint nur bei
   Mausbewegung oder Berührung. Der Bildschirm bleibt an, und um Mitternacht aktualisiert sich die Anzeige von selbst.
+- **Höhe der Diagrammachse wählbar:** Diagramme sowie die Karten First Pass Yield und Termintreue lassen sich auf
+  „Automatisch“ (Achse passt sich den Werten an) oder „Fest: 0–100 %“ stellen — beim Hinzufügen oder über ✎ im
+  Anpassen-Modus. Bei fester Achse beginnen andere Einheiten (t, h) bei 0.
 
 ### Geändert
 - **Anwenderdoku komplett überarbeitet:** 25 Themen in fünf Gruppen (Grundlagen, Täglicher Ablauf, Auswertung,
