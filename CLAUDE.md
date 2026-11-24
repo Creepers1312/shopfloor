@@ -35,6 +35,7 @@ frontend/index.html     gesamte Oberfläche (eine Datei, Vanilla-JS in einer IIF
 frontend/nginx.conf     nginx-unprivileged (Port 8080), Proxy /api → api:3000, Drosselung Anmelde-Endpunkte
 frontend/csp-hashes.js  berechnet beim Docker-Build die CSP-Hashes der Inline-Skripte (kein 'unsafe-inline')
 frontend/fonts/         Inter lokal (keine externen Quellen)
+frontend/docs/          Bilder der Anwenderdoku (WebP, erzeugt von tools/doku-screenshots.js)
 backend/src/            Node/Express + PostgreSQL (pg)
   server.js             Start, Migration, Zeitpläne (Sicherung, Aufräumen)
   app.js                Middleware (Größenlimits, Sitzung, Herkunfts-/CSRF-Prüfung), /api/health, Fehler
@@ -87,7 +88,9 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).
-- **Anwenderdoku** im Array `DOCS` — bei neuen Funktionen mitpflegen.
+- **Anwenderdoku** im Array `DOCS` (Gruppen `DOC_GROUPS`; je Thema `intro`, optional `flow`, `sections` mit
+  `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
+  `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
 
 ## Betrieb

@@ -10,12 +10,17 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 ## [Unveröffentlicht]
 
 ### Geändert
+- **Anwenderdoku komplett überarbeitet:** 25 Themen in fünf Gruppen (Grundlagen, Täglicher Ablauf, Auswertung,
+  Regeln & Kennzahlen, Verwaltung) mit Bildschirmfotos, Prozessabläufen (z. B. Daily Huddle, Abweichung begründen,
+  PDCA) und Schritt-für-Schritt-Anleitungen. Neu sind Themenliste mit Suche, Blättern zum nächsten Thema und
+  Vergrößern der Bilder per Klick.
 - **Dashboards übersichtlicher:** Neben der Auswahl stehen nur noch „Dashboards verwalten“ und „Dashboard
   anpassen“. Anlegen, Kopieren, Einstellungen und Löschen laufen über das Fenster „Dashboards verwalten“ mit der
   Liste aller Dashboards. Beim Anpassen erscheint eine eigene, hervorgehobene Leiste mit „+ Widget hinzufügen“,
   „Ursprüngliches Layout“ und „Fertig“.
 
 ### Behoben
+- In den Einstellungen überlagerte die Seitenleiste auf schmalen Bildschirmen beim Scrollen den Inhalt.
 - Die Zeitraum-Auswahl im Dashboard ragte auf schmalen Bildschirmen (Handy) über den Rand hinaus.
 
 ## [1.3.0] – 2026-11-24

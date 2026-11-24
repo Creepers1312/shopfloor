@@ -1082,11 +1082,11 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
   display: grid; grid-template-columns: 256px minmax(0, 1fr);
   gap: 40px; align-items: start; max-width: 1280px; margin: 0 auto;
 }
+.settings-side { position: sticky; top: 122px; display: flex; flex-direction: column; gap: 18px; }
 @media (max-width: 920px) {
   .settings-layout { grid-template-columns: 1fr; gap: 18px; }
   .settings-side { position: static; }
 }
-.settings-side { position: sticky; top: 122px; display: flex; flex-direction: column; gap: 18px; }
 .side-search {
   font: inherit; font-size: 13.5px; color: var(--ink);
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
@@ -1262,21 +1262,52 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .u-actions { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
 
 /* ============ Anwenderdoku ============ */
-.doc-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
-.doc-chip {
-  appearance: none; cursor: pointer; padding: 8px 15px; border-radius: 999px;
-  font: inherit; font-size: 13px; font-weight: 600;
-  background: none; color: var(--ink-2); border: 1px solid var(--line);
+.doc-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 22px; margin-top: 18px; align-items: start; }
+.doc-nav { position: sticky; top: 122px; display: flex; flex-direction: column; gap: 4px; max-height: calc(100vh - 140px); overflow-y: auto; padding-right: 4px; }
+.doc-nav .side-search { margin-bottom: 8px; }
+.doc-select { display: none; }
+.doc-toc { display: flex; flex-direction: column; gap: 2px; }
+.doc-toc-group { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin: 12px 0 4px 10px; }
+.doc-toc-group:first-child { margin-top: 2px; }
+.doc-toc-item { text-align: left; border: 0; background: none; color: var(--ink-2); font: inherit; font-size: 13.5px; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+.doc-toc-item:hover { background: var(--surface-2); color: var(--ink); }
+.doc-toc-item.active { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent-2); font-weight: 600; }
+@media (max-width: 860px) {
+  .doc-layout { grid-template-columns: 1fr; }
+  .doc-nav { position: static; max-height: none; overflow: visible; }
+  .doc-toc { display: none; }
+  .doc-select { display: block; width: 100%; }
 }
-.doc-chip:hover { color: var(--accent-2); }
-.doc-chip.active {
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent-2); border-color: color-mix(in srgb, var(--accent) 35%, transparent);
-}
-.doc-article { margin-top: 20px; padding: 26px 30px; }
-.doc-title { font-weight: 600; font-size: 19px; margin-bottom: 8px; }
-.doc-intro { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin-bottom: 20px; max-width: 66ch; }
-.doc-steps { display: flex; flex-direction: column; gap: 13px; max-width: 660px; }
+.doc-article { padding: 26px 30px 22px; min-width: 0; }
+@media (max-width: 600px) { .doc-article { padding: 18px 16px; } }
+.doc-group-label { font-size: 11.5px; font-weight: 600; color: var(--accent-2); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.doc-title { font-weight: 600; font-size: 21px; margin: 0 0 8px; }
+.doc-intro { color: var(--ink-2); font-size: 14.5px; line-height: 1.6; margin: 0 0 18px; max-width: 72ch; }
+.doc-flow { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin: 0 0 22px; }
+.doc-flow-step { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px 6px 6px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
+.doc-flow-step:not(:last-child)::after { content: "→"; color: var(--muted); font-weight: 400; margin-left: 4px; }
+.doc-flow-n { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: var(--accent); color: var(--accent-ink); }
+.doc-sec { padding: 18px 0; border-top: 1px solid var(--line); }
+.doc-sec.with-side { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 40%); gap: 22px; align-items: start; }
+@media (max-width: 1000px) { .doc-sec.with-side { grid-template-columns: 1fr; } }
+.doc-h { font-size: 16px; font-weight: 600; margin: 0 0 10px; grid-column: 1 / -1; }
+.doc-p { color: var(--ink-2); font-size: 14px; line-height: 1.65; margin: 0 0 10px; max-width: 72ch; }
+.doc-list { margin: 0 0 10px; padding-left: 20px; color: var(--ink-2); font-size: 14px; line-height: 1.6; max-width: 72ch; }
+.doc-list li { margin-bottom: 4px; }
+.doc-list b, .doc-p b, .doc-step-d b { color: var(--ink); }
+.doc-note { margin: 10px 0 0; padding: 9px 12px; border-left: 3px solid var(--accent); background: var(--surface-2); border-radius: 0 8px 8px 0; font-size: 13.5px; color: var(--ink-2); max-width: 72ch; }
+.doc-fig { margin: 0 0 14px; }
+.doc-fig img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); cursor: zoom-in; background: var(--surface-2); }
+.doc-fig:not(.small) img { max-width: 900px; }
+.doc-fig.small img { max-width: 460px; }
+.doc-fig figcaption { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.doc-pager { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.doc-pager .btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-img-dialog { max-width: min(1500px, calc(100vw - 32px)); padding: 12px; cursor: zoom-out; }
+.doc-img-dialog img { display: block; max-width: 100%; max-height: calc(100vh - 110px); margin: 0 auto; border-radius: 8px; }
+.doc-img-dialog p { margin: 8px 4px 0; font-size: 13px; color: var(--muted); text-align: center; }
+.doc-steps { display: flex; flex-direction: column; gap: 12px; max-width: 72ch; margin-bottom: 6px; }
 .doc-step { display: flex; gap: 13px; }
 .doc-n {
   width: 24px; height: 24px; border-radius: 50%; flex: none; margin-top: 1px;
@@ -1284,9 +1315,9 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
   font-weight: 600; font-size: 12px; display: grid; place-items: center;
 }
 .doc-step-t { font-weight: 600; font-size: 14.5px; margin-bottom: 2px; }
-.doc-step-d { color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+.doc-step-d { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
 .doc-tip {
-  margin-top: 20px; padding: 13px 15px; border-radius: 10px; max-width: 660px;
+  margin-top: 8px; padding: 13px 15px; border-radius: 10px; max-width: 72ch;
   background: color-mix(in srgb, var(--accent) 7%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
   font-size: 13px; color: var(--ink-2); line-height: 1.5;
@@ -2386,9 +2417,15 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <!-- ===== Anwenderdoku ===== -->
       <div class="spane" id="docCard">
         <h2 class="pane-title">Anwenderdoku</h2>
-        <p class="pane-sub">Für alle Rollen sichtbar — kurze Anleitungen zu jedem Bereich.</p>
-        <div class="doc-chips" id="docChips"></div>
-        <div class="card doc-article" id="docArticle"></div>
+        <p class="pane-sub">Für alle Rollen sichtbar — Abläufe und Bereiche Schritt für Schritt, mit Bildern. Bilder lassen sich zum Vergrößern anklicken.</p>
+        <div class="doc-layout">
+          <nav class="doc-nav" aria-label="Themen der Anwenderdoku">
+            <input id="docSearch" class="side-search" type="search" placeholder="In der Doku suchen …" aria-label="In der Doku suchen" autocomplete="off">
+            <select id="docSelect" class="doc-select perm-select" aria-label="Thema wählen"></select>
+            <div class="doc-toc" id="docToc"></div>
+          </nav>
+          <article class="card doc-article" id="docArticle"></article>
+        </div>
       </div>
     </div>
   </div>
@@ -3002,6 +3039,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="submit" class="btn primary" id="dmSave">Anlegen</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="docImgDialog" class="doc-img-dialog" aria-label="Bild vergrößert">
+  <img id="docImgBig" alt="">
+  <p id="docImgCap"></p>
 </dialog>
 
 <dialog id="confirmDialog">
@@ -9518,128 +9560,565 @@ window.SFM = (function () {
   });
 
   /* ---------- Anwenderdoku ---------- */
+  /* ---------- Anwenderdoku ----------
+     Jedes Thema: Gruppe, Titel, Einleitung, optional ein Prozessablauf (flow) und Abschnitte mit Text,
+     Bild (Datei in frontend/docs/, erzeugt mit tools/doku-screenshots.js), Schritten, Liste und Hinweis. */
+  var DOC_GROUPS = ["Grundlagen", "Täglicher Ablauf", "Auswertung", "Regeln & Kennzahlen", "Verwaltung"];
   var DOCS = [
-    { title: "Erste Schritte", intro: "Das Shopfloor Board bündelt SQIDP-Status, Kennzahlen, Abweichungen und die tägliche Runde einer Linie. Nach der Anmeldung landen Sie im Dashboard.", tip: "Tastaturkürzel: 1–6 wechseln die Bereiche, N legt eine neue Abweichung an, ◀/▶ blättern im Board durch die Monate.", steps: [
-      ["Anmelden", "Konto registrieren oder den Demo-Zugang nutzen. Konten liegen nur lokal in diesem Browser; der erste registrierte Benutzer wird automatisch Administrator."],
-      ["Bereiche wechseln", "Über die Icon-Navigation in der Kopfzeile — beim Daraufzeigen fährt die Beschriftung aus, der aktive Bereich behält sie."],
-      ["Kennzahlen lesen", "OEE, First-Pass-Yield und Termintreue werden gegen die in den Stammdaten hinterlegten Ziele grün, gelb oder rot gefärbt."],
-      ["Sicherheitszähler einrichten", "Die Karte „Sicherheit“ zählt die Tage seit dem letzten Unfall. Das Datum steht unter Einstellungen → Stammdaten → Arbeitssicherheit; ohne Eintrag zeigt die Karte „Nicht erfasst“."]] },
-    { title: "SQIDP-Board pflegen", intro: "Das Monatsboard hält für jede Kategorie (S, Q, I, D, P) und jeden Tag fest, ob der Tag in Ordnung war oder eine Abweichung hatte.", tip: "Die Karten über der Tabelle zeigen die Monatsbilanz mit Grünquote — dem Anteil grüner Tage an den bewerteten Tagen.", steps: [
-      ["Tag ansehen", "Ein Klick auf eine Tageszelle zeigt Status, Abweichung mit Maßnahme und die Tagesnotiz. Das Board selbst ist nur lesend — den Status setzen Sie im Huddle."],
-      ["Status entsteht im Huddle", "Eine Zelle wird rot, sobald zu dem Tag und der Kategorie eine Abweichung vorliegt — erkannt aus den Tageswerten oder von Hand erfasst. Grün wird sie, wenn der Punkt ohne Abweichung besprochen wurde."],
-      ["Monate blättern", "Mit ◀ ▶ oder den Pfeiltasten durch die Monate — vergangene Monate sind als Archiv markiert."],
-      ["Unfall erfassen", "Im Huddle beim Agenda-Punkt Sicherheit wählen: Kein Unfall, Beinahe-Unfall, Nicht meldepflichtiger Unfall oder Meldepflichtiger Unfall. Nur „Meldepflichtiger Unfall“ startet den Zähler „Tage unfallfrei“ im Dashboard neu; die anderen Auswahlen sind trotzdem Abweichungen und brauchen eine Begründung."]] },
-    { title: "Abweichungen & Maßnahmen", intro: "Jede Abweichung durchläuft den PDCA-Zyklus (Plan – Do – Check – Act), bis die Ursache beseitigt ist.", tip: "Oben lässt sich nach Kategorie, Verantwortlichem und Überfälligkeit filtern; der CSV-Export öffnet direkt in Excel.", steps: [
-      ["Neu anlegen", "Über „+ Neue Abweichung“ oder Taste N — Titel, Kategorie, Verantwortliche Person und Zieltermin festlegen."],
-      ["Durch PDCA bewegen", "Karten per Pfeil-Buttons oder Drag & Drop verschieben; ein Klick öffnet die Details."],
-      ["Ursache finden", "Die 5-Why-Analyse in der Detailansicht fragt so lange „Warum?“, bis die echte Ursache statt des Symptoms gefunden ist."]] },
-    { title: "Huddle durchführen", intro: "Die tägliche Runde am Board folgt der SQIDP-Agenda. Der Ring-Timer gibt den Takt vor, die Themen kommen aus den offenen Abweichungen.", tip: "Dauer und Uhrzeit der Runde stellt der Administrator in den Stammdaten ein — die Uhrzeit erscheint auch im TV-Modus.", steps: [
-      ["Timer starten", "Im Bereich Huddle-Timer auf „Start“ — der Ring zeigt die verbleibende Zeit, die letzte Minute wird gelb."],
-      ["Geführter Ablauf", "Ein Klick auf den Tag startet den Huddle in großen Fenstern mit Fortschrittsleiste: 1 Kennzahlen, dann S, Q, I, D und P. „Speichern & weiter“ und „Weiter“ führen durch die Schritte, „Zurück“ geht einen Schritt zurück, ein Klick auf die Leiste springt direkt. Der Huddle-Timer läuft oben im Fenster mit."],
-      ["Tageswerte erfassen", "Schritt 1 (Tabs Ausfälle, Produktion, Lager & Aufträge, Notiz). Rechts stehen OEE, First-Pass-Yield, Termintreue und die technische Anlagenverfügbarkeit und werden beim Tippen berechnet."],
-      ["Agenda durchgehen", "Jeder Punkt zeigt links die zugehörigen Tageswerte als Eingabefelder und rechts die daraus erkannten Abweichungen. Werte lassen sich direkt dort ändern oder erst eintragen (Qualität: Mengen, Inventory: Bestand und Grenzwert, Lieferung: Aufträge, Produktivität: Ausfallzeiten nach Art) — sie werden sofort gespeichert und die Abweichungen sofort neu erkannt. Ungültige Werte werden rot markiert und nicht übernommen. Dazu lassen sich beliebig viele weitere Abweichungen erfassen. Die Karten in der Huddle-Ansicht öffnen weiterhin jeden Punkt einzeln. Die Minutenangaben sind Richtwerte."],
-      ["Begründung ist Pflicht", "Jede Abweichung braucht eine Begründung — erkannte im Feld „Begründung (Pflicht)“, von Hand erfasste in der Beschreibung. Erst wenn alle begründet sind, lässt sich der Punkt als besprochen markieren."],
-      ["Themen besprechen", "Die Liste daneben zeigt die offenen Abweichungen — ein Klick öffnet die Details direkt."],
-      ["Revisionstag", "An Tagen ohne Produktion den Knopf „Revision“ wählen (oben im Huddle oder im Kennzahlen-Fenster). Das vereinfachte Fenster fragt nur Sicherheit, Inventory und Lieferung ab. Die geplanten Produktionsausfälle werden auf 24 h gesetzt (Art wählbar, Begründung „Revision“ vorbelegt), alle übrigen Produktions- und Ausfallwerte auf 0. Ergibt sich bei Sicherheit, Inventory oder Lieferung eine Abweichung, ist die Begründung direkt dort Pflicht. Danach sind alle Punkte des Tages besprochen; im Kalender trägt der Tag ein kleines „R“."]] },
-    { title: "Tagesbericht & E-Mail", intro: "Der Tagesbericht fasst SQIDP-Status, Kennzahlen, Grünquoten und offene Abweichungen des Tages zusammen.", tip: "Verteiler, Betreff-Vorlage und Mailserver stehen unter Einstellungen → E-Mail-Versand. Am Server nutzt das Board den Mailserver für „Passwort vergessen“ und Test-E-Mails; „Verbindung testen“ prüft ihn direkt.", steps: [
-      ["Bericht öffnen", "Bereich Tagesbericht (Taste 5) — Kennzahlen und Listen füllen sich automatisch aus den echten Daten."],
-      ["Tag auswählen", "Mit den Pfeilen oder dem Datumsfeld lässt sich ein früherer Tag wählen; der Bericht zeigt dann Kennzahlen und Abweichungen mit Begründung dieses Tages. „Heute“ springt zurück."],
-      ["Per E-Mail senden", "Öffnet den Bericht als E-Mail in Ihrem E-Mail-Programm; alternativ lässt sich der Text kopieren (z. B. für Teams)."],
-      ["Als PDF exportieren", "Öffnet die Druckansicht — dort „Als PDF speichern“ wählen."]] },
-    { title: "TV-Modus", intro: "Der TV-Modus zeigt Kennzahlen und offene Abweichungen im Großformat — gedacht für den Monitor an der Linie.", tip: "Für Touch-Terminals gibt es zusätzlich den Touch-Modus mit größeren Bedienelementen (Zeiger-Symbol in der Kopfzeile).", steps: [
-      ["Starten", "Monitor-Symbol oben rechts in der Kopfzeile anklicken."],
-      ["Vollbild", "Im Browser F11 drücken, damit nur das Board sichtbar ist."],
-      ["Beenden", "Esc drücken oder das ✕ oben rechts antippen."]] },
-    { title: "Rollen & Rechte", intro: "Vier Berechtigungsstufen steuern den Zugriff auf alle Bereiche.", tip: "Die Anwenderdoku ist für alle Rollen sichtbar — Stammdaten und Benutzerverwaltung zusätzlich für die Teamleitung, die übrigen Einstellungen nur für Administratoren.", steps: [
-      ["Nur Lesen", "Sieht Dashboard, Board, Maßnahmen, Huddle und Tagesbericht ohne Änderungsrechte."],
-      ["Bearbeiten", "Pflegt zusätzlich Board-Status, Abweichungen und die Huddle-Agenda."],
-      ["Teamleitung", "Darf zusätzlich Abweichungen löschen, die Stammdaten pflegen und Benutzer verwalten (anlegen, bearbeiten, Passwort setzen, sperren) — außer Administrator-Konten. E-Mail-Versand, Datenbank & Sicherung und das Sicherheitsprotokoll bleiben der Administration vorbehalten."],
-      ["Administrator", "Darf alles: zusätzlich E-Mail-Versand, Datenbank & Sicherung, Sicherheitsprotokoll und Administrator-Konten."]] },
-    { title: "Datenbank & Sicherung", intro: "Läuft das Board über den Server im Docker-Container, liegen Board, Maßnahmen, Konten und Einstellungen in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand.", tip: "Ob Datenbank oder nur Browser: Einstellungen → Datenbank & Sicherung zeigt es oben unter „Speicherort“. Gespeichert wird automatisch; nur wenn etwas nicht gespeichert werden konnte, erscheint ein Hinweis in der Kopfzeile.", steps: [
-      ["Starten", "Auf dem Server im Projektordner ./deploy.sh ausführen. Das Skript fragt die Einstellungen ab, legt beim ersten Start die Datenbank und das erste Administrator-Konto an und startet die Container."],
-      ["Automatisch sichern", "Schalter „Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Der Server legt die Sicherung selbstständig an — dafür muss der Container laufen, nicht der Browser."],
-      ["Wiederherstellen", "In der Liste „Vorhandene Sicherungen“ auf Wiederherstellen — nach Rückfrage wird der Datenbankinhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."],
-      ["Herunterladen", "„Herunterladen“ in der Liste speichert die Sicherungsdatei (.dump) auf diesem Computer, z. B. vor größeren Änderungen."],
-      ["Kopie auf SMB-Freigabe", "Unter „Kopie auf SMB-Freigabe“ Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern. Der Server kopiert dann jede Sicherung zusätzlich dorthin und holt fehlende Kopien stündlich nach. Gelöschte Sicherungen bleiben auf der Freigabe erhalten."],
-      ["Ernstfall", "Eine Datei von der Freigabe zurück in den Ordner backups des Projekts kopieren — sie erscheint dann in der Liste und lässt sich wiederherstellen."],
-      ["Überwachung (Checkmk)", "Läuft auf dem Server ein Checkmk-Agent, richtet ./deploy.sh die Dienste „Shopfloor Board“, „Shopfloor Backup“ und „Shopfloor Backup SMB“ ein. Sie melden u. a. eine Sicherung älter als 26 h (Warnung) bzw. 50 h, einen fehlgeschlagenen Versuch oder einen gescheiterten Abgleich mit der Freigabe (kritisch)."]] },
-    { title: "Datensicherung (Browser)", intro: "Alle Daten liegen lokal in diesem Browser — für Gerätewechsel oder Sicherungsstände gibt es die Datensicherung im Dashboard.", tip: "Regelmäßig sichern: Ein Browser-Reset oder Gerätetausch löscht lokale Daten unwiederbringlich.", steps: [
-      ["Sichern", "„Datensicherung“ im Dashboard lädt Board, Maßnahmen, Benutzerkonten und Einstellungen als JSON-Datei herunter."],
-      ["Wiederherstellen", "Administratoren spielen eine Sicherungsdatei über denselben Dialog wieder ein — nach Sicherheitsabfrage."],
-      ["Demo zurücksetzen", "Das Kreispfeil-Symbol lädt die Demo-Daten neu; Benutzerkonten und Einstellungen bleiben erhalten."],
-      ["Testdaten nachfüllen", "Das Datenbank-Symbol daneben ergänzt fehlende und unvollständige Tageswerte vom 1. Januar bis gestern. Bereits erfasste Werte, Maßnahmen und Begründungen bleiben erhalten, heute bleibt offen. Beide Symbole sehen nur Administratoren."]] },
-    { title: "Sicherheit & Konten", intro: "Am Server prüft die Datenbank jede Anmeldung und jede Berechtigung. Passwörter werden nur als scrypt-Hash gespeichert.", tip: "Das Board sollte nur über HTTPS erreichbar sein — sonst gehen Passwörter ungeschützt über das Netz.", steps: [
-      ["Anmelden", "Mit dem Anmeldenamen (z. B. „max.mustermann“) oder der hinterlegten E-Mail-Adresse — Groß-/Kleinschreibung egal. Der Anzeigename erscheint nur in Listen und Protokollen."],
-      ["Passwort vergessen", "Auf der Anmeldeseite „Passwort vergessen?“ wählen und Anmeldename oder E-Mail eingeben. Mit hinterlegter E-Mail (und eingerichtetem Mailserver unter Einstellungen → E-Mail-Versand) kommt ein Link, der 60 Minuten und nur einmal gilt. Ohne E-Mail (oder ohne Mailserver) geht eine Anfrage an die Administration, die ein neues Passwort setzt."],
-      ["Mein Konto", "Auf den eigenen Namen oben rechts klicken: E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet."],
-      ["Passwortregeln", "Mindestens 10 Zeichen (vom Server einstellbar), nicht gleich dem Namen. Nach mehreren Fehlversuchen ist die Anmeldung für 15 Minuten gesperrt."],
-      ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],
-      ["Konten verwalten", "Administratoren legen Konten mit Anzeigename, Anmeldename und optionaler E-Mail an, ändern sie über „Bearbeiten“, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen. Offene Passwort-Anfragen stehen oben in der Benutzerverwaltung."],
-      ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
-    { title: "Dashboards", intro: "Über die Auswahl links oben im Dashboard wechseln Sie zwischen mehreren Dashboards. „Standard“ und „Detaillierte Auswertung“ sind für alle gleich; zusätzlich kann jede Person eigene Dashboards anlegen — privat (nur für sich) oder öffentlich (alle sehen es).", tip: "Das zuletzt gewählte Dashboard wird beim nächsten Öffnen wieder angezeigt.", steps: [
-      ["Neues Dashboard", "„Dashboards verwalten“ öffnet die Liste aller Dashboards. Dort „+ Neues Dashboard“ wählen, Namen eingeben, „Privat“ oder „Öffentlich“ wählen und festlegen, ob als Kopie des aktuellen Dashboards oder leer begonnen wird. Danach öffnet sich gleich das Anpassen."],
-      ["Kopie erstellen", "In der Liste übernimmt „Kopie“ ein Dashboard (auch ein fremdes öffentliches oder ein Standard-Dashboard) als eigenes, das Sie frei ändern können."],
-      ["Wer darf was?", "Standard-Dashboards ändern nur Teamleitung und Administration — die Änderung gilt für alle. Ein öffentliches Dashboard ändern oder löschen nur die Person, die es angelegt hat, und die Administration; alle anderen sehen es nur. Private Dashboards sieht und ändert nur ihr Besitzer."],
-      ["Einstellungen", "Bei eigenen Dashboards öffnet „Einstellungen“ in der Liste Name und Sichtbarkeit; dort lässt sich ein Dashboard auch löschen. Wird ein Konto gelöscht, verschwinden seine privaten Dashboards, öffentliche bleiben erhalten."]
-    ] },
-    { title: "Dashboard anpassen", intro: "Jedes Dashboard besteht aus Widgets auf einem 12-Spalten-Raster. Anpassen kann, wer das Dashboard ändern darf (siehe „Dashboards“).", tip: "Bei Standard-Dashboards stellt „Ursprüngliches Layout“ die ausgelieferte Anordnung für alle wieder her, „Fertig“ beendet das Anpassen. Änderungen werden sofort gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
-      ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe). Diagramme, Verlaufslinien und der OEE-Ring passen sich der neuen Größe an; bei kleinen Widgets fallen Zusatzangaben wie Ø/Min/Max weg, damit nichts gescrollt werden muss."],
-      ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Karten, Kacheln und Diagramme für alle Werte aus dem Huddle — erfasste (z. B. Mengen, Ausfälle je Art) und berechnete (z. B. OEE, Technische Anlagenverfügbarkeit, Laufzeit, Gutmenge). Kacheln zeigen über einen Zeitraum die Summe, bei Kennzahlen den Wert für den ganzen Zeitraum (Ø) und bei Beständen den jüngsten Stand."],
-      ["Multigraph", "Bis zu fünf Werte mit bis zu zwei Einheiten in einem Diagramm: Die erste Einheit steht auf der linken, die zweite auf der rechten Achse (z. B. Ausschuss in t links, Ausfälle in h rechts). Die Legende nennt zu jedem Wert Einheit und Achse."],
-      ["Entfernen", "Das ✕ im Kopfbalken entfernt ein Widget; „Rückgängig“ im Hinweis stellt es wieder her."]] },
-    { title: "Abweichungs-Tracking", intro: "Der Reiter „Abweichungs-Tracking“ zeigt alle Abweichungen eines Zeitraums: aus den Tageskennzahlen erkannte, geplante Ausfälle und von Hand erfasste.", tip: "Der Zeitraum ist derselbe wie im Dashboard. „Aktuelle Arbeitswoche“ stellt immer die laufende Woche von Montag bis Sonntag ein.", steps: [
-      ["Zeitraum", "Tag, Arbeitswoche, Monat, Jahr oder ein frei definierter Zeitraum — mit ◀ ▶ blättern."],
-      ["Filter", "Kategorien (S, Q, I, D, P), Arten (z. B. S: Meldepflichtig / Nicht meldepflichtig, P: Geplant bzw. Ungeplant – Personell, Organisatorisch, Technisch) und Quelle lassen sich ein- und ausschalten. Ein Klick auf „Geplant“ oder „Ungeplant“ schaltet die ganze Gruppe."],
-      ["Summen", "Kacheln und die Tabelle „Summen je Art“ zählen Abweichungen und betroffene Tage und summieren Ausfallstunden, Nacharbeit und Ausschuss über den Zeitraum — immer passend zum Filter."],
-      ["Maßnahmen", "Ein Klick auf eine Zeile öffnet die verknüpfte Maßnahme oder legt eine neue an. Der CSV-Export enthält alle gefilterten Einträge."]] },
-    { title: "Abweichungsregeln", intro: "Diese Tageswerte führen zwingend zu einer Abweichung — sie werden aus den erfassten Werten erkannt, es gibt keine Doppeleingabe.", tip: "Geplante Ausfälle sind nie eine Abweichung, müssen im Huddle unter Produktivität aber ebenfalls begründet werden. Erkannte Abweichungen erscheinen zusätzlich im Reiter „Abweichungs-Tracking“.", steps: [
-      ["Q – Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan), jede Nacharbeit und jeder Ausschuss größer als 0."],
-      ["I – Inventory", "Inventory größer als der Inventory-Grenzwert."],
-      ["D – Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
-      ["P – Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) mit mehr als 0 Stunden ist eine eigene Abweichung. Geplante Ausfallarten über 0 Stunden sind keine Abweichung, brauchen aber eine Begründung, bevor der Punkt als besprochen gilt."],
-      ["S – Sicherheit", "Beinahe-Unfall, Nicht meldepflichtiger Unfall und Meldepflichtiger Unfall. „Kein Unfall“ ist keine Abweichung."]] },
-    { title: "Kennzahlen & Formeln", intro: "Alle Kennzahlen entstehen aus den Tageswerten der Huddle-Erfassung.", tip: "Die Schichtlänge (Standard 24 h) und die Zielwerte stehen unter Einstellungen → Stammdaten.", steps: [
-      ["Verfügbarkeit", "(Schicht − geplante Ausfälle − ungeplante Ausfälle) ÷ (Schicht − geplante Ausfälle). Alle vier Ausfallarten zählen mit."],
-      ["Technische Anlagenverfügbarkeit", "(Schicht − geplant technisch − ungeplant technisch) ÷ (Schicht − geplant technisch). Personen-, organisatorische und Rüstzeiten bleiben außen vor."],
-      ["Leistung, Qualität, OEE", "Leistung = produziert ÷ geplant, Qualität = (produziert − Ausschuss) ÷ produziert, OEE = Verfügbarkeit × Leistung × Qualität. Termintreue = pünktlich ÷ fällig."],
-      ["First Pass Yield, Nacharbeit, Ausschuss", "Die produzierte Menge teilt sich in drei Teile: Gutmenge im ersten Durchlauf (First Pass Yield), mit Nacharbeit verwendbar (gut, kein Ausschuss, aber kein First Pass Yield) und Ausschuss (geht zurück als Absandung / Kreislaufmaterial). First Pass Yield = (produziert − Nacharbeit − Ausschuss) ÷ produziert; die Qualität der OEE zählt Nacharbeit als verwendbar."],
-      ["Zeitraum im Dashboard", "Bei Monat, Jahr und Zeitraum werden Ausfallzeiten und Mengen (geplant, produziert, Ausschuss, fakturiert) summiert. Inventory zeigt den jüngsten Stand. Leistung, Qualität und Termintreue werden aus den Summen gebildet, Verfügbarkeit und OEE als Mittel der Tageswerte."]] },
-    { title: "Methodik (SQIDP & PDCA)", intro: "Shopfloor Management ist eine Lean-Führungsmethode: Abweichungen am Ort der Wertschöpfung erkennen, strukturiert lösen, Prozesse kontinuierlich verbessern.", tip: "Bewährt: maximal fünf bis sieben Kennzahlen, Commitment der Führung und eine offene Fehlerkultur. Fachliche Grundlage: symestic.com — „Shopfloor Management“.", steps: [
-      ["Führung am Gemba", "Regelmäßige Präsenz in der Fertigung — digitale Daten ersetzen den Gemba Walk nicht, sie bereiten ihn vor."],
-      ["Visuelle Boards", "Sicherheit, Qualität, Inventory, Lieferung und Produktivität auf einen Blick — grün oder rot, ohne Interpretationsspielraum."],
-      ["Strukturierte Problemlösung", "Jede Abweichung durchläuft PDCA; die 5-Why-Analyse führt zur Ursache statt zum Symptom."]] }
+    /* ===== Grundlagen ===== */
+    { id: "ueberblick", group: "Grundlagen", title: "Überblick: So arbeitet das Board",
+      intro: "Das Shopfloor Board ist das digitale Board einer Linie. Es bündelt die täglichen Kennzahlen, den SQIDP-Status (Sicherheit, Qualität, Inventory, Lieferung, Produktivität), die Abweichungen mit ihren Maßnahmen und die tägliche Runde am Board — den Daily Huddle.",
+      flow: ["Daily Huddle", "Werte erfassen", "Abweichungen begründen", "Maßnahmen (PDCA)", "Tagesbericht", "Auswertung"],
+      sections: [
+        { h: "Der tägliche Regelkreis",
+          p: "Jeden Tag trifft sich das Team zum Daily Huddle. Dort werden die Tageswerte des Vortags erfasst; das Board erkennt daraus selbstständig, wo eine Abweichung vorliegt (z. B. Ausschuss, ungeplanter Stillstand, verspätete Lieferung). Jede Abweichung wird begründet und — wenn nötig — mit einer Maßnahme verfolgt, bis die Ursache beseitigt ist. Der Tagesbericht fasst das Ergebnis zusammen, Dashboard, SQIDP-Board und Abweichungs-Tracking zeigen die Entwicklung über Wochen und Monate.",
+          note: "Alle Kennzahlen entstehen aus den im Huddle erfassten Tageswerten — es gibt keine Doppeleingabe." },
+        { h: "Die Bereiche", img: "kopfzeile", cap: "Kopfzeile mit allen Bereichen",
+          list: [
+            "<b>Dashboard</b> — Monatsbilanz, OEE, First Pass Yield, Termintreue und frei zusammenstellbare Kacheln und Diagramme.",
+            "<b>SQIDP-Board</b> — der Monatskalender: je Tag und Kategorie grün (in Ordnung) oder rot (Abweichung).",
+            "<b>Maßnahmen</b> — alle Abweichungen im PDCA-Ablauf; die Zahl am Symbol zeigt die offenen, rot heißt: etwas ist überfällig.",
+            "<b>Abweichungs-Tracking</b> — alle Abweichungen eines Zeitraums mit Filtern und Summen.",
+            "<b>Daily Huddle</b> — die tägliche Runde: Kennzahlen erfassen und die Agenda S, Q, I, D, P durchgehen.",
+            "<b>Tagesbericht</b> — Zusammenfassung eines Tages zum Versenden oder als PDF.",
+            "<b>Anwenderdoku</b> und <b>Einstellungen</b> — diese Hilfe, Stammdaten, Benutzer und Systemeinstellungen."
+          ] },
+        { h: "Wer macht was?", steps: [
+          ["Team / Schichtführung (Bearbeiten)", "Führt den Huddle, erfasst die Tageswerte, begründet Abweichungen und pflegt Maßnahmen."],
+          ["Teamleitung", "Zusätzlich Stammdaten (Ziele, Huddle-Dauer, Schichtlänge), Benutzer und die Standard-Dashboards für alle."],
+          ["Administration", "Zusätzlich E-Mail-Server, Datenbank & Sicherung, Sicherheitsprotokoll und Administrator-Konten."],
+          ["Nur Lesen", "Sieht alle Bereiche, ändert aber nichts — z. B. für Besucher oder Monitore. Eigene Dashboards darf jede Rolle anlegen."]
+        ] }
+      ],
+      tip: "Tastaturkürzel am PC: 1 Dashboard, 2 SQIDP-Board, 3 Maßnahmen, 4 Huddle, 5 Tagesbericht, 6 Einstellungen, N neue Abweichung." },
+
+    { id: "anmelden", group: "Grundlagen", title: "Anmelden & eigenes Konto",
+      intro: "Jede Person meldet sich mit einem eigenen Konto an. Die Rolle des Kontos bestimmt, was sie sehen und ändern darf.",
+      sections: [
+        { h: "Anmelden", img: "anmeldung", cap: "Anmeldeseite — unten steht die installierte Version", small: true, steps: [
+          ["Anmeldename oder E-Mail", "Den Anmeldenamen (z. B. „max.mustermann“) oder die hinterlegte E-Mail-Adresse eingeben — Groß- und Kleinschreibung spielt keine Rolle."],
+          ["Passwort", "Mindestens 10 Zeichen (am Server einstellbar), nicht gleich dem Namen. Nach mehreren Fehlversuchen ist die Anmeldung für 15 Minuten gesperrt."],
+          ["Erstes Konto", "Auf einem neuen System wird das zuerst angelegte Konto automatisch Administrator. Weitere Konten legt die Teamleitung oder Administration an."]
+        ] },
+        { h: "Passwort vergessen", steps: [
+          ["Link anfordern", "Auf der Anmeldeseite „Passwort vergessen?“ wählen und Anmeldename oder E-Mail eingeben."],
+          ["Mit E-Mail-Adresse", "Ist eine E-Mail hinterlegt und der Mailserver eingerichtet, kommt ein Link. Er gilt 60 Minuten und nur einmal."],
+          ["Ohne E-Mail-Adresse", "Die Anfrage erscheint bei der Administration in der Benutzerverwaltung; dort wird ein neues Passwort gesetzt und persönlich mitgeteilt."]
+        ] },
+        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“: E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
+        { h: "Abmelden", p: "Über das Pfeil-Symbol neben dem Namen. Nach 12 Stunden ohne Bedienung (einstellbar) meldet das Board automatisch ab — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage." }
+      ],
+      tip: "Das Board sollte nur über HTTPS geöffnet werden (Schloss-Symbol in der Adresszeile) — sonst gehen Passwörter ungeschützt über das Netz." },
+
+    { id: "bedienung", group: "Grundlagen", title: "Bedienung & Kopfzeile",
+      intro: "Die Kopfzeile ist immer sichtbar. Links stehen Linie und Bereiche, rechts Datum, Konto und Werkzeuge.",
+      sections: [
+        { h: "Werkzeuge in der Kopfzeile", img: "kopfzeile", cap: "Rechts: Datum, Konto, Abmelden, TV-Modus, Touch-Modus", list: [
+          "<b>Datum</b> — ein Klick öffnet direkt den Huddle von heute.",
+          "<b>Name</b> — „Mein Konto“ (E-Mail, Passwort).",
+          "<b>Pfeil</b> — Abmelden.",
+          "<b>Monitor</b> — TV-Modus für den Hallenmonitor.",
+          "<b>Zeiger</b> — Touch-Modus mit größeren Bedienelementen für Touch-Terminals.",
+          "<b>Speicherstatus</b> — erscheint nur, wenn etwas nicht gespeichert werden konnte. Ein Klick darauf öffnet „Datenbank & Sicherung“."
+        ] },
+        { h: "Hilfen im Board", list: [
+          "Das kleine <b>?</b> neben Feldern erklärt beim Daraufzeigen, was einzutragen ist.",
+          "Ungültige Eingaben werden rot markiert und nicht übernommen.",
+          "Gespeichert wird automatisch. Ändern zwei Personen gleichzeitig dasselbe, lädt das Board den neuesten Stand und meldet das.",
+          "Die installierte Version steht auf der Anmeldeseite und unter Einstellungen → Hilfe."
+        ] }
+      ],
+      tip: "Das Board passt sich an Bildschirmbreite an — es funktioniert am PC, am Tablet in der Halle und auf dem Handy." },
+
+    /* ===== Täglicher Ablauf ===== */
+    { id: "huddle", group: "Täglicher Ablauf", title: "Daily Huddle — der Ablauf",
+      intro: "Der Daily Huddle ist die tägliche Runde am Board. Das Board führt Schritt für Schritt durch: erst die Kennzahlen, dann die Agenda-Punkte Sicherheit, Qualität, Inventory, Lieferung und Produktivität.",
+      flow: ["Tag wählen", "Kennzahlen", "S", "Q", "I", "D", "P", "Huddle beenden"],
+      sections: [
+        { h: "1. Tag wählen", img: "huddle-kalender", cap: "Huddle-Kalender: grün = vollständig, orange = unvollständig",
+          p: "Im Bereich „Daily Huddle“ den Tag anklicken — üblicherweise den Vortag oder heute. Grüne Tage sind vollständig besprochen, orange Tage haben noch offene Punkte, helle Tage noch keinen Eintrag. Revisionstage tragen ein kleines „R“. Zukünftige Tage sind gesperrt." },
+        { h: "2. Kennzahlen erfassen", img: "huddle-kennzahlen", cap: "Schritt 1: Tages-Kennzahlen mit live berechnetem Ergebnis",
+          p: "Nach der Tagesauswahl öffnet sich das Fenster „Tages-Kennzahlen“. Oben zeigt die Schrittleiste den Fortschritt des ganzen Huddles, rechts läuft der Huddle-Timer mit. Die Werte werden in vier Reitern erfasst (siehe „Tageskennzahlen erfassen“); rechts rechnet das Board OEE, First Pass Yield, Termintreue und Verfügbarkeit sofort mit.",
+          steps: [
+            ["Speichern & weiter", "Speichert die Werte und geht zum ersten Agenda-Punkt (Sicherheit)."],
+            ["Speichern", "Speichert und bleibt im Fenster."],
+            ["Revision", "Für Tage ohne Produktion — siehe „Revisionstag“."]
+          ] },
+        { h: "3. Agenda S → Q → I → D → P", img: "huddle-agenda", cap: "Agenda-Punkt Qualität: Werte links, erkannte Abweichungen rechts",
+          p: "Jeder Agenda-Punkt zeigt links die zugehörigen Tageswerte (direkt änderbar) und rechts die daraus erkannten Abweichungen. Jede Abweichung braucht eine Begründung; erst dann lässt sich der Punkt „Als besprochen markieren“. „Weiter ›“ führt zum nächsten Punkt, ein Klick auf die Schrittleiste springt direkt.",
+          note: "Die Minutenangaben an den Agenda-Punkten (z. B. 3 min) sind Richtwerte, damit der Huddle in der geplanten Zeit bleibt." },
+        { h: "4. Huddle beenden", img: "huddle-runde", cap: "Huddle-Ansicht: Timer, Agenda mit Status und Themen aus Abweichungen",
+          p: "Beim letzten Punkt (Produktivität) schließt „Huddle beenden ✓“ den Huddle ab. Hinter den Fenstern liegt die Huddle-Ansicht mit großem Timer (Start, Pause, Zurücksetzen), der Agenda und den offenen Themen aus Abweichungen. „Huddle ENDE“ beendet die Runde und wechselt ins Dashboard — sind noch nicht alle Punkte besprochen, fragt das Board vorher nach.",
+          steps: [
+            ["Agenda-Status lesen", "„i. O.“ = keine Abweichung, „1 Abweichung“ = erkannt, „Begründung fehlt“ = noch zu begründen, grüner Haken = besprochen."],
+            ["Einzelne Punkte nacharbeiten", "Ein Klick auf eine Agenda-Karte öffnet den Punkt erneut — auch für frühere Tage."]
+          ] }
+      ],
+      tip: "Dauer und Uhrzeit des Huddles legt die Teamleitung in den Stammdaten fest. Die letzte Minute des Timers wird gelb; die Uhrzeit erscheint auch im TV-Modus." },
+
+    { id: "kennzahlen-erfassen", group: "Täglicher Ablauf", title: "Tageskennzahlen erfassen",
+      intro: "Die Tageswerte sind die Grundlage für alle Kennzahlen, Abweichungen und Auswertungen. Sie werden im ersten Schritt des Huddles erfasst und lassen sich später jederzeit korrigieren.",
+      sections: [
+        { h: "Reiter „Ausfälle“", p: "Stillstandszeiten in Stunden, getrennt nach ungeplant und geplant und jeweils nach Art. Die Summe je Gruppe steht neben der Überschrift.", list: [
+          "<b>Personen-Ausfälle</b> — fehlendes Personal (Krankheit, Unterbesetzung) bzw. geplant (Schulung, Betriebsversammlung).",
+          "<b>Technische Ausfälle</b> — Störungen, Defekte, Reparaturen bzw. geplante Wartung.",
+          "<b>Organisatorische Ausfälle</b> — fehlendes Material, fehlende Aufträge, Planungsfehler bzw. geplante Pausen der Linie.",
+          "<b>Rüst- und Handhabungszeiten</b> — Umrüsten, Werkzeugwechsel, Handling.",
+          "<b>Ungeplant</b> über 0 h ist immer eine Abweichung. <b>Geplant</b> ist keine Abweichung, muss aber begründet werden."
+        ] },
+        { h: "Reiter „Produktion“", img: "huddle-produktion", cap: "Mengen des Tages", list: [
+          "<b>Geplante Menge</b> und <b>produzierte Menge</b> in Tonnen — weichen sie voneinander ab, ist das eine Qualitäts-Abweichung (unter oder über Plan).",
+          "<b>Mit Nacharbeit verwendbar</b> — gut, aber nicht im ersten Durchlauf (zählt nicht zum First Pass Yield).",
+          "<b>Ausschuss</b> — nicht verwendbar (Absandung / Kreislaufmaterial)."
+        ] },
+        { h: "Reiter „Lager & Aufträge“", list: [
+          "<b>Inventory</b> — Bestand in Tonnen. Liegt er über dem <b>Inventory-Grenzwert</b>, ist das eine Abweichung. Der Grenzwert ist aus den Stammdaten vorbelegt und kann je Tag angepasst werden.",
+          "<b>Aufträge fällig</b> und <b>pünktlich geliefert</b> — weniger pünktlich als fällig ist eine Lieferungs-Abweichung.",
+          "<b>Fakturierte Menge</b> — berechnete Menge des Tages."
+        ] },
+        { h: "Reiter „Notiz“ und Korrekturen", steps: [
+          ["Notiz", "Freier Text zum Tag, z. B. Besonderheiten der Schicht. Erscheint im SQIDP-Board beim Tag."],
+          ["Werte später ändern", "Den Tag im Huddle-Kalender erneut öffnen oder im Agenda-Punkt die Werte direkt ändern. Geänderte Werte setzen den betroffenen Agenda-Punkt auf „nicht besprochen“ zurück, damit neue Abweichungen nicht übersehen werden."],
+          ["Werte löschen", "Entfernt alle Tageswerte des gewählten Tages — danach ist der Tag wieder offen."]
+        ] }
+      ],
+      tip: "Die Punkte an den Reitern zeigen, wo schon Werte erfasst sind. Leere Felder zählen nicht als 0 — so bleibt erkennbar, was noch fehlt." },
+
+    { id: "begruenden", group: "Täglicher Ablauf", title: "Abweichungen begründen",
+      intro: "Eine Abweichung ist alles, was vom Soll abweicht. Das Board erkennt sie aus den Tageswerten; im Huddle wird jede einzelne begründet. Erst dann gilt ein Agenda-Punkt als besprochen.",
+      flow: ["Wert erfasst", "Abweichung erkannt", "Begründung", "ggf. Maßnahme", "Besprochen ✓"],
+      sections: [
+        { h: "Erkannte Abweichungen", img: "huddle-agenda", cap: "Rot umrandet: Die Begründung fehlt noch",
+          p: "Rechts im Agenda-Punkt steht zu jeder erkannten Abweichung eine kurze Erklärung (z. B. „Nacharbeit 0,48 t“) und das Feld „Begründung (Pflicht)“. Hier kommt hinein, warum es dazu gekommen ist — kurz und konkret. Mit „Maßnahme anlegen“ entsteht direkt eine Maßnahme im PDCA-Ablauf." },
+        { h: "Geplante Stillstände", img: "huddle-produktivitaet", cap: "Produktivität: geplante Stillstände sind begründungspflichtig",
+          p: "Geplante Ausfälle (z. B. Wartung, Schulung) sind keine Abweichung und färben das Board nicht rot. Sie müssen im Punkt Produktivität trotzdem begründet werden, damit nachvollziehbar bleibt, wofür die Zeit geplant war." },
+        { h: "Sicherheit", p: "Im Punkt Sicherheit wird gewählt: Kein Unfall, Beinahe-Unfall, Nicht meldepflichtiger Unfall oder Meldepflichtiger Unfall. Alles außer „Kein Unfall“ ist eine Abweichung mit Begründung. Nur ein meldepflichtiger Unfall setzt den Zähler „Tage unfallfrei“ zurück." },
+        { h: "Weitere Abweichungen von Hand", p: "Was sich nicht aus Zahlen ablesen lässt (z. B. eine Stolperstelle, eine Kundenreklamation), wird mit „+ Weitere Abweichung hinzufügen“ erfasst. Die Beschreibung ist hier gleichzeitig die Begründung." },
+        { h: "Wann gilt ein Punkt als besprochen?", steps: [
+          ["Alle Abweichungen begründet", "Solange eine Begründung fehlt, lässt sich der Haken nicht setzen und die Agenda zeigt „Begründung fehlt“."],
+          ["Haken gesetzt", "„Als besprochen markieren“ — der Punkt wird grün und im SQIDP-Board erscheint der Tag in der Kategorie grün oder rot."],
+          ["Begründung gelöscht", "Wird eine Begründung später geleert, verschwindet der Haken wieder — der Punkt muss erneut besprochen werden."],
+          ["Wert geändert", "Ändert sich ein Tageswert nachträglich, wird der Punkt ebenfalls zurückgesetzt."]
+        ] }
+      ],
+      tip: "Welche Werte zu einer Abweichung führen, steht unter „Abweichungsregeln“." },
+
+    { id: "revision", group: "Täglicher Ablauf", title: "Revisionstag",
+      intro: "An Tagen ohne Produktion (Revision, Betriebsstillstand) wäre der normale Huddle unnötig lang. Das vereinfachte Fenster „Revision“ fragt nur ab, was an solchen Tagen zählt.",
+      sections: [
+        { h: "So geht’s", img: "revision", cap: "Fenster „Revisionstag“", small: true, steps: [
+          ["Öffnen", "Im Huddle oben „Revision“ wählen — oder im Kennzahlen-Fenster unten."],
+          ["Sicherheit", "Unfall-Auswahl wie im normalen Huddle."],
+          ["Inventory", "Bestand und Grenzwert eintragen bzw. bestätigen."],
+          ["Lieferung", "Fällige und pünktlich gelieferte Aufträge sowie die fakturierte Menge."],
+          ["Geplanter Stillstand", "Wird automatisch auf 24 h gesetzt. Art wählbar (Standard: Organisatorisch), Begründung „Revision“ ist vorbelegt."],
+          ["Speichern", "„Revisionstag speichern“ setzt alle übrigen Produktions- und Ausfallwerte auf 0 und markiert alle Punkte als besprochen."]
+        ] }
+      ],
+      tip: "Ergibt sich bei Sicherheit, Inventory oder Lieferung eine Abweichung, ist die Begründung direkt im Fenster Pflicht. Im Kalender trägt der Tag danach ein „R“." },
+
+    { id: "massnahmen", group: "Täglicher Ablauf", title: "Abweichungen & Maßnahmen (PDCA)",
+      intro: "Abweichungen, deren Ursache abgestellt werden muss, werden als Maßnahme verfolgt. Jede durchläuft den PDCA-Zyklus — Plan, Do, Check, Act — bis sie abgeschlossen ist.",
+      flow: ["Plan", "Do", "Check", "Act", "Abgeschlossen"],
+      sections: [
+        { h: "Die Spalten", img: "massnahmen", cap: "Maßnahmen-Board mit den vier PDCA-Spalten", list: [
+          "<b>Plan</b> — Problem verstehen, Ursache finden, Maßnahme planen.",
+          "<b>Do</b> — Maßnahme umsetzen.",
+          "<b>Check</b> — Wirksamkeit prüfen: Ist das Problem wirklich weg?",
+          "<b>Act</b> — Standard anpassen und verankern, damit es nicht wieder passiert.",
+          "Darunter stehen die <b>abgeschlossenen</b> Maßnahmen; „Wieder öffnen“ holt eine zurück."
+        ] },
+        { h: "Maßnahme anlegen", img: "abweichung", cap: "Abweichung bearbeiten", small: true, steps: [
+          ["Neu", "„+ Neue Abweichung“ (oder Taste N) — oder im Huddle bei einer erkannten Abweichung „Maßnahme anlegen“."],
+          ["Angaben", "Titel, Kategorie (S, Q, I, D, P), Art, PDCA-Phase, Fällig am, Verantwortlich und Begründung / Beschreibung (Pflicht)."],
+          ["5-Why-Analyse", "Aufklappen und so lange „Warum?“ fragen, bis die eigentliche Ursache statt des Symptoms gefunden ist."]
+        ] },
+        { h: "Verfolgen", steps: [
+          ["Weiterschieben", "Mit den Pfeil-Knöpfen auf der Karte (z. B. „Do →“) oder per Ziehen in die nächste Spalte."],
+          ["Überfällig", "Ist das Fälligkeitsdatum überschritten, wird es rot; die Zahl am Bereich „Maßnahmen“ wird rot."],
+          ["Filtern", "Nach Schlagwort, Kategorie, Verantwortlichen, Sortierung oder „Nur überfällige“."],
+          ["Abschließen", "Aus „Act“ auf „Abgeschlossen“ setzen. Löschen dürfen nur Teamleitung und Administration."]
+        ] }
+      ],
+      tip: "Der CSV-Export öffnet alle Abweichungen direkt in Excel — praktisch für Monatsgespräche." },
+
+    { id: "bericht", group: "Täglicher Ablauf", title: "Tagesbericht",
+      intro: "Der Tagesbericht fasst einen Tag zusammen: Kennzahlen mit Zielen, alle Tageswerte, Abweichungen mit Begründung, SQIDP-Status und offene Maßnahmen.",
+      sections: [
+        { h: "Bericht ansehen", img: "tagesbericht", cap: "Tagesbericht des Vortags", steps: [
+          ["Tag wählen", "Mit ◀ ▶ oder dem Datumsfeld; „Heute“ springt zurück. Bericht, E-Mail und PDF beziehen sich immer auf den gewählten Tag."],
+          ["Per E-Mail senden", "Öffnet den Bericht als E-Mail im eigenen E-Mail-Programm, an den Verteiler aus „E-Mail-Versand“. Alternativ lässt sich der Text kopieren, z. B. für Teams."],
+          ["Als PDF exportieren", "Öffnet die Druckansicht — dort „Als PDF speichern“ wählen."]
+        ] }
+      ],
+      tip: "Fehlt bei einer Abweichung die Begründung, steht im Bericht „FEHLT“ — ein guter Anlass, den Agenda-Punkt im Huddle noch einmal zu öffnen." },
+
+    /* ===== Auswertung ===== */
+    { id: "dashboard", group: "Auswertung", title: "Dashboard & Zeiträume",
+      intro: "Das Dashboard ist die Startseite nach der Anmeldung. Es zeigt die Lage der Linie für einen frei wählbaren Zeitraum.",
+      sections: [
+        { h: "Aufbau", img: "dashboard", cap: "Dashboard „Standard“ im Zeitraum Monat", list: [
+          "<b>Monatsbilanz SQIDP</b> — Grünquote je Kategorie: Anteil grüner Tage an den bewerteten Tagen.",
+          "<b>OEE</b> mit Verfügbarkeit, Leistung und Qualität, <b>First Pass Yield</b> und <b>Termintreue</b> mit Ziellinie und Vergleich zum Vorzeitraum.",
+          "<b>Kacheln</b> — Tage unfallfrei, offene Maßnahmen, Ausfälle, Mengen, Inventory und weitere Werte.",
+          "Farben: grün = Ziel erreicht, gelb/orange = knapp darunter, rot = deutlich darunter. Die Ziele stehen in den Stammdaten."
+        ] },
+        { h: "Zeitraum wählen", steps: [
+          ["Tag, Arbeitswoche, Monat, Jahr, Zeitraum", "Oben umschalten und mit ◀ ▶ blättern. „Aktueller Monat“ und „Aktuelle Arbeitswoche“ springen zurück ins Heute."],
+          ["Was wird zusammengerechnet?", "Mengen und Ausfallzeiten werden summiert, Inventory zeigt den jüngsten Stand, Quoten wie Termintreue werden aus den Summen gebildet."],
+          ["Tag-Ansicht", "Zeigt die Werte des gewählten Tages; Diagramme zeigen dann die letzten 14 Tage."]
+        ] },
+        { h: "Knöpfe oben rechts", list: [
+          "<b>Huddle starten</b> — springt in den Daily Huddle.",
+          "<b>CSV-Export</b> — alle Abweichungen für Excel.",
+          "<b>Datensicherung</b> — nur im lokalen Testmodus (ohne Server) zum Sichern und Wiederherstellen."
+        ] }
+      ],
+      tip: "Über die Auswahl links über den Kacheln lässt sich zwischen mehreren Dashboards wechseln — siehe „Dashboards verwalten“." },
+
+    { id: "dashboards", group: "Auswertung", title: "Dashboards verwalten",
+      intro: "Es gibt mehrere Dashboards. „Standard“ und „Detaillierte Auswertung“ gelten für alle. Zusätzlich kann jede Person eigene Dashboards anlegen — privat (nur für sich) oder öffentlich (alle sehen es).",
+      sections: [
+        { h: "Liste aller Dashboards", img: "dashboards-verwalten", cap: "Fenster „Dashboards verwalten“", small: true, steps: [
+          ["Öffnen", "„Dashboards verwalten“ zeigt alle Dashboards getrennt nach Standard, Öffentlich und Privat. „Öffnen“ zeigt eines an — schneller geht es über die Auswahl links."],
+          ["Neues Dashboard", "„+ Neues Dashboard“: Namen eingeben, Privat oder Öffentlich wählen und als Kopie des aktuellen Dashboards oder leer beginnen. Danach öffnet sich gleich das Anpassen."],
+          ["Kopie", "Übernimmt ein Dashboard — auch ein Standard- oder fremdes öffentliches — als eigenes, das Sie frei ändern können."],
+          ["Einstellungen", "Bei eigenen Dashboards: Name und Sichtbarkeit ändern oder das Dashboard löschen."]
+        ] },
+        { h: "Wer darf was?", list: [
+          "<b>Standard-Dashboards</b> ändern nur Teamleitung und Administration — die Änderung gilt für alle.",
+          "<b>Öffentliche</b> Dashboards sehen alle; ändern oder löschen dürfen nur die Person, die es angelegt hat, und die Administration.",
+          "<b>Private</b> Dashboards sieht und ändert nur ihr Besitzer. Wird ein Konto gelöscht, verschwinden seine privaten Dashboards; öffentliche bleiben."
+        ] }
+      ],
+      tip: "Das zuletzt gewählte Dashboard erscheint beim nächsten Öffnen wieder — auch auf einem anderen Gerät." },
+
+    { id: "anpassen", group: "Auswertung", title: "Dashboard anpassen",
+      intro: "Jedes Dashboard besteht aus Widgets (Karten, Kacheln, Diagramme) auf einem Raster mit 12 Spalten. Anpassen kann, wer das Dashboard ändern darf.",
+      sections: [
+        { h: "Anpassen-Modus", img: "dashboard-anpassen", cap: "Hervorgehobene Leiste im Anpassen-Modus", steps: [
+          ["Starten", "„Dashboard anpassen“ — oben erscheint eine blaue Leiste, die Widgets bekommen einen Kopfbalken."],
+          ["Verschieben", "Am Kopfbalken ziehen — oder Widget anklicken und mit den Pfeiltasten verschieben."],
+          ["Größe ändern", "Am Griff unten rechts ziehen — oder Umschalt + Pfeiltasten. Diagramme passen sich der Größe an."],
+          ["Entfernen", "Das ✕ im Kopfbalken; „Rückgängig“ im Hinweis stellt es wieder her."],
+          ["Fertig", "Beendet das Anpassen. Gespeichert wird sofort."]
+        ] },
+        { h: "Widgets hinzufügen", img: "widget-hinzufuegen", cap: "Karte oder Diagramm wählen", small: true, steps: [
+          ["Karte", "Monatsbilanz, OEE, First Pass Yield, Termintreue oder eine Kachel für jeden Wert aus dem Huddle — erfasst (z. B. Mengen, Ausfälle je Art) oder berechnet (z. B. Laufzeit, Gutmenge, Technische Anlagenverfügbarkeit)."],
+          ["Diagramm", "Verlauf über den gewählten Zeitraum. Als Multigraph bis zu fünf Werte mit bis zu zwei Einheiten — die erste Einheit links, die zweite rechts (z. B. Ausschuss in t und Ausfälle in h)."]
+        ] }
+      ],
+      tip: "Bei Standard-Dashboards stellt „Ursprüngliches Layout“ die ausgelieferte Anordnung für alle wieder her." },
+
+    { id: "board", group: "Auswertung", title: "SQIDP-Board",
+      intro: "Das SQIDP-Board ist der Monatskalender der Linie: Für jeden Tag und jede Kategorie zeigt es, ob der Tag in Ordnung war oder eine Abweichung hatte.",
+      sections: [
+        { h: "Lesen", img: "sqidp-board", cap: "SQIDP-Board mit Monatsbilanz", list: [
+          "<b>Grün ✓</b> — Punkt im Huddle ohne Abweichung besprochen.",
+          "<b>Rot !</b> — mindestens eine Abweichung an diesem Tag.",
+          "<b>Hell</b> — noch offen bzw. Tag liegt in der Zukunft.",
+          "Oben die Monatsbilanz je Kategorie mit Grünquote."
+        ] },
+        { h: "Details zu einem Tag", img: "board-tag", cap: "Klick auf eine Zelle", small: true,
+          p: "Ein Klick auf eine Zelle zeigt Status, Abweichung mit Maßnahme und Tagesnotiz. Das Board selbst ist nur lesend — den Status setzt der Huddle. Mit ◀ ▶ (oder den Pfeiltasten) durch die Monate blättern; „Drucken“ und „CSV-Export“ stehen oben rechts." }
+      ],
+      tip: "Eine rote Zelle ohne Maßnahme ist nicht automatisch ein Problem — nicht jede Abweichung braucht eine Maßnahme. Wiederholt sich dieselbe Ursache, sollte eine angelegt werden." },
+
+    { id: "tracking", group: "Auswertung", title: "Abweichungs-Tracking",
+      intro: "Das Abweichungs-Tracking listet alle Abweichungen eines Zeitraums — aus den Tageswerten erkannte, geplante Stillstände und von Hand erfasste — mit Filtern und Summen.",
+      sections: [
+        { h: "Filtern und auswerten", img: "tracking", cap: "Filter nach Kategorie, Quelle und Art", steps: [
+          ["Zeitraum", "Tag, Arbeitswoche, Monat, Jahr oder frei — wie im Dashboard."],
+          ["Filter", "Kategorien, Quelle (aus Kennzahlen, geplante Ausfälle, von Hand) und Arten ein- und ausschalten. Ein Klick auf „Geplant“ oder „Ungeplant“ schaltet die ganze Gruppe."],
+          ["Summen", "Die Kacheln und „Summen je Art“ zählen Abweichungen und betroffene Tage und summieren Ausfallstunden, Nacharbeit und Ausschuss — immer passend zum Filter."],
+          ["Maßnahme", "Ein Klick auf eine Zeile öffnet die verknüpfte Maßnahme oder legt eine neue an. Der CSV-Export enthält alle gefilterten Einträge."]
+        ] }
+      ],
+      tip: "Gut für die Ursachenanalyse: z. B. „Monat, nur P, ungeplant technisch“ zeigt, wie viele Stunden Technik-Störungen gekostet haben." },
+
+    { id: "tv", group: "Auswertung", title: "TV- und Touch-Modus",
+      intro: "Für den Hallenmonitor gibt es den TV-Modus, für Touch-Terminals den Touch-Modus.",
+      sections: [
+        { h: "TV-Modus", img: "tv-modus", cap: "TV-Modus mit Uhr, Kennzahlen und nächstem Huddle", steps: [
+          ["Starten", "Monitor-Symbol oben rechts."],
+          ["Vollbild", "Im Browser F11 drücken."],
+          ["Inhalt", "Uhrzeit, OEE, First Pass Yield, Termintreue, offene Maßnahmen, Tageswerte und die Uhrzeit des nächsten Huddles. Aktualisiert sich selbst; im TV-Modus wird nicht automatisch abgemeldet."],
+          ["Beenden", "Esc oder ✕ oben rechts."]
+        ] },
+        { h: "Touch-Modus", p: "Das Zeiger-Symbol in der Kopfzeile vergrößert Knöpfe und Eingabefelder — angenehm am Tablet oder Touch-Terminal in der Halle. Die Einstellung gilt für dieses Gerät." }
+      ],
+      tip: "Für einen Dauer-Monitor ein eigenes Konto mit „Nur Lesen“ anlegen." },
+
+    /* ===== Regeln & Kennzahlen ===== */
+    { id: "regeln", group: "Regeln & Kennzahlen", title: "Abweichungsregeln",
+      intro: "Diese Tageswerte führen zwingend zu einer Abweichung. Sie werden aus den erfassten Werten erkannt — es gibt keine Doppeleingabe.",
+      sections: [
+        { h: "Regeln je Kategorie", steps: [
+          ["S — Sicherheit", "Beinahe-Unfall, Nicht meldepflichtiger Unfall und Meldepflichtiger Unfall. „Kein Unfall“ ist keine Abweichung."],
+          ["Q — Qualität", "Produzierte Menge ungleich geplanter Menge (unter oder über Plan), jede Nacharbeit und jeder Ausschuss größer als 0."],
+          ["I — Inventory", "Inventory größer als der Inventory-Grenzwert des Tages."],
+          ["D — Lieferung", "Weniger Aufträge pünktlich geliefert als fällig."],
+          ["P — Produktivität", "Jede ungeplante Ausfallart (Personen, Technik, Organisation, Rüst- und Handhabungszeiten) über 0 Stunden ist eine eigene Abweichung."]
+        ] },
+        { h: "Keine Abweichung, aber begründungspflichtig", p: "Geplante Ausfallarten über 0 Stunden. Sie färben das Board nicht rot, brauchen im Huddle unter Produktivität aber eine Begründung, bevor der Punkt als besprochen gilt." }
+      ],
+      tip: "Alle erkannten Abweichungen erscheinen zusätzlich im Abweichungs-Tracking." },
+
+    { id: "formeln", group: "Regeln & Kennzahlen", title: "Kennzahlen & Formeln",
+      intro: "Alle Kennzahlen entstehen aus den Tageswerten der Huddle-Erfassung. Schichtlänge (Standard 24 h) und Zielwerte stehen in den Stammdaten.",
+      sections: [
+        { h: "Formeln", steps: [
+          ["Verfügbarkeit", "(Schicht − geplante Ausfälle − ungeplante Ausfälle) ÷ (Schicht − geplante Ausfälle). Geplante Stillstände verkürzen die Planzeit, ungeplante mindern die Verfügbarkeit."],
+          ["Technische Anlagenverfügbarkeit", "(Schicht − geplant technisch − ungeplant technisch) ÷ (Schicht − geplant technisch). Personen-, organisatorische und Rüstzeiten bleiben außen vor."],
+          ["Leistung", "produziert ÷ geplant."],
+          ["Qualität", "(produziert − Ausschuss) ÷ produziert — Nacharbeit zählt als verwendbar."],
+          ["OEE", "Verfügbarkeit × Leistung × Qualität."],
+          ["First Pass Yield", "(produziert − Nacharbeit − Ausschuss) ÷ produziert — nur was im ersten Durchlauf gut war."],
+          ["Termintreue", "pünktlich gelieferte ÷ fällige Aufträge."],
+          ["Laufzeit, Gutmenge", "Laufzeit = Schicht − alle Ausfälle; Gutmenge 1. Durchlauf = produziert − Nacharbeit − Ausschuss."]
+        ] },
+        { h: "Über Zeiträume", p: "Bei Woche, Monat, Jahr und freiem Zeitraum werden Ausfallzeiten und Mengen summiert. Inventory zeigt den jüngsten Stand. Leistung, Qualität, First Pass Yield und Termintreue werden aus den Summen gebildet (nicht als Mittel der Tagesquoten), Verfügbarkeit und OEE als Mittel der Tageswerte." }
+      ],
+      tip: "Das ? neben jedem Ergebnis im Kennzahlen-Fenster erklärt die Formel direkt beim Erfassen." },
+
+    { id: "methodik", group: "Regeln & Kennzahlen", title: "Methodik (SQIDP & PDCA)",
+      intro: "Shopfloor Management ist eine Lean-Führungsmethode: Abweichungen am Ort der Wertschöpfung erkennen, strukturiert lösen und die Prozesse kontinuierlich verbessern.",
+      sections: [
+        { h: "Grundgedanken", steps: [
+          ["Führung am Gemba", "Regelmäßige Präsenz in der Fertigung — digitale Daten ersetzen den Gang durch die Halle nicht, sie bereiten ihn vor."],
+          ["Visuelles Management", "Sicherheit, Qualität, Inventory, Lieferung und Produktivität auf einen Blick — grün oder rot, ohne Interpretationsspielraum."],
+          ["Kurze, feste Runde", "Täglich zur selben Zeit, mit fester Agenda und Zeitbegrenzung. Probleme werden benannt, nicht im Huddle gelöst."],
+          ["Strukturierte Problemlösung", "Jede wesentliche Abweichung durchläuft PDCA; die 5-Why-Analyse führt zur Ursache statt zum Symptom."]
+        ] }
+      ],
+      tip: "Bewährt: höchstens fünf bis sieben Kennzahlen, Rückhalt der Führung und eine offene Fehlerkultur — eine Abweichung ist eine Chance zur Verbesserung, kein Schuldvorwurf." },
+
+    /* ===== Verwaltung ===== */
+    { id: "rollen", group: "Verwaltung", title: "Rollen & Rechte",
+      intro: "Vier Rollen steuern den Zugriff. Der Server prüft jede Berechtigung — was in der Oberfläche ausgeblendet ist, ist auch technisch gesperrt.",
+      sections: [
+        { h: "Die Rollen", steps: [
+          ["Nur Lesen", "Sieht Dashboard, Board, Maßnahmen, Huddle und Tagesbericht. Darf eigene Dashboards anlegen."],
+          ["Bearbeiten", "Zusätzlich Huddle durchführen, Tageswerte erfassen, Abweichungen begründen und Maßnahmen pflegen."],
+          ["Teamleitung", "Zusätzlich Abweichungen löschen, Stammdaten pflegen, Standard-Dashboards ändern und Benutzer verwalten — außer Administrator-Konten."],
+          ["Administrator", "Darf alles: zusätzlich E-Mail-Versand, Datenbank & Sicherung, Sicherheitsprotokoll und Administrator-Konten."]
+        ] }
+      ],
+      tip: "Es bleibt immer mindestens ein aktiver Administrator erhalten — das letzte Administrator-Konto lässt sich weder sperren noch löschen." },
+
+    { id: "stammdaten", group: "Verwaltung", title: "Stammdaten",
+      intro: "Die Stammdaten gelten überall: Kopfzeile, Dashboard, Huddle, TV-Modus und Tagesbericht. Pflegen dürfen sie Teamleitung und Administration.",
+      sections: [
+        { h: "Einstellungen", img: "stammdaten", cap: "Einstellungen → Stammdaten", list: [
+          "<b>Linie / Bereich</b> — Name in Kopfzeile, TV-Modus und Berichten.",
+          "<b>Huddle-Dauer</b> (5–60 min) und <b>Huddle-Uhrzeit</b> — für Timer und TV-Modus.",
+          "<b>Geplante Produktionszeit</b> — Schichtlänge pro Tag in Stunden, Grundlage der Verfügbarkeit.",
+          "<b>Kennzahlen-Ziele</b> — OEE, First Pass Yield, Termintreue (färben Dashboard, TV-Modus und Bericht) und der Inventory-Grenzwert als Vorgabe für die tägliche Erfassung.",
+          "<b>Arbeitssicherheit</b> — Datum des letzten meldepflichtigen Unfalls bzw. Zählbeginn für „Tage unfallfrei“."
+        ] }
+      ],
+      tip: "Änderungen gelten erst nach „Speichern“; „Verwerfen“ stellt den gespeicherten Stand wieder her." },
+
+    { id: "benutzer", group: "Verwaltung", title: "Benutzerverwaltung",
+      intro: "Unter Einstellungen → Benutzerverwaltung legen Teamleitung und Administration Konten an und pflegen sie.",
+      sections: [
+        { h: "Konten pflegen", img: "benutzer", cap: "Benutzerverwaltung", steps: [
+          ["Anlegen", "„+ Benutzer anlegen“: Name, Anmeldename, optional E-Mail, Rolle (Funktion im Team, z. B. Meister:in), Berechtigung (Nur Lesen, Bearbeiten, Teamleitung, Administrator) und Startpasswort."],
+          ["Bearbeiten", "Name, E-Mail, Rolle und Berechtigung ändern."],
+          ["Passwort", "Neues Passwort setzen — das Konto wird dabei auf allen Geräten abgemeldet."],
+          ["Sperren / Entfernen", "Gesperrte Konten verlieren sofort alle Sitzungen. Beim Entfernen verschwinden auch die privaten Dashboards des Kontos."],
+          ["Offene Passwort-Anfragen", "Wer „Passwort vergessen“ gewählt hat, aber keinen Link bekommen konnte, steht oben in der Liste."]
+        ] }
+      ],
+      tip: "Die Teamleitung kann keine Administrator-Konten anlegen oder ändern." },
+
+    { id: "email", group: "Verwaltung", title: "E-Mail-Versand",
+      intro: "Hier stehen Absender, Mailserver und Verteiler. Der Server nutzt den Mailserver für „Passwort vergessen“ und Test-E-Mails; den Tagesbericht verschicken Sie über Ihr eigenes E-Mail-Programm an den Verteiler.",
+      sections: [
+        { h: "Einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
+          ["Absender", "Absendername, Absenderadresse und Antwortadresse."],
+          ["SMTP-Server", "Server, Port und Verschlüsselung (üblich: STARTTLS auf Port 587), Benutzer und Passwort. Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt — Feld leer lassen, um es zu behalten."],
+          ["Verbindung testen", "Prüft Server, Anmeldung und Verschlüsselung direkt."],
+          ["Verteiler", "Empfänger des Tagesberichts und die Betreff-Vorlage ({linie} und {datum} werden ersetzt)."]
+        ] }
+      ],
+      tip: "Nur die Administration sieht diesen Bereich." },
+
+    { id: "sicherung", group: "Verwaltung", title: "Datenbank & Sicherung",
+      intro: "Am Server liegen alle Daten in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand. Der Server sichert sie selbstständig.",
+      sections: [
+        { h: "Sichern und wiederherstellen", steps: [
+          ["Status", "Oben stehen Speicherort, Programm- und Datenbankversion, Sicherungswerkzeug und der Abgleich mit der Freigabe."],
+          ["Automatisch sichern", "„Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Dafür muss nur der Server laufen, nicht der Browser."],
+          ["Jetzt sichern / Herunterladen", "Legt sofort eine Sicherung an bzw. speichert eine Sicherungsdatei (.dump) auf diesem Computer."],
+          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — nach Rückfrage wird der Inhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."]
+        ] },
+        { h: "Kopie auf SMB-Freigabe", steps: [
+          ["Einrichten", "Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern."],
+          ["Betrieb", "Jede Sicherung wird zusätzlich dorthin kopiert, fehlende Kopien holt der Server stündlich nach. Gelöschte Sicherungen bleiben auf der Freigabe erhalten."],
+          ["Ernstfall", "Eine Datei von der Freigabe in den Ordner „backups“ des Projekts kopieren — sie erscheint dann in der Liste und lässt sich wiederherstellen."]
+        ] },
+        { h: "Überwachung", p: "Läuft auf dem Server ein Checkmk-Agent, richtet ./deploy.sh die Dienste „Shopfloor Board“, „Shopfloor Backup“ und „Shopfloor Backup SMB“ ein. Sie melden u. a. eine Sicherung älter als 26 h (Warnung) bzw. 50 h, einen fehlgeschlagenen Versuch oder einen gescheiterten Abgleich mit der Freigabe (kritisch)." }
+      ],
+      tip: "Vor jedem Update mit ./deploy.sh wird automatisch eine Sicherung angelegt." },
+
+    { id: "sicherheit", group: "Verwaltung", title: "Sicherheit & Protokoll",
+      intro: "Am Server prüft die Datenbank jede Anmeldung und jede Berechtigung. Passwörter werden nur als Hash gespeichert, Passwörter für Mail- und SMB-Server verschlüsselt.",
+      sections: [
+        { h: "Sicherheitsprotokoll", p: "Unter Einstellungen → Sicherheitsprotokoll sieht die Administration Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen, Dashboard-Änderungen und Speichervorgänge mit Zeit, Konto und IP-Adresse." },
+        { h: "Schutzmechanismen", list: [
+          "Sperre nach mehreren Fehlversuchen (15 Minuten), Begrenzung der Anmeldeversuche je Netzwerkadresse.",
+          "Automatische Abmeldung nach 12 Stunden ohne Bedienung, höchstens 14 Tage je Anmeldung.",
+          "Passwortänderung meldet alle anderen Geräte ab; gesperrte Konten verlieren sofort alle Sitzungen.",
+          "Gleichzeitige Änderungen werden erkannt — nichts wird stillschweigend überschrieben."
+        ] }
+      ],
+      tip: "Das Board nur über HTTPS (Reverse Proxy) erreichbar machen." },
+
+    { id: "lokal", group: "Verwaltung", title: "Lokaler Testmodus",
+      intro: "Wird die Seite ohne Server geöffnet, läuft das Board im Testmodus: Mit Testdaten, alles liegt nur im Speicher dieses Browsers.",
+      sections: [
+        { h: "Besonderheiten", steps: [
+          ["Konten", "Liegen nur in diesem Browser; das erste registrierte Konto wird Administrator. Ein Demo-Zugang ohne Konto ist möglich."],
+          ["Datensicherung", "„Datensicherung“ im Dashboard lädt alle Daten als Datei herunter und spielt sie wieder ein."],
+          ["Testdaten", "Für Administratoren: Das Kreispfeil-Symbol lädt die Testdaten neu, das Datenbank-Symbol ergänzt fehlende Tageswerte bis gestern."]
+        ] }
+      ],
+      tip: "Für den echten Betrieb immer die Server-Installation (./deploy.sh) verwenden — ein Browser-Reset löscht lokale Daten unwiederbringlich." }
   ];
-  var docIdx = 0;
-  function renderDoc() {
-    var chips = $("#docChips");
-    chips.innerHTML = "";
-    DOCS.forEach(function (d, i) {
-      var c = el("button", "doc-chip" + (i === docIdx ? " active" : ""), d.title);
-      c.type = "button";
-      c.addEventListener("click", function () { docIdx = i; renderDoc(); });
-      chips.appendChild(c);
+  var docIdx = 0, docQuery = "";
+  function docMatches(d, q) {
+    if (!q) return true;
+    var txt = [d.title, d.intro, d.tip, (d.flow || []).join(" ")].concat((d.sections || []).map(function (s) {
+      return [s.h, s.p, s.note, s.cap, (s.list || []).join(" "), (s.steps || []).map(function (x) { return x.join(" "); }).join(" ")].join(" ");
+    })).join(" ").toLowerCase();
+    return q.toLowerCase().split(/\s+/).every(function (w) { return txt.indexOf(w) >= 0; });
+  }
+  // Text mit <b>…</b> sicher einsetzen (nur Fettdruck aus den Doku-Texten, sonst reiner Text)
+  function docRich(node, text) {
+    String(text).split(/(<b>[^<]*<\/b>)/).forEach(function (part) {
+      var m = /^<b>([^<]*)<\/b>$/.exec(part);
+      if (m) node.appendChild(el("b", "", m[1]));
+      else if (part) node.appendChild(document.createTextNode(part));
     });
+    return node;
+  }
+  function docFigure(s) {
+    var fig = el("figure", "doc-fig" + (s.small ? " small" : ""));
+    var img = document.createElement("img");
+    img.src = "docs/" + s.img + ".webp";
+    img.alt = s.cap || "";
+    img.loading = "lazy";
+    img.addEventListener("error", function () { fig.hidden = true; });
+    img.addEventListener("click", function () { openDocImage(img.src, s.cap); });
+    fig.appendChild(img);
+    if (s.cap) fig.appendChild(el("figcaption", "", s.cap));
+    return fig;
+  }
+  function openDocImage(src, cap) {
+    var dlg = $("#docImgDialog");
+    $("#docImgBig").src = src;
+    $("#docImgBig").alt = cap || "";
+    $("#docImgCap").textContent = cap || "";
+    dlg.showModal();
+  }
+  $("#docImgDialog").addEventListener("click", function () { this.close(); });
+  function renderDocToc() {
+    var toc = $("#docToc"), sel = $("#docSelect");
+    toc.innerHTML = ""; sel.innerHTML = "";
+    var any = false;
+    DOC_GROUPS.forEach(function (g) {
+      var items = DOCS.map(function (d, i) { return { d: d, i: i }; }).filter(function (x) { return x.d.group === g && docMatches(x.d, docQuery); });
+      if (!items.length) return;
+      any = true;
+      toc.appendChild(el("div", "doc-toc-group", g));
+      var og = document.createElement("optgroup"); og.label = g;
+      items.forEach(function (x) {
+        var b = el("button", "doc-toc-item" + (x.i === docIdx ? " active" : ""), x.d.title);
+        b.type = "button";
+        b.addEventListener("click", function () { showDoc(x.i); });
+        toc.appendChild(b);
+        var o = document.createElement("option"); o.value = x.i; o.textContent = x.d.title; og.appendChild(o);
+      });
+      sel.appendChild(og);
+    });
+    if (!any) toc.appendChild(el("p", "mini-hint", "Kein Thema gefunden."));
+    sel.value = String(docIdx);
+  }
+  function showDoc(i) {
+    docIdx = i;
+    renderDoc();
+    var art = $("#docArticle");
+    if (art.getBoundingClientRect().top < 0) art.scrollIntoView({ block: "start" });
+  }
+  function renderDoc() {
+    renderDocToc();
     var art = $("#docArticle");
     art.innerHTML = "";
     var d = DOCS[docIdx];
-    art.appendChild(el("div", "doc-title", d.title));
-    art.appendChild(el("div", "doc-intro", d.intro));
-    var steps = el("div", "doc-steps");
-    d.steps.forEach(function (s, i) {
-      var row = el("div", "doc-step");
-      row.appendChild(el("span", "doc-n", String(i + 1)));
-      var box = el("div");
-      box.appendChild(el("div", "doc-step-t", s[0]));
-      box.appendChild(el("div", "doc-step-d", s[1]));
-      row.appendChild(box);
-      steps.appendChild(row);
+    art.appendChild(el("div", "doc-group-label", d.group));
+    art.appendChild(el("h3", "doc-title", d.title));
+    art.appendChild(el("p", "doc-intro", d.intro));
+    if (d.flow) {
+      var flow = el("ol", "doc-flow");
+      flow.setAttribute("aria-label", "Ablauf");
+      d.flow.forEach(function (f, i) {
+        var li = el("li", "doc-flow-step");
+        li.appendChild(el("span", "doc-flow-n", String(i + 1)));
+        li.appendChild(el("span", "", f));
+        flow.appendChild(li);
+      });
+      art.appendChild(flow);
+    }
+    (d.sections || []).forEach(function (s) {
+      var sec = el("section", "doc-sec" + (s.img && s.small ? " with-side" : ""));
+      var body = el("div", "doc-sec-body");
+      if (s.h) sec.appendChild(el("h4", "doc-h", s.h));
+      if (s.p) body.appendChild(docRich(el("p", "doc-p"), s.p));
+      if (s.list) {
+        var ul = el("ul", "doc-list");
+        s.list.forEach(function (t) { ul.appendChild(docRich(el("li"), t)); });
+        body.appendChild(ul);
+      }
+      if (s.steps) {
+        var steps = el("div", "doc-steps");
+        s.steps.forEach(function (st, i) {
+          var row = el("div", "doc-step");
+          row.appendChild(el("span", "doc-n", String(i + 1)));
+          var box = el("div");
+          box.appendChild(el("div", "doc-step-t", st[0]));
+          box.appendChild(docRich(el("div", "doc-step-d"), st[1]));
+          row.appendChild(box);
+          steps.appendChild(row);
+        });
+        body.appendChild(steps);
+      }
+      if (s.note) body.appendChild(docRich(el("p", "doc-note"), s.note));
+      if (s.img && !s.small) sec.appendChild(docFigure(s));
+      sec.appendChild(body);
+      if (s.img && s.small) sec.appendChild(docFigure(s));
+      art.appendChild(sec);
     });
-    art.appendChild(steps);
-    var tip = el("div", "doc-tip");
-    tip.appendChild(el("b", "", "Tipp: "));
-    tip.appendChild(document.createTextNode(d.tip));
-    art.appendChild(tip);
+    if (d.tip) {
+      var tip = el("div", "doc-tip");
+      tip.appendChild(el("b", "", "Tipp: "));
+      tip.appendChild(document.createTextNode(d.tip));
+      art.appendChild(tip);
+    }
+    var nav = el("div", "doc-pager");
+    var prev = DOCS[docIdx - 1], next = DOCS[docIdx + 1];
+    if (prev) { var pb = el("button", "btn", "‹ " + prev.title); pb.type = "button"; pb.addEventListener("click", function () { showDoc(docIdx - 1); }); nav.appendChild(pb); }
+    nav.appendChild(el("span", "wz-spacer"));
+    if (next) { var nb = el("button", "btn", next.title + " ›"); nb.type = "button"; nb.addEventListener("click", function () { showDoc(docIdx + 1); }); nav.appendChild(nb); }
+    art.appendChild(nav);
   }
+  $("#docSearch").addEventListener("input", function () {
+    docQuery = this.value.trim();
+    var first = DOCS.findIndex(function (d) { return docMatches(d, docQuery); });
+    if (first >= 0 && !docMatches(DOCS[docIdx], docQuery)) docIdx = first;
+    renderDoc();
+  });
+  $("#docSelect").addEventListener("change", function () { showDoc(+this.value); });
   renderDoc();
 
   /* ---------- Tagesbericht (E-Mail) ---------- */
