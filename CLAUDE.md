@@ -41,7 +41,8 @@ backend/src/            Node/Express + PostgreSQL (pg)
   http.js               HttpError, wrap, requireUser/Edit/Manager/Admin, guardAdminAccount, passwordMatches
   routes/documents.js   Gesamtdokumente state/settings/users mit Revisionsnummer und Konfliktprüfung (409)
   routes/auth.js        Anmeldung, Registrierung, Demo, „Passwort vergessen“ (Einmal-Links, Bremse)
-  routes/account.js     Konten verwalten, eigenes Konto, Dashboard-Layout je Benutzer
+  routes/account.js     Konten verwalten, eigenes Konto, zuletzt gewähltes Dashboard
+  routes/dashboards.js  Dashboard-Liste (standard/public/private), Regeln in dashboards.js
   routes/admin.js       E-Mail-Server, Sicherheitsprotokoll, Sicherungen, SMB
   db.js                 Schema + idempotente Migration (bei jedem Start; Beispiel: CHECK-Regel erweitern)
   users.js sessions.js passwords.js audit.js
@@ -75,8 +76,13 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   Haken; geänderte Werte setzen „besprochen“ zurück (`reopenAgenda`).
 - **Revisionstag:** Fenster „Revision“ — nur Sicherheit, Inventory, Lieferung; geplant 24 h (Standard
   Organisatorisch, Begründung „Revision“), Rest 0, `rec.revision = true`, alle Punkte besprochen.
-- **Dashboards:** `BOARDS.dash` und `BOARDS.detail`, Widgets im 12-Spalten-Raster je Benutzer (lokal + am Konto),
-  `sanitizeWidgets` prüft gespeicherte Layouts, `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
+- **Dashboards:** Liste mehrerer Dashboards (`dashList`, `currentDash()`, Auswahl `#dashSelect`), Widgets im
+  12-Spalten-Raster. Sichtbarkeit `standard` (eingebaut: `standard`, `detail` = „Detaillierte Auswertung“; ändern nur
+  manager/admin, `widgets: null` = ausgeliefertes Layout aus `DASH_BUILTIN`), `public` (alle sehen, ändern/löschen
+  nur Ersteller + admin), `private` (nur Besitzer). Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
+  alter `users.dashboard`-Layouts → private Dashboards), `routes/dashboards.js`; `/api/user/dashboard` speichert nur
+  das zuletzt gewählte (`{v:2,current}`). Lokal: `sfm-dashboards-v1`. `sanitizeWidgets` prüft gespeicherte Layouts,
+  `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
   (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).

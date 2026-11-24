@@ -9,6 +9,21 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Dashboard-Liste:** Auswahl mehrerer Dashboards im Dashboard. Jede Person kann eigene Dashboards anlegen —
+  **privat** (nur für sich) oder **öffentlich** (für alle sichtbar) —, leer oder als Kopie eines bestehenden
+  („Kopie erstellen“). Öffentliche Dashboards ändern und löschen nur Ersteller:in und Administration. Das zuletzt
+  gewählte Dashboard bleibt je Konto gespeichert.
+
+### Geändert
+- **Standard-Dashboards:** Das bisherige Dashboard heißt „Standard“ und ist für alle gleich; anpassen dürfen es
+  Teamleitung und Administration („Ursprüngliches Layout“ setzt es zurück).
+- **Detaillierte Auswertung** ist jetzt ein auswählbares Standard-Dashboard statt eines eigenen Vollbilds; der
+  bisherige Knopf entfällt.
+- Bisherige persönliche Layouts werden beim Update automatisch als private Dashboards „Mein Dashboard“ bzw.
+  „Meine Auswertung“ übernommen und vorausgewählt.
+- Sicherungen enthalten zusätzlich die Dashboards.
+
 ## [1.2.0] – 2026-11-24
 
 ### Neu

@@ -100,6 +100,20 @@ CREATE TABLE IF NOT EXISTS backups (
   size_bytes bigint NOT NULL DEFAULT 0,
   error      text
 );
+
+-- Dashboard-Liste (Standard, öffentlich, privat); widgets NULL = eingebautes Layout der Oberfläche
+CREATE TABLE IF NOT EXISTS dashboards (
+  id         text PRIMARY KEY,
+  name       text NOT NULL,
+  visibility text NOT NULL CHECK (visibility IN ('standard', 'public', 'private')),
+  owner      text,
+  widgets    jsonb,
+  position   integer NOT NULL DEFAULT 100,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  updated_by text
+);
+CREATE INDEX IF NOT EXISTS dashboards_owner_lower ON dashboards (lower(owner));
 `;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -126,6 +140,9 @@ async function migrate() {
     // Ältere Konten ohne Anmeldenamen bekommen einen aus dem Namen
     const n = await require("./users").backfillUsernames(c);
     if (n) console.log(`[db] ${n} Anmeldename(n) aus dem Namen abgeleitet`);
+    // Standard-Dashboards anlegen, frühere persönliche Layouts in private Dashboards übernehmen
+    const moved = await require("./dashboards").migrate(c);
+    if (moved) console.log(`[db] ${moved} persönliche(s) Layout(s) als private Dashboards übernommen`);
   } finally {
     await c.query("SELECT pg_advisory_unlock(424242)").catch(() => {});
     c.release();

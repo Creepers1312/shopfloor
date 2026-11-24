@@ -230,6 +230,8 @@ async function syncFromClient(q, list, actorPerm = "admin") {
     await q.query("DELETE FROM sessions WHERE lower(user_name) = ANY($1::text[])", [names]);
     await q.query("DELETE FROM password_resets WHERE lower(user_name) = ANY($1::text[])", [names]);
     await q.query("DELETE FROM reset_requests WHERE lower(user_name) = ANY($1::text[])", [names]);
+    // Private Dashboards gehen mit dem Konto; öffentliche bleiben (die Administration kann sie löschen)
+    await q.query("DELETE FROM dashboards WHERE visibility = 'private' AND lower(owner) = ANY($1::text[])", [names]);
     changes.removed = del.rows.map((r) => r.name);
   }
   // Gesperrte Konten verlieren sofort alle Sitzungen und offenen Reset-Links
