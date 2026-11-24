@@ -1516,13 +1516,11 @@ kbd {
 
 
 /* ============ Anpassbares Dashboard (12-Spalten-Raster) ============ */
-.dash-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-right: auto; }
-.dash-picker select { min-width: 220px; max-width: 340px; font-weight: 600; }
 .dm-vis { display: flex; flex-direction: column; gap: 8px; }
 .dm-opt { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; font-weight: 400 !important; color: var(--ink); cursor: pointer; }
 .dm-opt input { margin-top: 3px; }
+.dash-toolbar:not(.editing) { display: none; }
 .dash-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 14px; }
-.dash-toolbar.editing > :not(.dash-editbar) { display: none; }
 .dash-editbar { flex: 1 1 100%; display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap; padding: 10px 12px 10px 16px;
   border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); border-radius: 12px;
   background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
@@ -1531,19 +1529,36 @@ kbd {
 .dash-editbar-text b { font-size: 14px; }
 .dash-editbar-text span { font-size: 12px; color: var(--muted); }
 .dash-editbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-#dashListDialog { width: min(640px, calc(100vw - 32px)); }
-.dl-top { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
-.dl-top .mini-hint { margin: 0; flex: 1 1 240px; }
-.dl-group { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 14px 0 6px; }
-.dl-group:first-child { margin-top: 0; }
-.dl-list { display: flex; flex-direction: column; }
-.dl-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 6px; background: var(--surface); }
-.dl-row.current { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
-.dl-main { flex: 1 1 auto; min-width: 0; }
-.dl-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dl-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
-.dl-actions { display: flex; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
-@media (max-width: 560px) { .dl-row { flex-wrap: wrap; } .dl-actions { width: 100%; justify-content: flex-start; } }
+.dash-menu-wrap { position: relative; }
+.dash-menu-btn { display: inline-flex; align-items: center; gap: 8px; max-width: 340px; }
+.dash-menu-btn .ico { width: 16px; height: 16px; flex: none; }
+.dash-menu-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dash-menu-vis { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; white-space: nowrap; }
+.dash-menu-caret { color: var(--muted); font-size: 11px; }
+.dash-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 60; width: min(380px, calc(100vw - 32px));
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 8px; }
+.dash-menu[hidden] { display: none; }
+.dash-menu-list { max-height: min(46vh, 360px); overflow-y: auto; padding-bottom: 6px; }
+.dash-menu-group { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; padding: 8px 10px 4px; }
+.dash-menu-opt { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: var(--ink); padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+.dash-menu-opt:hover, .dash-menu-opt:focus-visible, .dash-menu-item:hover, .dash-menu-item:focus-visible { background: var(--surface-2); outline: none; }
+.dash-menu-opt.current { background: color-mix(in srgb, var(--accent) 11%, transparent); }
+.dash-menu-check { width: 16px; flex: none; color: var(--accent-2); font-weight: 700; }
+.dash-menu-opt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.dash-menu-opt.current .dash-menu-opt-name { font-weight: 600; }
+.dash-menu-opt-owner { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.dash-menu-actions { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; }
+.dash-menu-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: var(--ink); padding: 8px 10px; border-radius: 9px; cursor: pointer; }
+.dash-menu-item[hidden] { display: none; }
+.dash-menu-item b { display: block; font-weight: 600; font-size: 14px; }
+.dash-menu-item small { display: block; font-size: 12px; color: var(--muted); margin-top: 1px; }
+.dmi-ico { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; flex: none; background: var(--surface-2); color: var(--accent-2); font-size: 13px; margin-top: 1px; }
+@media (max-width: 640px) {
+  .dash-menu-wrap { position: static; width: 100%; }
+  .dash-menu-btn { max-width: none; width: 100%; }
+  .dash-menu-name { flex: 1; text-align: left; }
+  .dash-menu { left: 16px; right: 16px; width: auto; top: auto; margin-top: 6px; position: absolute; }
+}
 .dash-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-auto-rows: 40px; gap: 12px; position: relative; }
 .dw {
   grid-column: var(--x) / span var(--w); grid-row: var(--y) / span var(--h);
@@ -1875,6 +1890,23 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <h1 id="dashTitle">Übersicht Linie M2</h1>
     </div>
     <div class="head-actions">
+      <div class="dash-menu-wrap">
+        <button class="btn dash-menu-btn" id="dashMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="dashMenu" title="Dashboard wechseln, anpassen, kopieren oder neu anlegen">
+          <svg class="ico" aria-hidden="true"><use href="#i-dashboard"/></svg>
+          <span class="dash-menu-name" id="dashMenuName">Standard</span>
+          <span class="dash-menu-vis" id="dashVisPill"></span>
+          <span class="dash-menu-caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="dash-menu" id="dashMenu" role="menu" aria-label="Dashboards" hidden>
+          <div class="dash-menu-list" id="dashMenuList"></div>
+          <div class="dash-menu-actions">
+            <button class="dash-menu-item" role="menuitem" type="button" id="dashEditBtn"><span class="dmi-ico" aria-hidden="true">✎</span><span><b>Dashboard anpassen</b><small id="dashEditHintTxt">Karten und Diagramme hinzufügen, verschieben, Größe ändern</small></span></button>
+            <button class="dash-menu-item" role="menuitem" type="button" id="dashCopyBtn"><span class="dmi-ico" aria-hidden="true">⧉</span><span><b>Kopie erstellen</b><small>Dieses Dashboard als eigenes übernehmen</small></span></button>
+            <button class="dash-menu-item" role="menuitem" type="button" id="dashMetaBtn"><span class="dmi-ico" aria-hidden="true">⚙</span><span><b>Einstellungen</b><small>Name, Sichtbarkeit, löschen</small></span></button>
+            <button class="dash-menu-item" role="menuitem" type="button" id="dashNewBtn"><span class="dmi-ico" aria-hidden="true">＋</span><span><b>Neues Dashboard</b><small>Leer oder als Kopie, privat oder öffentlich</small></span></button>
+          </div>
+        </div>
+      </div>
       <button class="btn" id="backupBtn" title="Alle Daten als Datei sichern oder aus einer Sicherung wiederherstellen">Datensicherung</button>
       <button class="btn" id="dashCsvBtn" title="Tages-Kennzahlen (OEE, FPY, Termintreue u. a.) als CSV exportieren">CSV-Export</button>
       <button class="btn primary" data-goto="huddle">Huddle starten</button>
@@ -1905,12 +1937,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     <p class="mini-hint" id="dashCoverageText"></p>
   </div>
   <div class="dash-toolbar" id="dashToolbar">
-    <div class="dash-picker" id="dashPicker">
-      <select id="dashSelect" class="perm-select" aria-label="Dashboard auswählen"></select>
-      <span class="pill neutral" id="dashVisPill"></span>
-    </div>
-    <button class="btn" id="dashManageBtn" type="button" title="Alle Dashboards: öffnen, neu anlegen, kopieren, umbenennen, löschen">Dashboards verwalten</button>
-    <button class="btn" id="dashEditBtn" title="Karten und Diagramme hinzufügen, verschieben und in der Größe ändern">Dashboard anpassen</button>
     <div class="dash-editbar" id="dashEditTools" hidden>
       <div class="dash-editbar-text">
         <b id="dashEditTitle">Dashboard anpassen</b>
@@ -3043,20 +3069,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 </dialog>
 
 <!-- Dialog: Dashboard anlegen / Einstellungen -->
-<dialog id="dashListDialog" aria-labelledby="dlTitle">
-  <div class="dlg-head">
-    <h2 id="dlTitle">Dashboards</h2>
-    <button type="button" class="btn ghost sm" id="dlClose" aria-label="Schließen">✕</button>
-  </div>
-  <div class="dlg-body">
-    <div class="dl-top">
-      <p class="mini-hint">Standard-Dashboards gelten für alle. Eigene Dashboards sind privat oder öffentlich.</p>
-      <button type="button" class="btn primary" id="dlNew">+ Neues Dashboard</button>
-    </div>
-    <div class="dl-list" id="dlList"></div>
-  </div>
-</dialog>
-
 <dialog id="dashMetaDialog">
   <form method="dialog" id="dashMetaForm" novalidate>
     <div class="dlg-head">
@@ -5964,34 +5976,72 @@ window.SFM = (function () {
     B.edit = on;
     renderActiveBoard();
   }
+  function dashOwnerText(x) {
+    var me = dashMe().toLowerCase();
+    if (x.visibility !== "public") return "";
+    return String(x.owner).toLowerCase() === me && me ? "von Ihnen" : "von " + x.owner;
+  }
   function renderDashPicker() {
-    var sel = $("#dashSelect");
-    if (!sel) return;
-    var list = dashList || dashFallbackList(), d = currentDash(), me = dashMe().toLowerCase();
-    sel.innerHTML = "";
-    [["standard", "Standard"], ["public", "Öffentlich"], ["private", "Privat"]].forEach(function (g) {
+    if (!$("#dashMenuName")) return;
+    var d = currentDash();
+    $("#dashMenuName").textContent = d.name;
+    $("#dashVisPill").textContent = d.visibility === "standard" ? "für alle" : d.visibility === "public" ? "öffentlich" : "privat";
+    $("#dashMenuBtn").title = "Dashboard: " + d.name + " — " + (d.visibility === "standard" ? "Standard-Dashboard, gleich für alle"
+      : d.visibility === "public" ? "öffentlich, " + dashOwnerText(d) : "privat, nur für Sie") + ". Klicken zum Wechseln, Anpassen oder Anlegen.";
+    $("#dashLayoutReset").hidden = !dashIsBuiltin(d);
+    $("#dashEditHintTxt").textContent = dashIsBuiltin(d) ? "Gilt für alle — Teamleitung und Administration" : "Karten und Diagramme hinzufügen, verschieben, Größe ändern";
+    $("#dashCopyBtn").hidden = !dashMe();
+    $("#dashNewBtn").hidden = !dashMe();
+    $("#dashMetaBtn").hidden = !(d.canEdit && !dashIsBuiltin(d));
+    if (!$("#dashMenu").hidden) renderDashMenuList();
+  }
+  function renderDashMenuList() {
+    var box = $("#dashMenuList"), list = dashList || dashFallbackList(), cur = currentDash();
+    box.innerHTML = "";
+    [["standard", "Standard — für alle"], ["public", "Öffentlich"], ["private", "Privat — nur für Sie"]].forEach(function (g) {
       var items = list.filter(function (x) { return x.visibility === g[0]; });
       if (!items.length) return;
-      var og = document.createElement("optgroup");
-      og.label = g[1];
+      box.appendChild(el("div", "dash-menu-group", g[1]));
       items.forEach(function (x) {
-        var o = document.createElement("option");
-        o.value = x.id;
-        o.textContent = x.name + (x.visibility === "public" && String(x.owner).toLowerCase() !== me ? " · " + x.owner : "");
-        og.appendChild(o);
+        var b = el("button", "dash-menu-opt" + (x.id === cur.id ? " current" : ""));
+        b.type = "button"; b.setAttribute("role", "menuitemradio"); b.setAttribute("aria-checked", x.id === cur.id ? "true" : "false");
+        b.appendChild(el("span", "dash-menu-check", x.id === cur.id ? "✓" : ""));
+        b.appendChild(el("span", "dash-menu-opt-name", x.name));
+        var own = dashOwnerText(x);
+        if (own) b.appendChild(el("span", "dash-menu-opt-owner", own));
+        b.addEventListener("click", function () { closeDashMenu(); selectDash(x.id); });
+        box.appendChild(b);
       });
-      sel.appendChild(og);
     });
-    sel.value = d.id;
-    var mine = String(d.owner).toLowerCase() === me && !!me;
-    $("#dashVisPill").textContent = d.visibility === "standard" ? "Für alle" : d.visibility === "public" ? "Öffentlich · " + (mine ? "von Ihnen" : "von " + d.owner) : "Privat";
-    $("#dashVisPill").title = d.visibility === "standard" ? "Standard-Dashboard — gleich für alle, gepflegt von Teamleitung und Administration"
-      : d.visibility === "public" ? "Alle sehen dieses Dashboard; ändern darf nur, wer es angelegt hat (und die Administration)" : "Nur Sie sehen dieses Dashboard";
-    $("#dashLayoutReset").hidden = !dashIsBuiltin(d);
-    $("#dashEditBtn").title = dashIsBuiltin(d)
-      ? "„" + d.name + "“ für alle anpassen (Teamleitung und Administration)"
-      : "Karten und Diagramme hinzufügen, verschieben und in der Größe ändern";
   }
+  function openDashMenu() {
+    renderDashPicker(); renderDashMenuList();
+    $("#dashMenu").hidden = false;
+    $("#dashMenuBtn").setAttribute("aria-expanded", "true");
+    var first = $("#dashMenu .dash-menu-opt.current") || $("#dashMenu .dash-menu-opt");
+    if (first) first.focus();
+    // Öffentliche Dashboards ändern andere — beim Öffnen den aktuellen Stand holen
+    if (SFM.isServer()) loadDashList(currentDashId).then(function () { if (!$("#dashMenu").hidden) renderDashMenuList(); }, function () {});
+  }
+  function closeDashMenu() {
+    $("#dashMenu").hidden = true;
+    $("#dashMenuBtn").setAttribute("aria-expanded", "false");
+  }
+  $("#dashMenuBtn").addEventListener("click", function (e) {
+    e.stopPropagation();
+    if ($("#dashMenu").hidden) openDashMenu(); else closeDashMenu();
+  });
+  document.addEventListener("click", function (e) {
+    if (!$("#dashMenu").hidden && !e.target.closest(".dash-menu-wrap")) closeDashMenu();
+  });
+  $("#dashMenu").addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { closeDashMenu(); $("#dashMenuBtn").focus(); return; }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    var items = [].slice.call($("#dashMenu").querySelectorAll("button:not([hidden])"));
+    var i = items.indexOf(document.activeElement);
+    items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
+  });
   function selectDash(id) {
     if (id === currentDashId) return;
     B.edit = false;
@@ -6002,7 +6052,6 @@ window.SFM = (function () {
     // Öffentliche Dashboards ändern andere — beim Wechsel den aktuellen Stand holen
     if (SFM.isServer()) loadDashList(id);
   }
-  $("#dashSelect").addEventListener("change", function () { selectDash(this.value); });
 
   var dmDlg = $("#dashMetaDialog"), dmMode = "new";
   function dmError(msg) { var e = $("#dmError"); e.hidden = !msg; e.textContent = msg || ""; }
@@ -6023,50 +6072,9 @@ window.SFM = (function () {
     dmDlg.showModal();
     setTimeout(function () { $("#dmName").focus(); $("#dmName").select(); }, 0);
   }
-  // Fenster „Dashboards verwalten“: alle Dashboards mit Öffnen, Kopie, Einstellungen
-  var dlDlg = $("#dashListDialog");
-  function dashVisText(x) {
-    var me = dashMe().toLowerCase();
-    if (x.visibility === "standard") return "Für alle · gepflegt von Teamleitung und Administration";
-    if (x.visibility === "public") return "Öffentlich · " + (String(x.owner).toLowerCase() === me && me ? "von Ihnen" : "von " + x.owner);
-    return "Privat · nur für Sie";
-  }
-  function renderDashListDialog() {
-    var box = $("#dlList"), list = dashList || dashFallbackList(), cur = currentDash();
-    box.innerHTML = "";
-    $("#dlNew").hidden = !dashMe();
-    [["standard", "Standard"], ["public", "Öffentlich"], ["private", "Privat"]].forEach(function (g) {
-      var items = list.filter(function (x) { return x.visibility === g[0]; });
-      if (!items.length) return;
-      box.appendChild(el("div", "dl-group", g[1]));
-      items.forEach(function (x) {
-        var row = el("div", "dl-row" + (x.id === cur.id ? " current" : ""));
-        var main = el("div", "dl-main");
-        main.appendChild(el("div", "dl-name", x.name));
-        main.appendChild(el("div", "dl-sub", (x.id === cur.id ? "Angezeigt · " : "") + dashVisText(x)));
-        row.appendChild(main);
-        var act = el("div", "dl-actions");
-        var btn = function (label, cls, title, fn) {
-          var b = el("button", "btn sm" + (cls ? " " + cls : ""), label);
-          b.type = "button"; b.title = title;
-          b.addEventListener("click", fn);
-          act.appendChild(b);
-        };
-        if (x.id !== cur.id) btn("Öffnen", "primary", "Dieses Dashboard anzeigen", function () { dlDlg.close(); selectDash(x.id); });
-        if (dashMe()) btn("Kopie", "", "Als eigenes Dashboard kopieren", function () { dlDlg.close(); selectDash(x.id); openDashMeta("copy"); });
-        if (x.canEdit && !dashIsBuiltin(x)) btn("Einstellungen", "", "Name, Sichtbarkeit, löschen", function () { dlDlg.close(); selectDash(x.id); openDashMeta("edit"); });
-        row.appendChild(act);
-        box.appendChild(row);
-      });
-    });
-  }
-  $("#dashManageBtn").addEventListener("click", function () {
-    renderDashListDialog();
-    dlDlg.showModal();
-    if (SFM.isServer()) loadDashList(currentDashId).then(function () { if (dlDlg.open) renderDashListDialog(); }, function () {});
-  });
-  $("#dlClose").addEventListener("click", function () { dlDlg.close(); });
-  $("#dlNew").addEventListener("click", function () { dlDlg.close(); openDashMeta("new"); });
+  $("#dashNewBtn").addEventListener("click", function () { closeDashMenu(); openDashMeta("new"); });
+  $("#dashCopyBtn").addEventListener("click", function () { closeDashMenu(); openDashMeta("copy"); });
+  $("#dashMetaBtn").addEventListener("click", function () { closeDashMenu(); openDashMeta("edit"); });
   $("#dmCancel").addEventListener("click", function () { dmDlg.close(); });
   $("#dmClose").addEventListener("click", function () { dmDlg.close(); });
   $("#dashMetaForm").addEventListener("submit", function (e) {
@@ -6131,7 +6139,7 @@ window.SFM = (function () {
     });
   });
 
-  $("#dashEditBtn").addEventListener("click", function () { setDashEdit(true); });
+  $("#dashEditBtn").addEventListener("click", function () { closeDashMenu(); setDashEdit(true); });
   $("#dashEditDone").addEventListener("click", function () { setDashEdit(false); });
   $("#dashAddBtn").addEventListener("click", function () { openWidgetDialog(null); });
   $("#dashLayoutReset").addEventListener("click", function () {
@@ -10031,16 +10039,17 @@ window.SFM = (function () {
           "<b>Datensicherung</b> — nur im lokalen Testmodus (ohne Server) zum Sichern und Wiederherstellen."
         ] }
       ],
-      tip: "Über die Auswahl links über den Kacheln lässt sich zwischen mehreren Dashboards wechseln — siehe „Dashboards verwalten“." },
+      tip: "Über den Dashboard-Knopf oben rechts lässt sich zwischen mehreren Dashboards wechseln — siehe „Dashboards wechseln & verwalten“." },
 
-    { id: "dashboards", group: "Auswertung", title: "Dashboards verwalten",
-      intro: "Es gibt mehrere Dashboards. „Standard“ und „Detaillierte Auswertung“ gelten für alle. Zusätzlich kann jede Person eigene Dashboards anlegen — privat (nur für sich) oder öffentlich (alle sehen es).",
+    { id: "dashboards", group: "Auswertung", title: "Dashboards wechseln & verwalten",
+      intro: "Es gibt mehrere Dashboards. „Standard“ und „Detaillierte Auswertung“ gelten für alle. Zusätzlich kann jede Person eigene Dashboards anlegen — privat (nur für sich) oder öffentlich (alle sehen es). Alles dazu steckt im Dashboard-Knopf oben rechts.",
       sections: [
-        { h: "Liste aller Dashboards", img: "dashboards-verwalten", cap: "Fenster „Dashboards verwalten“", small: true, steps: [
-          ["Öffnen", "„Dashboards verwalten“ zeigt alle Dashboards getrennt nach Standard, Öffentlich und Privat. „Öffnen“ zeigt eines an — schneller geht es über die Auswahl links."],
-          ["Neues Dashboard", "„+ Neues Dashboard“: Namen eingeben, Privat oder Öffentlich wählen und als Kopie des aktuellen Dashboards oder leer beginnen. Danach öffnet sich gleich das Anpassen."],
-          ["Kopie", "Übernimmt ein Dashboard — auch ein Standard- oder fremdes öffentliches — als eigenes, das Sie frei ändern können."],
-          ["Einstellungen", "Bei eigenen Dashboards: Name und Sichtbarkeit ändern oder das Dashboard löschen."]
+        { h: "Das Dashboard-Menü", img: "dashboard-menue", cap: "Knopf mit dem Namen des Dashboards — ein Klick öffnet das Menü", small: true, steps: [
+          ["Wechseln", "Oben rechts auf den Knopf mit dem Namen des aktuellen Dashboards klicken (z. B. „Standard · für alle“). Oben im Menü stehen alle Dashboards — Standard, Öffentlich, Privat; ein Klick zeigt eines an, der Haken markiert das aktuelle."],
+          ["Dashboard anpassen", "Karten und Diagramme hinzufügen, verschieben, Größe ändern — erscheint nur, wenn Sie das Dashboard ändern dürfen (siehe „Dashboard anpassen“)."],
+          ["Kopie erstellen", "Übernimmt das aktuelle Dashboard — auch ein Standard- oder fremdes öffentliches — als eigenes, das Sie frei ändern können."],
+          ["Einstellungen", "Nur bei eigenen Dashboards: Name und Sichtbarkeit ändern oder das Dashboard löschen."],
+          ["Neues Dashboard", "Namen eingeben, Privat oder Öffentlich wählen und als Kopie des aktuellen Dashboards oder leer beginnen. Danach öffnet sich gleich das Anpassen."]
         ] },
         { h: "Wer darf was?", list: [
           "<b>Standard-Dashboards</b> ändern nur Teamleitung und Administration — die Änderung gilt für alle.",
@@ -10048,13 +10057,12 @@ window.SFM = (function () {
           "<b>Private</b> Dashboards sieht und ändert nur ihr Besitzer. Wird ein Konto gelöscht, verschwinden seine privaten Dashboards; öffentliche bleiben."
         ] }
       ],
-      tip: "Das zuletzt gewählte Dashboard erscheint beim nächsten Öffnen wieder — auch auf einem anderen Gerät." },
-
+      tip: "Das zuletzt gewählte Dashboard erscheint beim nächsten Öffnen wieder — auch auf einem anderen Gerät. Im Menü lässt es sich auch mit den Pfeiltasten bedienen; Esc schließt es." },
     { id: "anpassen", group: "Auswertung", title: "Dashboard anpassen",
       intro: "Jedes Dashboard besteht aus Widgets (Karten, Kacheln, Diagramme) auf einem Raster mit 12 Spalten. Anpassen kann, wer das Dashboard ändern darf.",
       sections: [
         { h: "Anpassen-Modus", img: "dashboard-anpassen", cap: "Hervorgehobene Leiste im Anpassen-Modus", steps: [
-          ["Starten", "„Dashboard anpassen“ — oben erscheint eine blaue Leiste, die Widgets bekommen einen Kopfbalken."],
+          ["Starten", "Dashboard-Knopf oben rechts → „Dashboard anpassen“. Über den Widgets erscheint eine blaue Leiste, die Widgets bekommen einen Kopfbalken."],
           ["Verschieben", "Am Kopfbalken ziehen — oder Widget anklicken und mit den Pfeiltasten verschieben."],
           ["Größe ändern", "Am Griff unten rechts ziehen — oder Umschalt + Pfeiltasten. Diagramme passen sich der Größe an."],
           ["Entfernen", "Das ✕ im Kopfbalken; „Rückgängig“ im Hinweis stellt es wieder her."],

@@ -24,7 +24,9 @@ const W = 1440, H = 900;
   await p.mouse.move(W - 5, H - 5);
   await shot('kopfzeile', { clip: { x: 0, y: 0, width: W, height: 96 } });
   await shot('dashboard');
-  await p.click('#dashManageBtn'); await wait(400); await shot('dashboards-verwalten', { clip: await box('dialog[open]', 28) }); await p.click('#dlClose');
+  await p.click('#dashMenuBtn'); await wait(400);
+  { const r1 = await p.locator('#dashMenuBtn').boundingBox(), r2 = await p.locator('#dashMenu').boundingBox();
+    const x = Math.min(r1.x, r2.x) - 24, y = r1.y - 20; await shot('dashboard-menue', { clip: { x, y, width: Math.max(r1.x + r1.width, r2.x + r2.width) - x + 24, height: r2.y + r2.height - y + 24 } }); }
   await p.click('#dashEditBtn'); await wait(400);
   await p.evaluate(() => scrollTo(0, document.querySelector('#dashToolbar').getBoundingClientRect().top + scrollY - 16)); await wait(300);
   await shot('dashboard-anpassen');

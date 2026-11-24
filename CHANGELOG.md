@@ -22,10 +22,11 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   Regeln & Kennzahlen, Verwaltung) mit Bildschirmfotos, Prozessabläufen (z. B. Daily Huddle, Abweichung begründen,
   PDCA) und Schritt-für-Schritt-Anleitungen. Neu sind Themenliste mit Suche, Blättern zum nächsten Thema und
   Vergrößern der Bilder per Klick.
-- **Dashboards übersichtlicher:** Neben der Auswahl stehen nur noch „Dashboards verwalten“ und „Dashboard
-  anpassen“. Anlegen, Kopieren, Einstellungen und Löschen laufen über das Fenster „Dashboards verwalten“ mit der
-  Liste aller Dashboards. Beim Anpassen erscheint eine eigene, hervorgehobene Leiste mit „+ Widget hinzufügen“,
-  „Ursprüngliches Layout“ und „Fertig“.
+- **Dashboards übersichtlicher:** Die Dashboard-Knöpfe sind in die Kopfzeile neben „Datensicherung“,
+  „CSV-Export“ und „Huddle starten“ gewandert. Ein Knopf mit dem Namen des aktuellen Dashboards öffnet ein Menü:
+  oben alle Dashboards zum Wechseln (Standard, Öffentlich, Privat), darunter „Dashboard anpassen“, „Kopie
+  erstellen“, „Einstellungen“ und „Neues Dashboard“. Beim Anpassen erscheint eine eigene, hervorgehobene Leiste
+  mit „+ Widget hinzufügen“, „Ursprüngliches Layout“ und „Fertig“.
 
 ### Behoben
 - In den Einstellungen überlagerte die Seitenleiste auf schmalen Bildschirmen beim Scrollen den Inhalt.
