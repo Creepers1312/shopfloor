@@ -640,6 +640,7 @@ dialog.wizard .dlg-foot .btn { padding: 11px 20px; font-size: 14.5px; }
 .wz-step.current .wz-step-n { background: var(--accent); color: #fff; }
 .wz-step.ok .wz-step-n { background: var(--good); color: #fff; }
 .wz-step.nok .wz-step-n { background: var(--crit); color: #fff; }
+.wz-step.warn .wz-step-n { background: var(--warn); color: #fff; }
 .wz-step-t { min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
 .wz-step-name { font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wz-step small { font-size: 12px; color: var(--muted); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -4392,7 +4393,7 @@ window.SFM = (function () {
   }
   function huddleChecklistComplete(iso) {
     var h = huddleEntry(iso);
-    return !!(h && h.checked && AGENDA.every(function (a) { return h.checked.indexOf(a.id) !== -1; }));
+    return !!(h && h.checked && AGENDA.every(function (a) { return agendaChecked(a.id, iso); }));
   }
   function huddleChecklistPartial(iso) {
     var h = huddleEntry(iso);
@@ -7024,9 +7025,25 @@ window.SFM = (function () {
     });
     return { findings: findings, extra: extra, notes: notes, count: findings.length + extra.length, missing: missing };
   }
-  function agendaChecked(catKey, iso) {
+  // Abgehakt im Huddle-Protokoll (gespeicherter Haken)
+  function agendaMarked(catKey, iso) {
     var h = state.huddleLog[iso];
     return !!(h && h.checked && h.checked.indexOf(catKey) !== -1);
+  }
+  // „Besprochen“ gilt nur, solange alle Abweichungen und geplanten Stillstände begründet sind —
+  // fehlt eine Begründung (z. B. nachträglich gelöscht), ist der Punkt wieder offen
+  function agendaChecked(catKey, iso) {
+    return agendaMarked(catKey, iso) && agendaModel(catKey, iso).missing === 0;
+  }
+  // Haken entfernen, wenn eine Begründung gelöscht wurde: nach dem Nachtragen muss der Punkt
+  // bewusst wieder als besprochen markiert werden
+  function unmarkAgenda(catKey, iso) {
+    var h = state.huddleLog[iso];
+    if (!h || !h.checked) return false;
+    var i = h.checked.indexOf(catKey);
+    if (i === -1) return false;
+    h.checked.splice(i, 1);
+    return true;
   }
   // Hält die Board-Zelle des Tages mit den erkannten/erfassten Abweichungen in Einklang
   function syncAgendaStatus(catKey, iso) {
@@ -7054,7 +7071,7 @@ window.SFM = (function () {
   function toggleAgendaChecked(catKey) {
     if (!can("edit")) return;
     var mdl = agendaModel(catKey, selectedHuddleIso);
-    var already = agendaChecked(catKey, selectedHuddleIso);
+    var already = agendaMarked(catKey, selectedHuddleIso) && mdl.missing === 0;
     if (!already && mdl.missing > 0) {
       toast("Erst alle Abweichungen und geplanten Stillstände begründen — dann als besprochen markieren");
       if (!agDlg.open) openAgendaDialog(catKey);
@@ -7063,7 +7080,8 @@ window.SFM = (function () {
     if (!state.huddleLog[selectedHuddleIso]) state.huddleLog[selectedHuddleIso] = { checked: [] };
     var checked = state.huddleLog[selectedHuddleIso].checked;
     var i = checked.indexOf(catKey);
-    if (i === -1) checked.push(catKey); else checked.splice(i, 1);
+    if (!already && i === -1) checked.push(catKey);
+    else if (already && i !== -1) checked.splice(i, 1);
     syncAgendaStatus(catKey, selectedHuddleIso);
     save(); renderAll();
   }
@@ -7077,8 +7095,9 @@ window.SFM = (function () {
     AGENDA.forEach(function (item) {
       var c = catOf(item.id), as = agendaStateOf(c.key, iso), done = agendaChecked(c.key, iso);
       steps.push({
-        id: item.id, name: c.name, cls: as.st === "nok" ? "nok" : as.st === "ok" ? "ok" : "",
-        sub: done ? "Besprochen" : as.st === "nok" ? as.count + (as.count === 1 ? " Abweichung" : " Abweichungen") : as.st === "ok" ? "In Ordnung" : "Offen",
+        id: item.id, name: c.name, cls: as.st === "nok" ? "nok" : as.missing > 0 ? "warn" : as.st === "ok" ? "ok" : "",
+        sub: done ? "Besprochen" : as.missing > 0 ? (as.missing === 1 ? "Begründung fehlt" : as.missing + "× Begründung fehlt")
+          : as.st === "nok" ? as.count + (as.count === 1 ? " Abweichung" : " Abweichungen") : as.st === "ok" ? "In Ordnung" : "Offen",
         mark: done ? "✓" : letterOf(c.key), color: catColor(c.key)
       });
     });
@@ -7280,7 +7299,13 @@ window.SFM = (function () {
     rl.htmlFor = ri.id = "agReason-" + item.key;
     ri.addEventListener("input", function () {
       setReason(iso, agCat, item.key, ri.value);
-      rw.classList.toggle("missing", !ri.value.trim());
+      var empty = !ri.value.trim();
+      rw.classList.toggle("missing", empty);
+      if (empty && unmarkAgenda(agCat, iso)) {
+        save();
+        toast("Begründung entfernt — " + letterOf(agCat) + " " + catOf(agCat).name + " ist nicht mehr besprochen");
+        renderAgenda(); renderHuddleCalendar();
+      }
       refreshAgendaDone();
     });
     ri.addEventListener("change", function () { renderAgenda(); renderHuddleCalendar(); renderReport(); });
@@ -7477,8 +7502,11 @@ window.SFM = (function () {
       row.appendChild(el("span", "agenda-k", letterOf(c.key)));
       row.appendChild(el("span", "agenda-title", c.name));
       row.appendChild(el("span", "agenda-min", item.min + " min"));
-      row.appendChild(el("span", "pill " + (as.st === "ok" ? "ok" : as.st === "nok" ? "crit" : "neutral"),
-        as.st === "nok" ? as.count + (as.count === 1 ? " Abweichung" : " Abweichungen") : as.st === "ok" ? "i. O." : "Offen"));
+      // „i. O.“ nur, wenn auch nichts mehr zu begründen ist
+      if (!(as.st === "ok" && as.missing > 0)) {
+        row.appendChild(el("span", "pill " + (as.st === "ok" ? "ok" : as.st === "nok" ? "crit" : "neutral"),
+          as.st === "nok" ? as.count + (as.count === 1 ? " Abweichung" : " Abweichungen") : as.st === "ok" ? "i. O." : "Offen"));
+      }
       if (as.missing > 0) row.appendChild(el("span", "pill warn", as.missing === 1 ? "Begründung fehlt" : as.missing + "× Begründung fehlt"));
       var chk = el("button", "agenda-check", "✓");
       chk.type = "button";
