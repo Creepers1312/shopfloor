@@ -1013,6 +1013,20 @@ table.board th.is-today .wd { color: var(--accent); }
 @media (max-width: 480px) { .dgrid { grid-template-columns: 1fr; } }
 .dgroup { margin: 0; padding: 10px 14px 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-2); min-width: 0; }
 .dgroup legend { flex-wrap: wrap; row-gap: 2px; padding: 0 6px; font-size: 13px; font-weight: 600; color: var(--ink); display: flex; align-items: center; gap: 10px; }
+dialog.wizard.rev-dialog { width: min(780px, calc(100vw - 32px)); height: fit-content; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); }
+dialog.wizard.rev-dialog .field textarea { min-height: 64px; font-size: 15px; }
+dialog.wizard.rev-dialog .field input, dialog.wizard.rev-dialog .field select { font-size: 16px; }
+/* Revisionstag im Huddle-Kalender: kleines „R“ in der Ecke */
+.huddle-cal-day.revision { position: relative; }
+.huddle-cal-day.revision::after { content: "R"; position: absolute; top: 3px; right: 5px; font-size: 9px; font-weight: 700; color: var(--muted); }
+.rev-dialog .dgroup { display: flex; flex-direction: column; gap: 10px; }
+.rev-dialog .rev-letter { width: 24px; height: 24px; font-size: 12px; border-radius: 6px; }
+.rev-dialog .rev-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+dialog.wizard.rev-dialog .ag-choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+dialog.wizard.rev-dialog .ag-choice { padding: 10px 8px; font-size: 13.5px; text-align: center; }
+@media (max-width: 620px) { dialog.wizard.rev-dialog .ag-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .rev-dialog .rev-three { grid-template-columns: 1fr; } }
+.rev-dialog .rev-reason textarea { width: 100%; }
 .dgroup-sum { font-size: 12px; font-weight: 600; color: var(--accent-2); font-variant-numeric: tabular-nums; }
 .dgroup .field input { background: var(--surface); }
 .dgroup .mini-hint { margin: 8px 0 0; }
@@ -1967,6 +1981,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <div class="head-actions">
       <button class="btn" id="huddleBackBtn" hidden>◀ Anderen Tag wählen</button>
+      <button class="btn" id="huddleRevBtn" hidden title="Tag ohne Produktion: nur Sicherheit, Inventory und Lieferung erfassen">Revision</button>
       <button class="btn primary" id="huddleKpiBtn" hidden>Kennzahlen erfassen</button>
     </div>
   </div>
@@ -2811,6 +2826,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <div class="dlg-foot wz-foot">
       <button type="button" class="btn ghost danger" id="dailyDlgClear">Werte löschen</button>
+      <button type="button" class="btn" id="dailyDlgRev" title="Tag ohne Produktion: nur Sicherheit, Inventory und Lieferung erfassen">Revision</button>
       <button type="button" class="btn" id="dailyDlgCancel">Abbrechen</button>
       <button type="submit" class="btn" id="dailyDlgSave">Speichern</button>
       <button type="button" class="btn primary" id="dailyDlgNext">Speichern &amp; weiter ›</button>
@@ -2852,6 +2868,62 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 </dialog>
 
 <!-- Dialog: confirmDialog -->
+<!-- Dialog: Revisionstag (keine Produktion) -->
+<dialog id="revDialog" class="wizard rev-dialog">
+  <form method="dialog" id="revForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="revTitle">Revisionstag</h2>
+      <div class="wz-tools"><button type="button" class="btn ghost sm" id="revClose" aria-label="Schließen">✕</button></div>
+    </div>
+    <div class="dlg-body">
+      <p class="cf-text">Am Revisionstag läuft keine Produktion. Beim Speichern werden die <b>geplanten Produktionsausfälle auf 24 h</b> gesetzt und alle übrigen Produktions- und Ausfallwerte auf 0. Zu erfassen sind nur Sicherheit, Inventory und Lieferung — danach ist der Huddle für den Tag abgeschlossen.</p>
+      <fieldset class="dgroup">
+        <legend><span class="sq-letter rev-letter" data-cat="S">S</span> Sicherheit</legend>
+        <div class="ag-choices" id="revSafety" role="group" aria-label="Sicherheit des Tages"></div>
+        <div class="field rev-reason" id="revSafetyReasonF" hidden>
+          <label for="revSafetyReason">Begründung (Pflicht)</label>
+          <textarea id="revSafetyReason" rows="2" placeholder="Was ist passiert, welche Sofortmaßnahme?"></textarea>
+        </div>
+      </fieldset>
+      <fieldset class="dgroup">
+        <legend><span class="sq-letter rev-letter" data-cat="C">I</span> Inventory</legend>
+        <div class="dgrid">
+          <div class="field"><label for="revInv">Inventory (t)</label><input id="revInv" type="number" min="0" max="100000" step="0.01" inputmode="decimal" required></div>
+          <div class="field"><label for="revInvLim">Inventory-Grenzwert (t)</label><input id="revInvLim" type="number" min="0" max="100000" step="0.01" inputmode="decimal" required></div>
+        </div>
+        <div class="field rev-reason" id="revInvReasonF" hidden>
+          <label for="revInvReason">Begründung (Pflicht) — Inventory über Grenzwert</label>
+          <textarea id="revInvReason" rows="2"></textarea>
+        </div>
+      </fieldset>
+      <fieldset class="dgroup">
+        <legend><span class="sq-letter rev-letter" data-cat="D">D</span> Lieferung</legend>
+        <div class="dgrid rev-three">
+          <div class="field"><label for="revDue">Aufträge fällig</label><input id="revDue" type="number" min="0" max="100000" step="1" inputmode="numeric" required></div>
+          <div class="field"><label for="revOnTime">Aufträge pünktlich geliefert</label><input id="revOnTime" type="number" min="0" max="100000" step="1" inputmode="numeric" required></div>
+          <div class="field"><label for="revFakt">Fakturierte Menge (t)</label><input id="revFakt" type="number" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="0"></div>
+        </div>
+        <div class="field rev-reason" id="revOtdReasonF" hidden>
+          <label for="revOtdReason">Begründung (Pflicht) — nicht alle fälligen Aufträge pünktlich geliefert</label>
+          <textarea id="revOtdReason" rows="2"></textarea>
+        </div>
+      </fieldset>
+      <fieldset class="dgroup">
+        <legend><span class="sq-letter rev-letter" data-cat="P">P</span> Geplanter Stillstand (24 h)</legend>
+        <div class="dgrid">
+          <div class="field"><label for="revKind">Art des Stillstands</label><select id="revKind"></select></div>
+          <div class="field"><label for="revPlanReason">Begründung</label><input id="revPlanReason" maxlength="300" required></div>
+        </div>
+      </fieldset>
+      <p class="login-error" id="revError" hidden></p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn" id="revCancel">Abbrechen</button>
+      <button type="submit" class="btn primary" id="revSave">Revisionstag speichern</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="confirmDialog">
   <div class="dlg-head">
     <h2 id="cfTitle">Bestätigen</h2>
@@ -6770,6 +6842,7 @@ window.SFM = (function () {
   var huddleStage = "pick"; // "pick" = nur Kalender sichtbar · "session" = Timer/Agenda für den gewählten Tag
   function updateHuddleHeader() {
     $("#huddleKpiBtn").hidden = huddleStage !== "session";
+    $("#huddleRevBtn").hidden = huddleStage !== "session" || !can("edit");
     $("#huddleBackBtn").hidden = huddleStage !== "session";
     $("#huddleSub").textContent = huddleStage === "pick"
       ? "Zuerst den Tag für den Huddle im Kalender auswählen."
@@ -6813,7 +6886,9 @@ window.SFM = (function () {
       var btn = el("button", cls, String(d));
       btn.type = "button";
       btn.disabled = future;
-      btn.title = future ? "" : fmtDate(iso) + ": " + (st === "full" ? "vollständig" : st === "partial" ? "unvollständig" : "kein Eintrag");
+      var isRev = !future && dailyRecord(iso) && dailyRecord(iso).revision;
+      if (isRev) btn.classList.add("revision");
+      btn.title = future ? "" : fmtDate(iso) + ": " + (isRev ? "Revisionstag · " : "") + (st === "full" ? "vollständig" : st === "partial" ? "unvollständig" : "kein Eintrag");
       (function (iso2) { btn.addEventListener("click", function () { selectHuddleDay(iso2); }); })(iso);
       wrap.appendChild(btn);
     }
@@ -7627,7 +7702,8 @@ window.SFM = (function () {
     var editable = can("edit");
     $("#dailyDlgTitle").textContent = "Tages-Kennzahlen — " + fmtDate(iso) + (iso === TODAY_ISO ? " (heute)" : "");
     $("#dailyDlgSub").textContent = editable
-      ? (dailyRecord(iso) ? "Bereits erfasste Werte für diesen Tag — bei Bedarf anpassen." : "Noch keine Werte für diesen Tag erfasst. Bitte eintragen.")
+      ? (rec.revision ? "Revisionstag — keine Produktion. Für Änderungen an Sicherheit, Inventory oder Lieferung am einfachsten „Revision“ verwenden."
+        : dailyRecord(iso) ? "Bereits erfasste Werte für diesen Tag — bei Bedarf anpassen." : "Noch keine Werte für diesen Tag erfasst. Bitte eintragen.")
       : "Nur Lesen — Ihre Berechtigung erlaubt keine Bearbeitung.";
     var invPrefill = editable && numOrNull(rec.inventoryGrenzwert) == null;
     $("#dfInvHint").hidden = !invPrefill;
@@ -7708,6 +7784,130 @@ window.SFM = (function () {
     toast("Tages-Kennzahlen gelöscht — " + fmtDate(editingDailyIso));
   });
   $("#huddleKpiBtn").addEventListener("click", function () { openDailyDialog(selectedHuddleIso); });
+
+  /* ---------- Revisionstag: keine Produktion ----------
+     Vereinfachte Erfassung: nur Sicherheit, Inventory und Lieferung. Geplante Ausfälle = 24 h
+     (eine wählbare Art), alle übrigen Produktions- und Ausfallwerte = 0. Abweichungen bei
+     Sicherheit, Inventory und Lieferung brauchen wie im Huddle eine Begründung; danach gelten
+     alle Agenda-Punkte des Tages als besprochen. */
+  var revDlg = $("#revDialog"), revIso = null, revSafety = "none";
+  var REV_HOURS = 24;
+  function revNum(id) { return numOrNull($("#" + id).value); }
+  function revRenderSafety() {
+    var box = $("#revSafety");
+    box.innerHTML = "";
+    SAFETY_STATES.forEach(function (o) {
+      var on = revSafety === o.key;
+      var bt = el("button", "ag-choice" + (on ? " on " + (o.key === "none" ? "good" : "crit") : ""), o.label);
+      bt.type = "button";
+      bt.setAttribute("aria-pressed", on ? "true" : "false");
+      bt.addEventListener("click", function () { revSafety = o.key; revRenderSafety(); revUpdate(); });
+      box.appendChild(bt);
+    });
+  }
+  // Begründungsfelder nur zeigen, wenn die Werte eine Abweichung ergeben (gleiche Regeln wie im Huddle)
+  function revUpdate() {
+    $("#revSafetyReasonF").hidden = revSafety === "none";
+    $("#revInvReasonF").hidden = !inventoryDeviates(revNum("revInv"), revNum("revInvLim"));
+    $("#revOtdReasonF").hidden = !ordersDeviate(revNum("revDue"), revNum("revOnTime"));
+  }
+  function revError(msg) { var e = $("#revError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function openRevisionDialog(iso) {
+    if (!can("edit") || !iso) return;
+    revIso = iso;
+    var rec = dailyRecord(iso) || {};
+    $("#revTitle").textContent = "Revisionstag — " + fmtDate(iso);
+    revDlg.querySelectorAll(".rev-letter").forEach(function (l) { l.style.background = catColor(l.dataset.cat); });
+    revSafety = safetyStateOf(iso) || "none";
+    revRenderSafety();
+    var val = function (v) { v = numOrNull(v); return v == null ? "" : String(v); };
+    $("#revInv").value = val(rec.inventory);
+    $("#revInvLim").value = numOrNull(rec.inventoryGrenzwert) != null ? val(rec.inventoryGrenzwert) : String(settings.inventoryLimit);
+    $("#revDue").value = val(rec.auftraegeFaellig);
+    $("#revOnTime").value = val(rec.auftraegePuenktlich);
+    $("#revFakt").value = val(rec.faktoriert);
+    var kindSel = $("#revKind");
+    kindSel.innerHTML = "";
+    OUTAGE_KINDS.forEach(function (o) {
+      var op = document.createElement("option");
+      op.value = o.k; op.textContent = o.label;
+      kindSel.appendChild(op);
+    });
+    // War der Tag schon ein Revisionstag, die gewählte Art übernehmen
+    var prevKind = OUTAGE_KINDS.filter(function (o) { return numOrNull(rec[outageKey("G", o.k)]) === REV_HOURS; })[0];
+    kindSel.value = rec.revision && prevKind ? prevKind.k : "orga";
+    $("#revPlanReason").value = getReason(iso, "P", "plan-" + kindSel.value) || "Revision";
+    $("#revSafetyReason").value = revSafety !== "none" ? getReason(iso, "S", revSafety) : "";
+    $("#revInvReason").value = getReason(iso, "C", "inv");
+    $("#revOtdReason").value = getReason(iso, "D", "otd");
+    revUpdate(); revError(null);
+    revDlg.showModal();
+    setTimeout(function () { $("#revInv").focus(); }, 0);
+  }
+  ["revInv", "revInvLim", "revDue", "revOnTime"].forEach(function (id) { $("#" + id).addEventListener("input", revUpdate); });
+  // Fehlermeldung verschwindet, sobald etwas geändert wird
+  $("#revForm").addEventListener("input", function () { revError(null); });
+  $("#revCancel").addEventListener("click", function () { revDlg.close(); });
+  $("#revClose").addEventListener("click", function () { revDlg.close(); });
+  $("#huddleRevBtn").addEventListener("click", function () { openRevisionDialog(selectedHuddleIso); });
+  $("#dailyDlgRev").addEventListener("click", function () {
+    var iso = editingDailyIso;
+    dailyDlg.close();
+    openRevisionDialog(iso);
+  });
+  $("#revForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!can("edit") || !revIso) { revDlg.close(); return; }
+    var bad = ["revInv", "revInvLim", "revDue", "revOnTime", "revFakt"].map(function (id) { return $("#" + id); })
+      .filter(function (inp) { return !inp.checkValidity(); })[0];
+    if (bad) { bad.reportValidity(); return; }
+    var inv = revNum("revInv"), lim = revNum("revInvLim"), due = revNum("revDue"), onTime = revNum("revOnTime");
+    if (onTime > due) { revError("Es können nicht mehr Aufträge pünktlich geliefert werden als fällig waren."); return; }
+    var need = [
+      [!$("#revSafetyReasonF").hidden, "revSafetyReason", "Bitte den Sicherheitsvorfall begründen."],
+      [!$("#revInvReasonF").hidden, "revInvReason", "Bitte begründen, warum das Inventory über dem Grenzwert liegt."],
+      [!$("#revOtdReasonF").hidden, "revOtdReason", "Bitte begründen, warum nicht alle Aufträge pünktlich geliefert wurden."],
+      [true, "revPlanReason", "Bitte den geplanten Stillstand begründen."]
+    ].filter(function (n) { return n[0] && !$("#" + n[1]).value.trim(); })[0];
+    if (need) { revError(need[2]); $("#" + need[1]).focus(); return; }
+    var old = dailyRecord(revIso);
+    var producing = old && !old.revision && ["geplant", "produziert", "ausschuss"].some(function (k) { return (numOrNull(old[k]) || 0) > 0; });
+    var commit = function () {
+      var iso = revIso, kind = $("#revKind").value;
+      // Am Ende gilt ohnehin alles als besprochen — vorher zurücksetzen, damit kein
+      // „muss erneut besprochen werden“-Hinweis erscheint
+      if (state.huddleLog[iso]) state.huddleLog[iso].checked = [];
+      // Sicherheit zuerst (pflegt auch die Unfallchronik und den Zähler „Tage unfallfrei“)
+      setSafetyState(iso, revSafety);
+      var rec = {};
+      Object.keys(DAILY_INPUT_IDS).forEach(function (k) { rec[k] = 0; });
+      OUTAGE_KINDS.forEach(function (o) { rec[outageKey("U", o.k)] = 0; rec[outageKey("G", o.k)] = o.k === kind ? REV_HOURS : 0; });
+      rec.ausfall = 0; rec.ausfallGeplant = REV_HOURS; rec.personalausfall = 0;
+      rec.inventory = inv; rec.inventoryGrenzwert = lim;
+      rec.auftraegeFaellig = due; rec.auftraegePuenktlich = onTime;
+      rec.faktoriert = revNum("revFakt") || 0;
+      rec.grund = (old && old.grund) || "Revision";
+      rec.revision = true;
+      state.dailyData[iso] = rec;
+      // Begründungen: geplanter Stillstand und ggf. die Abweichungen
+      OUTAGE_KINDS.forEach(function (o) { if (o.k !== kind) setReason(iso, "P", "plan-" + o.k, ""); });
+      setReason(iso, "P", "plan-" + kind, $("#revPlanReason").value.trim());
+      if (revSafety !== "none") setReason(iso, "S", revSafety, $("#revSafetyReason").value.trim());
+      setReason(iso, "C", "inv", $("#revInvReasonF").hidden ? "" : $("#revInvReason").value.trim());
+      setReason(iso, "D", "otd", $("#revOtdReasonF").hidden ? "" : $("#revOtdReason").value.trim());
+      // Alle Agenda-Punkte des Tages gelten als besprochen
+      if (!state.huddleLog[iso]) state.huddleLog[iso] = { checked: [] };
+      state.huddleLog[iso].checked = CATS.map(function (c) { return c.key; });
+      syncAgendaStatusAll(iso);
+      save(); revDlg.close(); renderAll();
+      toast("Revisionstag gespeichert — " + fmtDate(iso) + " · alle Punkte besprochen");
+    };
+    if (producing) {
+      appConfirm("Produktionswerte überschreiben?",
+        "Für den " + fmtDate(revIso) + " sind bereits Produktionswerte erfasst. Als Revisionstag werden sie auf 0 gesetzt und die geplanten Ausfälle auf 24 h.",
+        "Überschreiben", true, commit);
+    } else commit();
+  });
   $("#huddleBackBtn").addEventListener("click", function () {
     showHuddleStage("pick");
     hcY = Y; hcM = M;
@@ -9032,7 +9232,8 @@ window.SFM = (function () {
       ["Tageswerte erfassen", "Schritt 1 (Tabs Ausfälle, Produktion, Lager & Aufträge, Notiz). Rechts stehen OEE, First-Pass-Yield, Termintreue und die technische Anlagenverfügbarkeit und werden beim Tippen berechnet."],
       ["Agenda durchgehen", "Jeder Punkt zeigt links die zugehörigen Tageswerte als Eingabefelder und rechts die daraus erkannten Abweichungen. Werte lassen sich direkt dort ändern oder erst eintragen (Qualität: Mengen, Inventory: Bestand und Grenzwert, Lieferung: Aufträge, Produktivität: Ausfallzeiten nach Art) — sie werden sofort gespeichert und die Abweichungen sofort neu erkannt. Ungültige Werte werden rot markiert und nicht übernommen. Dazu lassen sich beliebig viele weitere Abweichungen erfassen. Die Karten in der Huddle-Ansicht öffnen weiterhin jeden Punkt einzeln. Die Minutenangaben sind Richtwerte."],
       ["Begründung ist Pflicht", "Jede Abweichung braucht eine Begründung — erkannte im Feld „Begründung (Pflicht)“, von Hand erfasste in der Beschreibung. Erst wenn alle begründet sind, lässt sich der Punkt als besprochen markieren."],
-      ["Themen besprechen", "Die Liste daneben zeigt die offenen Abweichungen — ein Klick öffnet die Details direkt."]] },
+      ["Themen besprechen", "Die Liste daneben zeigt die offenen Abweichungen — ein Klick öffnet die Details direkt."],
+      ["Revisionstag", "An Tagen ohne Produktion den Knopf „Revision“ wählen (oben im Huddle oder im Kennzahlen-Fenster). Das vereinfachte Fenster fragt nur Sicherheit, Inventory und Lieferung ab. Die geplanten Produktionsausfälle werden auf 24 h gesetzt (Art wählbar, Begründung „Revision“ vorbelegt), alle übrigen Produktions- und Ausfallwerte auf 0. Ergibt sich bei Sicherheit, Inventory oder Lieferung eine Abweichung, ist die Begründung direkt dort Pflicht. Danach sind alle Punkte des Tages besprochen; im Kalender trägt der Tag ein kleines „R“."]] },
     { title: "Tagesbericht & E-Mail", intro: "Der Tagesbericht fasst SQIDP-Status, Kennzahlen, Grünquoten und offene Abweichungen des Tages zusammen.", tip: "Verteiler, Betreff-Vorlage und Mailserver stehen unter Einstellungen → E-Mail-Versand. Am Server nutzt das Board den Mailserver für „Passwort vergessen“ und Test-E-Mails; „Verbindung testen“ prüft ihn direkt.", steps: [
       ["Bericht öffnen", "Bereich Tagesbericht (Taste 5) — Kennzahlen und Listen füllen sich automatisch aus den echten Daten."],
       ["Tag auswählen", "Mit den Pfeilen oder dem Datumsfeld lässt sich ein früherer Tag wählen; der Bericht zeigt dann Kennzahlen und Abweichungen mit Begründung dieses Tages. „Heute“ springt zurück."],
