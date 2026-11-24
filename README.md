@@ -3,6 +3,8 @@
 Deutsche Web-App für das digitale Shopfloor Management mit SQIDP-Board, Kennzahlen und Huddle.
 Läuft als Docker-Compose-Stack mit PostgreSQL. Alle Geräte einer Linie sehen denselben Stand.
 
+Änderungen je Version: [CHANGELOG.md](CHANGELOG.md).
+
 ## Funktionen
 
 | Bereich | Inhalt |
@@ -99,7 +101,7 @@ Jede Einstellung lässt sich vorab als Umgebungsvariable setzen. Es gilt: Umgebu
 Danach ist allein die `.env` maßgeblich (Umgebungsvariablen überschreiben sie beim Start nicht mehr).
 
 ```bash
-DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.trobox.de \
+DEPLOY_MODE=proxy PROXY_NETWORK=npm_default PUBLIC_URL=https://shopfloor.firma.de \
 ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' ./deploy.sh -y
 ```
 
@@ -143,15 +145,15 @@ ADMIN_NAME="Max Mustermann" ADMIN_USERNAME=max.mustermann ADMIN_PASSWORD='…' .
 **NPM als Docker-Container auf demselben Server (Betriebsart `proxy`, empfohlen):**
 
 1. `./deploy.sh` ausführen; Betriebsart `proxy` und das NPM-Netz werden vorgeschlagen.
-   `PUBLIC_URL=https://shopfloor.trobox.de`, damit wird `COOKIE_SECURE=true`.
-2. In NPM einen Proxy Host `shopfloor.trobox.de` anlegen: Schema `http`, Host `shopfloor-web`, Port `8080`
+   `PUBLIC_URL=https://shopfloor.firma.de`, damit wird `COOKIE_SECURE=true`.
+2. In NPM einen Proxy Host `shopfloor.firma.de` anlegen: Schema `http`, Host `shopfloor-web`, Port `8080`
    (bei anderem Projektnamen `<projekt>-web`). SSL-Zertifikat zuweisen, „Force SSL“, „HTTP/2“ und „HSTS“ an.
 3. Fertig — `TRUSTED_PROXIES` ist bereits auf das Proxy-Netz gesetzt.
 
 **NPM auf einem anderen Rechner (Betriebsart `port`):**
 
-1. `PUBLIC_URL=https://shopfloor.trobox.de`, damit wird `COOKIE_SECURE=true`.
-2. In NPM einen Proxy Host `shopfloor.trobox.de` → `http://<server-ip>:<WEB_PORT>` anlegen, SSL-Zertifikat zuweisen, „Force SSL“ und „HSTS“ an.
+1. `PUBLIC_URL=https://shopfloor.firma.de`, damit wird `COOKIE_SECURE=true`.
+2. In NPM einen Proxy Host `shopfloor.firma.de` → `http://<server-ip>:<WEB_PORT>` anlegen, SSL-Zertifikat zuweisen, „Force SSL“ und „HSTS“ an.
 3. `TRUSTED_PROXIES` auf die IP des NPM-Rechners setzen (`./deploy.sh config`, danach `./deploy.sh`) — sonst sehen
    Login-Bremse und Sicherheitsprotokoll alle Zugriffe als „von NPM“. Die IP steht nach dem ersten Aufruf im
    Protokoll (*Einstellungen → Sicherheitsprotokoll*, Spalte IP-Adresse).
