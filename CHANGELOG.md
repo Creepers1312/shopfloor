@@ -9,6 +9,15 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Geändert
+- **Dashboards übersichtlicher:** Neben der Auswahl stehen nur noch „Dashboards verwalten“ und „Dashboard
+  anpassen“. Anlegen, Kopieren, Einstellungen und Löschen laufen über das Fenster „Dashboards verwalten“ mit der
+  Liste aller Dashboards. Beim Anpassen erscheint eine eigene, hervorgehobene Leiste mit „+ Widget hinzufügen“,
+  „Ursprüngliches Layout“ und „Fertig“.
+
+### Behoben
+- Die Zeitraum-Auswahl im Dashboard ragte auf schmalen Bildschirmen (Handy) über den Rand hinaus.
+
 ## [1.3.0] – 2026-11-24
 
 ### Neu

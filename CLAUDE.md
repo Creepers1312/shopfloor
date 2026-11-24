@@ -76,7 +76,8 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   Haken; geänderte Werte setzen „besprochen“ zurück (`reopenAgenda`).
 - **Revisionstag:** Fenster „Revision“ — nur Sicherheit, Inventory, Lieferung; geplant 24 h (Standard
   Organisatorisch, Begründung „Revision“), Rest 0, `rec.revision = true`, alle Punkte besprochen.
-- **Dashboards:** Liste mehrerer Dashboards (`dashList`, `currentDash()`, Auswahl `#dashSelect`), Widgets im
+- **Dashboards:** Liste mehrerer Dashboards (`dashList`, `currentDash()`, Auswahl `#dashSelect`; Anlegen/Kopie/
+  Einstellungen nur im Fenster „Dashboards verwalten“ `#dashListDialog`; Anpassen-Leiste `#dashEditTools`), Widgets im
   12-Spalten-Raster. Sichtbarkeit `standard` (eingebaut: `standard`, `detail` = „Detaillierte Auswertung“; ändern nur
   manager/admin, `widgets: null` = ausgeliefertes Layout aus `DASH_BUILTIN`), `public` (alle sehen, ändern/löschen
   nur Ersteller + admin), `private` (nur Besitzer). Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
