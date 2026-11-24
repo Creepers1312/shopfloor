@@ -182,7 +182,7 @@ SETTINGS=(
   "PROXY_NETWORK|__auto__|network|Docker-Netz des Reverse Proxys"
   "WEB_BIND|__auto__|ip|IP-Adresse, an die der Web-Port gebunden wird (127.0.0.1 = nur lokal)"
   "WEB_PORT|8080|port|Port für das Board auf diesem Server"
-  "PUBLIC_URL|__auto__|url|Adresse, unter der das Board erreichbar ist (z. B. https://shopfloor.trobox.de)"
+  "PUBLIC_URL|__auto__|url|Adresse, unter der das Board erreichbar ist (z. B. https://shopfloor.firma.de)"
   "TZ|Europe/Berlin|text|Zeitzone (für Sicherungszeiten und Dateinamen)"
   "DB_NAME|shopfloor|name|Name der Datenbank"
   "DB_USER|shopfloor|name|Datenbank-Benutzer"

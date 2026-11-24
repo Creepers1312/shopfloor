@@ -20,7 +20,7 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   im Diagramm, Auswahl nach Einheiten gruppiert.
 - **Multigraph mit zwei Einheiten:** bis zu fünf Werte mit linker und rechter Achse (eigene Skala und Einheit);
   Legende und Tooltip nennen die Einheit je Wert.
-- `CHANGELOG.md` eingeführt.
+- `CHANGELOG.md` eingeführt; Projektnotizen für künftige Arbeiten in `CLAUDE.md`.
 
 ### Geändert
 - **Dashboard-Widgets passen ihren Inhalt der Größe an:** Die Verlaufslinie der Kennzahl-Karten wird in der

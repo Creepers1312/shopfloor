@@ -21,7 +21,7 @@ async function loadDbVersion() {
 
 /* ---------- Herkunftsprüfung (CSRF) ----------
    Zusätzlich zu SameSite=Strict: schreibende Anfragen aus dem Browser müssen von genau
-   dieser Adresse kommen. Andere Subdomains (z. B. *.trobox.de) gelten für SameSite als
+   dieser Adresse kommen. Andere Subdomains (z. B. *.firma.de) gelten für SameSite als
    „dieselbe Seite“ — hier nicht. Anfragen ohne Origin (curl, Skripte) brauchen trotzdem
    ein gültiges Sitzungs-Cookie. */
 function originAllowed(req) {

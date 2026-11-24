@@ -43,7 +43,7 @@ module.exports = {
     password: String(env.SMTP_PASSWORD || ""),
     from: String(env.SMTP_FROM || "").trim()
   },
-  // Erlaubte Herkunft schreibender Anfragen zusätzlich zur eigenen Adresse (z. B. https://shopfloor.trobox.de)
+  // Erlaubte Herkunft schreibender Anfragen zusätzlich zur eigenen Adresse (z. B. https://shopfloor.firma.de)
   publicUrl: String(env.PUBLIC_URL || "").replace(/\/+$/, ""),
   cookieSecure: bool(env.COOKIE_SECURE, false),
   // Mit HTTPS: __Host-Präfix — der Browser nimmt das Cookie dann nur über HTTPS und nur für genau diese Adresse an
