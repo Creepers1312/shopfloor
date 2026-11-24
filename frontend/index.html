@@ -3649,8 +3649,64 @@ window.SFM = (function () {
     var rec = dailyRecord(iso);
     return {
       verf: oeeAvailability(rec), leist: oeePerformance(rec), qual: oeeQuality(rec),
-      oee: oeeOverall(rec), fpy: fpyValue(rec), otd: otdValue(rec)
+      oee: oeeOverall(rec), fpy: fpyValue(rec), otd: otdValue(rec), techVerf: techAvailability(rec)
     };
+  }
+  // Laufzeit = Schichtstunden − geplante − ungeplante Ausfälle
+  function runTimeValue(rec) {
+    var u = outageTotal(rec, "U"), g = outageTotal(rec, "G");
+    if (u == null || g == null || !settings.shiftHours) return null;
+    return Math.max(0, Math.round((settings.shiftHours - g - u) * 100) / 100);
+  }
+
+  /* ---------- Alle Werte aus dem Huddle (erfasst und berechnet) ----------
+     Eine Quelle für Dashboard-Diagramme, -Kacheln und Auswahllisten. agg legt fest, wie ein
+     Zeitraum zusammengefasst wird: avg = Kennzahl über den Zeitraum (Quoten aus den Summen),
+     sum = Summe, last = jüngster erfasster Stand (Bestände). */
+  var VALUE_CATALOG = [
+    { key: "oee", label: "OEE", unit: "%", agg: "avg" },
+    { key: "verf", label: "Verfügbarkeit", unit: "%", agg: "avg" },
+    { key: "techVerf", label: "Technische Anlagenverfügbarkeit", unit: "%", agg: "avg" },
+    { key: "leist", label: "Leistung", unit: "%", agg: "avg" },
+    { key: "qual", label: "Qualität", unit: "%", agg: "avg" },
+    { key: "fpy", label: "First Pass Yield", unit: "%", agg: "avg" },
+    { key: "otd", label: "Termintreue", unit: "%", agg: "avg" },
+    { key: "ausfall", label: "Ungeplante Produktionsausfälle", unit: "h", agg: "sum" }
+  ];
+  OUTAGE_KINDS.forEach(function (o) {
+    VALUE_CATALOG.push({ key: outageKey("U", o.k), label: "Ungeplant · " + o.label, unit: "h", agg: "sum" });
+  });
+  VALUE_CATALOG.push({ key: "ausfallGeplant", label: "Geplante Produktionsausfälle", unit: "h", agg: "sum" });
+  OUTAGE_KINDS.forEach(function (o) {
+    VALUE_CATALOG.push({ key: outageKey("G", o.k), label: "Geplant · " + o.label, unit: "h", agg: "sum" });
+  });
+  VALUE_CATALOG.push(
+    { key: "personalausfall", label: "Personen Ausfallzeit Ungeplant", unit: "h", agg: "sum" },
+    { key: "laufzeit", label: "Laufzeit", unit: "h", agg: "sum" },
+    { key: "geplant", label: "Geplante Menge", unit: "t", agg: "sum" },
+    { key: "produziert", label: "Produzierte Menge", unit: "t", agg: "sum" },
+    { key: "gutmenge", label: "Gutmenge 1. Durchlauf", unit: "t", agg: "sum" },
+    { key: "nacharbeit", label: "Mit Nacharbeit verwendbar", unit: "t", agg: "sum" },
+    { key: "ausschuss", label: "Ausschuss", unit: "t", agg: "sum" },
+    { key: "faktoriert", label: "Fakturierte Menge", unit: "t", agg: "sum" },
+    { key: "inventory", label: "Inventory", unit: "t", agg: "last" },
+    { key: "inventoryGrenzwert", label: "Inventory-Grenzwert", unit: "t", agg: "last" },
+    { key: "auftraegeFaellig", label: "Aufträge fällig", unit: "Stk.", agg: "sum" },
+    { key: "auftraegePuenktlich", label: "Aufträge pünktlich geliefert", unit: "Stk.", agg: "sum" }
+  );
+  VALUE_CATALOG.forEach(function (c) { c.digits = c.unit === "t" ? 2 : c.unit === "Stk." ? 0 : 1; });
+  var VALUE_UNITS = ["%", "h", "t", "Stk."];
+  function valueInfo(key) { return VALUE_CATALOG.filter(function (c) { return c.key === key; })[0] || null; }
+  // Wert eines Tages: berechnete Kennzahlen und Summen (Ausfälle aus den Einzelarten) richtig gebildet
+  var VALUE_CALC = {
+    oee: oeeOverall, verf: oeeAvailability, techVerf: techAvailability, leist: oeePerformance,
+    qual: oeeQuality, fpy: fpyValue, otd: otdValue, laufzeit: runTimeValue, gutmenge: firstPassGood,
+    ausfall: function (rec) { return outageTotal(rec, "U"); },
+    ausfallGeplant: function (rec) { return outageTotal(rec, "G"); }
+  };
+  function valueOf(key, rec) {
+    if (!rec) return null;
+    return VALUE_CALC[key] ? VALUE_CALC[key](rec) : numOrNull(rec[key]);
   }
   function isDailyComplete(iso) {
     var rec = dailyRecord(iso);
@@ -3701,8 +3757,7 @@ window.SFM = (function () {
   function periodSum(key, fromIso, toIso) {
     var sum = 0, days = 0, to = dateOnly(toIso);
     for (var dt = dateOnly(fromIso); dt <= to; dt.setDate(dt.getDate() + 1)) {
-      var rec = dailyRecord(isoOf(dt));
-      var v = rec ? numOrNull(rec[key]) : null;
+      var v = valueOf(key, dailyRecord(isoOf(dt)));
       if (v != null) { sum += v; days++; }
     }
     return { sum: days ? Math.round(sum * 100) / 100 : null, days: days };
@@ -4775,8 +4830,9 @@ window.SFM = (function () {
   // gewählten Zeitraum: Ausfallzeiten und Mengen (agg "sum") werden über den Zeitraum summiert,
   // Bestandsgrößen (agg "last": Inventory und Grenzwert) zeigen den jüngsten erfassten Stand.
   // Im Tag-Modus ist beides derselbe Tageswert.
+  // Kennzahlen (agg "avg") zeigen über einen Zeitraum den Wert für den ganzen Zeitraum (Ø).
   var MINI_TILES = [{ kind: "safety" }, { kind: "actions" }];
-  DAILY_FIELD_TILES.forEach(function (f) {
+  VALUE_CATALOG.forEach(function (f) {
     MINI_TILES.push({ kind: "field", key: f.key, label: f.label, unit: f.unit, digits: f.digits, agg: f.agg });
   });
   // Kontext für die Kacheln — einmal je Rendern berechnet (Zeitraum, jüngster Tageswert, Sicherheit, Maßnahmen)
@@ -4806,15 +4862,19 @@ window.SFM = (function () {
       tile.addEventListener("click", function () { switchView("actions"); });
     } else {
       var summed = m.agg === "sum" && dashMode !== "day";
+      var averaged = m.agg === "avg" && dashMode !== "day";
       var v, sumInfo = null;
       if (summed) {
         sumInfo = periodSum(m.key, ctx.b.from, ctx.b.to);
         v = sumInfo.sum;
+      } else if (averaged) {
+        v = periodAverage(m.key, ctx.b.from, ctx.b.to);
       } else {
-        v = rec ? numOrNull(rec[m.key]) : null;
+        v = valueOf(m.key, rec);
       }
       tile.appendChild(el("div", "mini-value", v == null ? "–" : fmtNum(v, m.digits) + " " + m.unit));
-      tile.appendChild(el("div", "mini-label", m.label + (summed ? " · Summe" : "")));
+      tile.appendChild(el("div", "mini-label", m.label + (summed ? " · Summe" : averaged ? " · Ø" : "")));
+      if (averaged) tile.title = "Kennzahl " + dashPeriodNoun() + " (" + fmtDate(ctx.b.from) + " – " + fmtDate(ctx.b.to) + ")";
       if (summed) {
         tile.title = "Summe " + dashPeriodNoun() + " — " + sumInfo.days + (sumInfo.days === 1 ? " erfasster Tag" : " erfasste Tage") +
           " (" + fmtDate(ctx.b.from) + " – " + fmtDate(ctx.b.to) + ")";
@@ -4848,33 +4908,21 @@ window.SFM = (function () {
     var rec = dailyRecord(iso);
     return deviationsForIso(iso).length > 0 || !!(rec && rec.grund);
   }
-  function fieldSeriesForRange(keys, fromIso, toIso) {
+  // Tageswerte beliebiger Katalogwerte (erfasst oder berechnet) parallel über einen Zeitraum
+  function valueSeriesForRange(keys, fromIso, toIso) {
     var isos = [], series = keys.map(function () { return []; });
     var to = dateOnly(toIso);
     for (var dt = dateOnly(fromIso); dt <= to; dt.setDate(dt.getDate() + 1)) {
       var iso = isoOf(dt);
       var rec = dailyRecord(iso);
       isos.push(iso);
-      keys.forEach(function (k, ki) { series[ki].push(rec ? numOrNull(rec[k]) : null); });
-    }
-    return { isos: isos, series: series };
-  }
-  // Kennzahlen (OEE-Komponenten, Kopfzahlen) über einen Zeitraum — analog zu fieldSeriesForRange,
-  // aber aus metricsFor() statt aus den rohen Tagesfeldern gespeist.
-  function metricSeriesForRange(kinds, fromIso, toIso) {
-    var isos = [], series = kinds.map(function () { return []; });
-    var to = dateOnly(toIso);
-    for (var dt = dateOnly(fromIso); dt <= to; dt.setDate(dt.getDate() + 1)) {
-      var iso = isoOf(dt);
-      var m = metricsFor(iso);
-      isos.push(iso);
-      kinds.forEach(function (k, ki) { series[ki].push(m[k] != null ? m[k] : null); });
+      keys.forEach(function (k, ki) { series[ki].push(valueOf(k, rec)); });
     }
     return { isos: isos, series: series };
   }
   // Feste kategoriale Reihenfolge (Blau/Orange/Aqua) — dieselben, bereits im Design verwendeten
   // Farben wie --cat-s/--cat-q/--cat-c (SQIDP), je Feld fest zugeordnet statt durchgewürfelt.
-  // Mehrfach-Liniendiagramm mit gemeinsamer Achse (immer nur eine Einheit je Gruppe), fester
+  // Mehrfach-Liniendiagramm mit bis zu zwei Einheiten (linke und rechte Achse), fester
   // Farbzuordnung je Feld, Ziellinie/Überschreitungs-Fläche für Grenzwerte und nativen
   // Hover-Tooltips (bei moderater Punktzahl je Punkt, sonst nur am letzten Datenpunkt).
   // Kurzes Datum ohne Jahr für Achsenbeschriftungen (z. B. "01.09.") — der Zeitraum selbst
@@ -4885,30 +4933,56 @@ window.SFM = (function () {
     var p = String(iso).split("-");
     return p[2] + "." + p[1] + ".";
   }
+  // Rechter Rand: Platz für die zweite Achse, wenn das Diagramm zwei Einheiten zeigt
+  function chartPadR(group) { return group.units && group.units.length > 1 ? 46 : 14; }
   function multiFieldChartSvg(group, isos, series) {
-    var defs = group.fields, unit = group.unit;
+    var defs = group.fields;
     var n = isos.length;
+    var dual = !!(group.units && group.units.length > 1);
     var allVals = [];
     series.forEach(function (vals) { vals.forEach(function (v) { if (v != null) allVals.push(v); }); });
     if (!n || !allVals.length) return '<div class="empty-hint">Keine Daten im gewählten Zeitraum.</div>';
     var small = (group.height || 220) <= 120;
-    var w = group.width || 900, h = group.height || 220, padL = 40, padR = 14, padT = 12, padB = small ? 20 : 26;
+    var w = group.width || 900, h = group.height || 220, padL = 40, padR = chartPadR(group), padT = dual ? 18 : 12, padB = small ? 20 : 26;
     // Wie bei sparkline() kein erzwungener Nullpunkt — bei Bestands-/Mengenwerten mit engem
     // Wertebereich (z. B. Inventory) würde das die eigentliche Schwankung auf einen schmalen
     // Streifen zusammenstauchen und die Grenzwert-Überschreitung unlesbar machen.
-    var min = Math.min.apply(null, allVals), max = Math.max.apply(null, allVals);
-    var span = (max - min) || 1;
-    min -= span * 0.10; max += span * 0.10; span = (max - min) || 1;
+    // Wertebereich je Achse (bei einer Einheit nur Achse 0)
+    var axes = [0, 1].map(function (a) {
+      var vals = [];
+      series.forEach(function (sv, di) {
+        if ((defs[di].axis || 0) === a) sv.forEach(function (v) { if (v != null) vals.push(v); });
+      });
+      if (!vals.length) return null;
+      var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      var sp = (mx - mn) || 1, nonNeg = mn >= 0;
+      mn -= sp * 0.10; mx += sp * 0.10;
+      if (nonNeg && mn < 0) mn = 0;   // keine negativen Achsenwerte, wenn es keine negativen Werte gibt
+      return { min: mn, max: mx, span: (mx - mn) || 1 };
+    });
+    if (!axes[0]) axes[0] = axes[1] || { min: 0, max: 1, span: 1 };
     function px(i) { return n <= 1 ? (padL + (w - padL - padR) / 2) : padL + (i / (n - 1)) * (w - padL - padR); }
-    function py(v) { return h - padB - ((v - min) / span) * (h - padT - padB); }
+    function pyA(v, a) { var ax = axes[a] || axes[0]; return h - padB - ((v - ax.min) / ax.span) * (h - padT - padB); }
+    function py(v) { return pyA(v, 0); }
     var plotBottom = h - padB;
     var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="trend-chart" role="img" aria-label="Verlauf ' + defs.map(function (d) { return d.label; }).join(", ") + '" preserveAspectRatio="none">';
     // Gitterlinien mit Achsenbeschriftung (unten/mittig/oben)
-    [min, min + span / 2, max].forEach(function (gv) {
+    // Bei zwei Einheiten steht rechts die zweite Skala auf denselben Gitterlinien
+    var a0 = axes[0], a1 = dual ? axes[1] : null;
+    [0, 0.5, 1].forEach(function (fr) {
+      var gv = a0.min + a0.span * fr;
       var y = py(gv).toFixed(1);
       svg += '<line x1="' + padL + '" y1="' + y + '" x2="' + (w - padR) + '" y2="' + y + '" stroke="var(--grid)" stroke-width="1"></line>';
       svg += '<text x="' + (padL - 6) + '" y="' + (parseFloat(y) + 3) + '" text-anchor="end" font-size="10" fill="var(--muted)">' + fmtNum(gv, gv !== 0 && Math.abs(gv) < 10 ? 1 : 0) + '</text>';
+      if (a1) {
+        var rv = a1.min + a1.span * fr;
+        svg += '<text x="' + (w - padR + 6) + '" y="' + (parseFloat(y) + 3) + '" text-anchor="start" font-size="10" fill="var(--muted)">' + fmtNum(rv, rv !== 0 && Math.abs(rv) < 10 ? 1 : 0) + '</text>';
+      }
     });
+    if (dual) {
+      svg += '<text x="' + (padL - 6) + '" y="10" text-anchor="end" font-size="10" font-weight="600" fill="var(--muted)">' + group.units[0] + '</text>';
+      svg += '<text x="' + (w - padR + 6) + '" y="10" text-anchor="start" font-size="10" font-weight="600" fill="var(--muted)">' + group.units[1] + '</text>';
+    }
     // x-Achse: Datumsbeschriftung an einigen gleichmäßig verteilten Stützstellen (nicht an jedem
     // Tag, sonst überlappt der Text bei Monats-/Jahresansicht) plus dünner Teilstrich je Stützstelle.
     var tickCount = Math.min(n, small ? 3 : 6);
@@ -4930,11 +5004,12 @@ window.SFM = (function () {
         var b0 = baseVals[i], b1 = baseVals[i + 1], t0 = threshVals[i], t1 = threshVals[i + 1];
         if (b0 == null || b1 == null || t0 == null || t1 == null) continue;
         if (b0 <= t0 && b1 <= t1) continue;
+        var oa = defs[0].axis || 0;
         var pts = [
-          px(i).toFixed(1) + "," + py(b0).toFixed(1),
-          px(i + 1).toFixed(1) + "," + py(b1).toFixed(1),
-          px(i + 1).toFixed(1) + "," + py(t1).toFixed(1),
-          px(i).toFixed(1) + "," + py(t0).toFixed(1)
+          px(i).toFixed(1) + "," + pyA(b0, oa).toFixed(1),
+          px(i + 1).toFixed(1) + "," + pyA(b1, oa).toFixed(1),
+          px(i + 1).toFixed(1) + "," + pyA(t1, oa).toFixed(1),
+          px(i).toFixed(1) + "," + pyA(t0, oa).toFixed(1)
         ].join(" ");
         svg += '<polygon points="' + pts + '" fill="var(--crit)" opacity="0.16"></polygon>';
       }
@@ -4943,9 +5018,10 @@ window.SFM = (function () {
     defs.forEach(function (d, di) {
       var vals = series[di];
       var segs = [], cur = null;
+      var ax = d.axis || 0;
       vals.forEach(function (v, i) {
         if (v == null) { if (cur) { segs.push(cur); cur = null; } return; }
-        var pt = px(i).toFixed(1) + "," + py(v).toFixed(1);
+        var pt = px(i).toFixed(1) + "," + pyA(v, ax).toFixed(1);
         cur = cur ? cur + " L" + pt : "M" + pt;
       });
       if (cur) segs.push(cur);
@@ -4958,7 +5034,7 @@ window.SFM = (function () {
           if (v == null) return;
           var isLast = i === vals.length - 1;
           if (!showPoints && !isLast) return;
-          var cx = px(i).toFixed(1), cy = py(v).toFixed(1);
+          var cx = px(i).toFixed(1), cy = pyA(v, ax).toFixed(1);
           // Gestrichelter Ring als sichtbarer Hinweis „an diesem Tag liegt eine Abweichung
           // vor" — die eigentlichen Tooltip-Inhalte kommen aus wireChartInteraction() (ein
           // Fadenkreuz über dem gesamten Diagramm statt eines nativen Tooltips je Punkt;
@@ -4985,7 +5061,7 @@ window.SFM = (function () {
     var svgEl = wrap.querySelector("svg");
     var n = isos.length;
     if (!svgEl || !n) return;
-    var w = group.width || 900, h = group.height || 220, padL = 40, padR = 14;
+    var w = group.width || 900, h = group.height || 220, padL = 40, padR = chartPadR(group);
     function pxOf(i) { return n <= 1 ? (padL + (w - padL - padR) / 2) : padL + (i / (n - 1)) * (w - padL - padR); }
 
     var cross = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -5020,7 +5096,8 @@ window.SFM = (function () {
         key.style.background = f.dashed ? "none" : f.color;
         row.appendChild(key);
         row.appendChild(el("span", "chart-tooltip-label", f.label));
-        row.appendChild(el("span", "chart-tooltip-val", v == null ? "–" : fmtNum(v, unitDigits(unit)) + " " + unit));
+        var fu = f.unit || unit;
+        row.appendChild(el("span", "chart-tooltip-val", v == null ? "–" : fmtNum(v, unitDigits(fu)) + " " + fu));
         tip.appendChild(row);
       });
       var devs = deviationsForIso(isos[i]);
@@ -5090,7 +5167,7 @@ window.SFM = (function () {
     sw.style.background = f.dashed ? "none" : f.color;
     sw.style.borderColor = f.color;
     item.appendChild(sw);
-    item.appendChild(document.createTextNode(f.label));
+    item.appendChild(document.createTextNode(f.label + (f.axisNote ? " " + f.axisNote : "")));
     return item;
   }
   /* ---------- Anpassbares Dashboard: Widgets im 12-Spalten-Raster ---------- */
@@ -5101,19 +5178,10 @@ window.SFM = (function () {
   var DASH_SERIES_COLORS = ["var(--cat-s)", "var(--cat-q)", "var(--cat-c)", "var(--cat-d)", "var(--cat-p)"];
   var DASH_MAX_SERIES = DASH_SERIES_COLORS.length;
   var DW_MIN = { bilanz: [4, 3], kpi: [3, 5], tile: [2, 2], chart: [3, 5] };
-  var DASH_METRIC_SERIES = [
-    { key: "oee", label: "OEE", unit: "%", metric: true },
-    { key: "verf", label: "Verfügbarkeit", unit: "%", metric: true },
-    { key: "leist", label: "Leistung", unit: "%", metric: true },
-    { key: "qual", label: "Qualität", unit: "%", metric: true },
-    { key: "fpy", label: "First Pass Yield", unit: "%", metric: true },
-    { key: "otd", label: "Termintreue", unit: "%", metric: true }
-  ];
   var DASH_UNIT_TITLES = { "%": "Kennzahlen (%)", "h": "Zeiten (h)", "t": "Mengen (t)", "Stk.": "Aufträge (Stück)" };
-  // Alle wählbaren Werte: berechnete Kennzahlen + die erfassten Tagesfelder
-  function dashSeriesCatalog() {
-    return DASH_METRIC_SERIES.concat(DAILY_FIELDS.map(function (f) { return { key: f.key, label: f.label, unit: f.unit, metric: false }; }));
-  }
+  // Zwei Einheiten je Diagramm: linke und rechte Achse
+  var DASH_MAX_UNITS = 2;
+  function dashSeriesCatalog() { return VALUE_CATALOG; }
   function dashSeriesInfo(key) {
     return dashSeriesCatalog().filter(function (s) { return s.key === key; })[0] || null;
   }
@@ -5153,8 +5221,11 @@ window.SFM = (function () {
     add({ type: "kpi", kpi: "oee", x: 0, y: 4, w: 4, h: 6 });
     add({ type: "kpi", kpi: "fpy", x: 4, y: 4, w: 4, h: 6 });
     add({ type: "kpi", kpi: "otd", x: 8, y: 4, w: 4, h: 6 });
-    MINI_TILES.forEach(function (m, i) {
-      add({ type: "tile", tile: m.kind === "field" ? m.key : m.kind, x: (i % 6) * 2, y: 10 + Math.floor(i / 6) * 2, w: 2, h: 2 });
+    // Standard-Kacheln wie bisher: laufender Stand + die erfassten Tageswerte (weitere Werte
+    // lassen sich über „Widget hinzufügen“ ergänzen)
+    var defaultTiles = ["safety", "actions"].concat(DAILY_FIELD_TILES.map(function (f) { return f.key; }));
+    defaultTiles.forEach(function (key, i) {
+      add({ type: "tile", tile: key, x: (i % 6) * 2, y: 10 + Math.floor(i / 6) * 2, w: 2, h: 2 });
     });
     return ws;
   }
@@ -5194,7 +5265,11 @@ window.SFM = (function () {
       } else if (w.type === "chart") {
         var infos = (Array.isArray(w.series) ? w.series : []).map(dashSeriesInfo).filter(Boolean).slice(0, DASH_MAX_SERIES);
         if (!infos.length) return;
-        infos = infos.filter(function (s) { return s.unit === infos[0].unit; }); // eine Einheit = eine Achse
+        var units = [];
+        infos = infos.filter(function (s) {   // höchstens zwei Einheiten (linke und rechte Achse)
+          if (units.indexOf(s.unit) < 0) { if (units.length >= DASH_MAX_UNITS) return false; units.push(s.unit); }
+          return true;
+        });
         o.series = infos.map(function (s) { return s.key; });
         o.mode = o.series.length > 1 && w.mode === "multi" ? "multi" : "single";
         if (o.mode === "single") o.series = o.series.slice(0, 1);
@@ -5294,39 +5369,44 @@ window.SFM = (function () {
     return chartTitle(w);
   }
   function chartInfos(w) { return w.series.map(dashSeriesInfo).filter(Boolean); }
+  function chartUnits(infos) {
+    var units = [];
+    infos.forEach(function (s) { if (units.indexOf(s.unit) < 0) units.push(s.unit); });
+    return units;
+  }
   function chartTitle(w) {
     var infos = chartInfos(w);
     if (!infos.length) return "Diagramm";
-    var unit = infos[0].unit;
     var base = w.title || (infos.length <= 3 ? infos.map(function (s) { return s.label; }).join(" · ") : infos.length + " Werte im Vergleich");
-    return w.title ? base : base + " (" + unit + ")";
+    return w.title ? base : base + " (" + chartUnits(infos).join(" / ") + ")";
   }
   // Linienreihen eines Diagramms: feste Farbreihenfolge; Inventory-Grenzwert wird als gestrichelte
   // Referenzlinie mit rot markierter Überschreitung dargestellt, sobald Inventory mit dabei ist
   function chartGroup(w) {
     var infos = chartInfos(w);
-    var unit = infos.length ? infos[0].unit : "";
+    var units = chartUnits(infos);
+    var unit = units.length ? units[0] : "";
     var invI = -1, limI = -1;
     infos.forEach(function (s, i) { if (s.key === "inventory") invI = i; if (s.key === "inventoryGrenzwert") limI = i; });
     var ordered = infos.slice();
     if (invI > 0 && limI >= 0) { var inv = ordered.splice(invI, 1)[0]; ordered.unshift(inv); }
     var colorIdx = 0, overflowIndex = null;
     var fields = ordered.map(function (s, i) {
-      var f = { key: s.key, label: s.label };
+      var f = { key: s.key, label: s.label, unit: s.unit, axis: Math.max(0, units.indexOf(s.unit)) };
       if (s.key === "inventoryGrenzwert" && invI >= 0) { f.color = "var(--muted)"; f.dashed = true; f.threshold = true; overflowIndex = i; }
       else f.color = DASH_SERIES_COLORS[colorIdx++ % DASH_SERIES_COLORS.length];
       return f;
     });
-    var g = { id: w.id, title: chartTitle(w), unit: unit, fields: fields };
+    if (units.length > 1) fields.forEach(function (f) { f.axisNote = "(" + f.unit + (f.axis ? ", rechts" : ", links") + ")"; });
+    var g = { id: w.id, title: chartTitle(w), unit: unit, units: units, fields: fields };
     if (overflowIndex != null) g.overflowIndex = overflowIndex;
-    g.source = ordered.length && ordered[0].metric ? "metric" : "field";
     return g;
   }
   function buildChartWidget(w) {
     var group = chartGroup(w);
     var range = detailChartRange();
     var keys = group.fields.map(function (f) { return f.key; });
-    var data = group.source === "metric" ? metricSeriesForRange(keys, range.from, range.to) : fieldSeriesForRange(keys, range.from, range.to);
+    var data = valueSeriesForRange(keys, range.from, range.to);
     var card = el("div", "card detail-chart-card dw-chart-card");
     var head = el("div", "detail-chart-head");
     head.appendChild(el("div", "detail-chart-title", group.title));
@@ -5340,7 +5420,7 @@ window.SFM = (function () {
     // Kennzahl-Zeile (Ø/Min/Max) immer erzeugen — ob sie Platz hat, entscheidet das CSS nach der
     // echten Widget-Größe (Container-Abfrage), damit dem Diagramm genug Höhe bleibt
     var stats = el("div", "detail-chart-stats");
-    group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], group.unit)); });
+    group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], f.unit || group.unit)); });
     card.appendChild(stats);
     var host = el("div", "dw-chart-body detail-chart-svg-wrap");
     host._group = group; host._data = data;
@@ -5637,17 +5717,25 @@ window.SFM = (function () {
   /* -- Dialog: Widget hinzufügen / Diagramm bearbeiten -- */
   var wdDlg = $("#widgetDialog");
   var wdEditing = null;
+  // Auswahl für Karten und Kacheln, gruppiert (alle Werte aus dem Huddle als Kachel)
   function wdCardOptions() {
-    var opts = [
-      { v: "bilanz", t: "Monatsbilanz SQIDP" },
-      { v: "kpi:oee", t: "OEE (mit Komponenten)" },
-      { v: "kpi:fpy", t: "First Pass Yield (mit Verlauf)" },
-      { v: "kpi:otd", t: "Termintreue (mit Verlauf)" },
-      { v: "tile:safety", t: "Kachel: Tage unfallfrei" },
-      { v: "tile:actions", t: "Kachel: Offene Maßnahmen" }
+    var groups = [
+      { label: "Karten", opts: [
+        { v: "bilanz", t: "Monatsbilanz SQIDP" },
+        { v: "kpi:oee", t: "OEE (mit Komponenten)" },
+        { v: "kpi:fpy", t: "First Pass Yield (mit Verlauf)" },
+        { v: "kpi:otd", t: "Termintreue (mit Verlauf)" }
+      ] },
+      { label: "Kacheln — laufender Stand", opts: [
+        { v: "tile:safety", t: "Tage unfallfrei" },
+        { v: "tile:actions", t: "Offene Maßnahmen" }
+      ] }
     ];
-    DAILY_FIELD_TILES.forEach(function (f) { opts.push({ v: "tile:" + f.key, t: "Kachel: " + f.label }); });
-    return opts;
+    VALUE_UNITS.forEach(function (u) {
+      groups.push({ label: "Kacheln — " + DASH_UNIT_TITLES[u], opts: VALUE_CATALOG.filter(function (c) { return c.unit === u; })
+        .map(function (c) { return { v: "tile:" + c.key, t: c.label }; }) });
+    });
+    return groups;
   }
   function wdKind() { return wdDlg.querySelector('input[name="wdKind"]:checked').value; }
   function wdMode() { return wdDlg.querySelector('input[name="wdMode"]:checked').value; }
@@ -5658,30 +5746,37 @@ window.SFM = (function () {
     var e = $("#wdError");
     e.hidden = !msg; e.textContent = msg || "";
   }
-  // Mehrfachauswahl: sobald ein Wert gewählt ist, sind nur noch Werte derselben Einheit wählbar
-  // (eine gemeinsame Achse), und höchstens DASH_MAX_SERIES Werte
+  // Mehrfachauswahl: höchstens zwei Einheiten (linke und rechte Achse) und höchstens
+  // DASH_MAX_SERIES Werte — sind zwei Einheiten gewählt, bleiben nur noch Werte dieser beiden wählbar
+  function wdSelectedUnits(keys) {
+    var units = [];
+    keys.forEach(function (k) { var u = dashSeriesInfo(k).unit; if (units.indexOf(u) < 0) units.push(u); });
+    return units;
+  }
   function wdSyncChecks() {
     var keys = wdCheckedKeys();
-    var unit = keys.length ? dashSeriesInfo(keys[0]).unit : null;
+    var units = wdSelectedUnits(keys);
     $("#wdMulti").querySelectorAll(".wd-check").forEach(function (lbl) {
       var inp = lbl.querySelector("input");
       var info = dashSeriesInfo(inp.value);
-      var block = !inp.checked && ((unit && info.unit !== unit) || keys.length >= DASH_MAX_SERIES);
+      var block = !inp.checked && ((units.length >= DASH_MAX_UNITS && units.indexOf(info.unit) < 0) || keys.length >= DASH_MAX_SERIES);
       inp.disabled = block;
       lbl.classList.toggle("disabled", block);
       var sw = lbl.querySelector(".wd-swatch");
       var pos = keys.indexOf(inp.value);
       sw.style.background = pos >= 0 ? DASH_SERIES_COLORS[pos % DASH_SERIES_COLORS.length] : "var(--line)";
     });
-    $("#wdValuesHint").textContent = keys.length
-      ? keys.length + " von " + DASH_MAX_SERIES + " Werten gewählt · alle in " + dashSeriesInfo(keys[0]).unit + " (eine gemeinsame Achse)"
-      : "Nur Werte mit gleicher Einheit lassen sich in einem Diagramm kombinieren. Bis zu " + DASH_MAX_SERIES + " Werte.";
+    $("#wdValuesHint").textContent = !keys.length
+      ? "Bis zu " + DASH_MAX_SERIES + " Werte mit bis zu zwei Einheiten — die erste Einheit steht auf der linken, die zweite auf der rechten Achse."
+      : keys.length + " von " + DASH_MAX_SERIES + " Werten gewählt · " + (units.length > 1
+        ? "Achse links: " + units[0] + ", rechts: " + units[1]
+        : "alle in " + units[0] + " — eine zweite Einheit erscheint auf der rechten Achse");
   }
   function wdBuildValueLists(selected) {
     var single = $("#wdSingle"), multi = $("#wdMulti");
     single.innerHTML = ""; multi.innerHTML = "";
     var catalog = dashSeriesCatalog();
-    ["%", "h", "t", "Stk."].forEach(function (u) {
+    VALUE_UNITS.forEach(function (u) {
       var items = catalog.filter(function (s) { return s.unit === u; });
       var og = document.createElement("optgroup");
       og.label = DASH_UNIT_TITLES[u];
@@ -5722,10 +5817,15 @@ window.SFM = (function () {
     wdError(null);
     var sel = $("#wdCard");
     sel.innerHTML = "";
-    wdCardOptions().forEach(function (o) {
-      var opt = document.createElement("option");
-      opt.value = o.v; opt.textContent = o.t;
-      sel.appendChild(opt);
+    wdCardOptions().forEach(function (g) {
+      var og = document.createElement("optgroup");
+      og.label = g.label;
+      g.opts.forEach(function (o) {
+        var opt = document.createElement("option");
+        opt.value = o.v; opt.textContent = o.t;
+        og.appendChild(opt);
+      });
+      sel.appendChild(og);
     });
     var selected = editW ? editW.series.slice() : [];
     wdBuildValueLists(selected);
@@ -5772,6 +5872,7 @@ window.SFM = (function () {
     var keys = multi ? wdCheckedKeys() : [$("#wdSingle").value];
     if (!keys.length || !keys[0]) { wdError("Bitte mindestens einen Wert auswählen."); return; }
     if (multi && keys.length < 2) { wdError("Ein Multigraph braucht mindestens zwei Werte — für einen Wert den Einzelgraph wählen."); return; }
+    if (wdSelectedUnits(keys).length > DASH_MAX_UNITS) { wdError("Höchstens zwei Einheiten je Diagramm (linke und rechte Achse)."); return; }
     var title = $("#wdTitleInput").value.trim();
     if (wdEditing) {
       wdEditing.series = keys; wdEditing.mode = multi ? "multi" : "single";
@@ -7818,7 +7919,7 @@ window.SFM = (function () {
     var minisGrid = $("#tvMinis");
     minisGrid.innerHTML = "";
     DAILY_FIELD_TILES.forEach(function (f) {
-      var v = dRec ? numOrNull(dRec[f.key]) : null;
+      var v = valueOf(f.key, dRec);
       var tile = el("div", "tv-mini");
       if (f.key === "inventory" && dRec) {
         var invMaxTv = numOrNull(dRec.inventoryGrenzwert);
@@ -8969,7 +9070,8 @@ window.SFM = (function () {
       ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
     { title: "Dashboard anpassen", intro: "Das Dashboard und die Detaillierte Auswertung bestehen aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet beide Ansichten für sich ein (in der Detaillierten Auswertung über „Auswertung anpassen“).", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe). Diagramme, Verlaufslinien und der OEE-Ring passen sich der neuen Größe an; bei kleinen Widgets fallen Zusatzangaben wie Ø/Min/Max weg, damit nichts gescrollt werden muss."],
-      ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Kennzahl-Kacheln und Diagramme. Ein Diagramm zeigt einen Wert oder mehrere Werte mit gleicher Einheit."],
+      ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Karten, Kacheln und Diagramme für alle Werte aus dem Huddle — erfasste (z. B. Mengen, Ausfälle je Art) und berechnete (z. B. OEE, Technische Anlagenverfügbarkeit, Laufzeit, Gutmenge). Kacheln zeigen über einen Zeitraum die Summe, bei Kennzahlen den Wert für den ganzen Zeitraum (Ø) und bei Beständen den jüngsten Stand."],
+      ["Multigraph", "Bis zu fünf Werte mit bis zu zwei Einheiten in einem Diagramm: Die erste Einheit steht auf der linken, die zweite auf der rechten Achse (z. B. Ausschuss in t links, Ausfälle in h rechts). Die Legende nennt zu jedem Wert Einheit und Achse."],
       ["Entfernen", "Das ✕ im Kopfbalken entfernt ein Widget; „Rückgängig“ im Hinweis stellt es wieder her."]] },
     { title: "Abweichungs-Tracking", intro: "Der Reiter „Abweichungs-Tracking“ zeigt alle Abweichungen eines Zeitraums: aus den Tageskennzahlen erkannte, geplante Ausfälle und von Hand erfasste.", tip: "Der Zeitraum ist derselbe wie im Dashboard. „Aktuelle Arbeitswoche“ stellt immer die laufende Woche von Montag bis Sonntag ein.", steps: [
       ["Zeitraum", "Tag, Arbeitswoche, Monat, Jahr oder ein frei definierter Zeitraum — mit ◀ ▶ blättern."],
@@ -9073,7 +9175,7 @@ window.SFM = (function () {
       lines.push("  für diesen Tag keine Tageskennzahlen erfasst");
     } else {
       DAILY_FIELD_TILES.forEach(function (f) {
-        var v = numOrNull(repDRec[f.key]);
+        var v = valueOf(f.key, repDRec);
         lines.push("  " + f.label + ": " + (v == null ? "–" : fmtNum(v, f.digits) + " " + f.unit));
       });
     }
@@ -9202,7 +9304,7 @@ window.SFM = (function () {
     var dGrid = $("#reportDailyGrid");
     dGrid.innerHTML = "";
     DAILY_FIELD_TILES.forEach(function (f) {
-      var v = dRec ? numOrNull(dRec[f.key]) : null;
+      var v = valueOf(f.key, dRec);
       var tile = el("div", "card mini-tile");
       if (f.key === "inventory" && dRec) {
         var invMaxRep = numOrNull(dRec.inventoryGrenzwert);
