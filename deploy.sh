@@ -41,7 +41,7 @@
 # =============================================================================
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="1.2.0"
 cd "$(dirname "$(readlink -f "$0")")"
 
 ENV_FILE=".env"

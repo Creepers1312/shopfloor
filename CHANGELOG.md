@@ -9,6 +9,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.2.0] – 2026-11-24
+
 ### Neu
 - **Revisionstag im Huddle:** Knopf „Revision“ (im Huddle und im Kennzahlen-Fenster) öffnet ein vereinfachtes
   Fenster nur mit Sicherheit, Inventory und Lieferung. Geplante Produktionsausfälle werden auf 24 h gesetzt (Art
@@ -91,7 +93,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/5b2d566...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Creepers1312/shopfloor/compare/5b2d566...v1.2.0
 [1.1.0]: https://github.com/Creepers1312/shopfloor/compare/856e513...5b2d566
 [1.0.0]: https://github.com/Creepers1312/shopfloor/compare/fd36899...856e513
 [0.1.0]: https://github.com/Creepers1312/shopfloor/commit/fd36899
