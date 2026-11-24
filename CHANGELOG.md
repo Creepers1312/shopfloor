@@ -9,6 +9,34 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.4.0] – 2026-11-24
+
+### Neu
+- **TV-Modus neu für den Hallenmonitor:** vier automatisch wechselnde Seiten in großer Schrift und
+  Alltagssprache — „Auf einen Blick“ (Tage ohne Unfall, SQIDP-Status, produziert gegenüber Plan, Ausschuss,
+  Stillstand, pünktliche Lieferungen), „Monat“ (SQIDP-Board), „Kennzahlen“ (mit Verlauf und Erklärung) und
+  „Abweichungen & Maßnahmen“ (Begründungen, wer macht was bis wann). Hinweis auf den nächsten Huddle (blinkt
+  während des Huddles), dunkle oder helle Darstellung, Vollbild-Knopf, Pause; die Bedienleiste erscheint nur bei
+  Mausbewegung oder Berührung. Der Bildschirm bleibt an, und um Mitternacht aktualisiert sich die Anzeige von selbst.
+- **Höhe der Diagrammachse wählbar:** Diagramme sowie die Karten First Pass Yield und Termintreue lassen sich auf
+  „Automatisch“ (Achse passt sich den Werten an) oder „Fest: 0–100 %“ stellen — beim Hinzufügen oder über ✎ im
+  Anpassen-Modus. Bei fester Achse beginnen andere Einheiten (t, h) bei 0.
+
+### Geändert
+- **Anwenderdoku komplett überarbeitet:** 25 Themen in fünf Gruppen (Grundlagen, Täglicher Ablauf, Auswertung,
+  Regeln & Kennzahlen, Verwaltung) mit Bildschirmfotos, Prozessabläufen (z. B. Daily Huddle, Abweichung begründen,
+  PDCA) und Schritt-für-Schritt-Anleitungen. Neu sind Themenliste mit Suche, Blättern zum nächsten Thema und
+  Vergrößern der Bilder per Klick.
+- **Dashboards übersichtlicher:** Die Dashboard-Knöpfe sind in die Kopfzeile neben „Datensicherung“,
+  „CSV-Export“ und „Huddle starten“ gewandert. Ein Knopf mit dem Namen des aktuellen Dashboards öffnet ein Menü:
+  oben alle Dashboards zum Wechseln (Standard, Öffentlich, Privat), darunter „Dashboard anpassen“, „Kopie
+  erstellen“, „Einstellungen“ und „Neues Dashboard“. Beim Anpassen erscheint eine eigene, hervorgehobene Leiste
+  mit „+ Widget hinzufügen“, „Ursprüngliches Layout“ und „Fertig“.
+
+### Behoben
+- In den Einstellungen überlagerte die Seitenleiste auf schmalen Bildschirmen beim Scrollen den Inhalt.
+- Die Zeitraum-Auswahl im Dashboard ragte auf schmalen Bildschirmen (Handy) über den Rand hinaus.
+
 ## [1.3.0] – 2026-11-24
 
 ### Neu
@@ -112,7 +140,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Creepers1312/shopfloor/compare/5b2d566...v1.2.0
 [1.1.0]: https://github.com/Creepers1312/shopfloor/compare/856e513...5b2d566

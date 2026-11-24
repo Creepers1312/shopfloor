@@ -35,6 +35,7 @@ frontend/index.html     gesamte Oberfläche (eine Datei, Vanilla-JS in einer IIF
 frontend/nginx.conf     nginx-unprivileged (Port 8080), Proxy /api → api:3000, Drosselung Anmelde-Endpunkte
 frontend/csp-hashes.js  berechnet beim Docker-Build die CSP-Hashes der Inline-Skripte (kein 'unsafe-inline')
 frontend/fonts/         Inter lokal (keine externen Quellen)
+frontend/docs/          Bilder der Anwenderdoku (WebP, erzeugt von tools/doku-screenshots.js)
 backend/src/            Node/Express + PostgreSQL (pg)
   server.js             Start, Migration, Zeitpläne (Sicherung, Aufräumen)
   app.js                Middleware (Größenlimits, Sitzung, Herkunfts-/CSRF-Prüfung), /api/health, Fehler
@@ -76,18 +77,25 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   Haken; geänderte Werte setzen „besprochen“ zurück (`reopenAgenda`).
 - **Revisionstag:** Fenster „Revision“ — nur Sicherheit, Inventory, Lieferung; geplant 24 h (Standard
   Organisatorisch, Begründung „Revision“), Rest 0, `rec.revision = true`, alle Punkte besprochen.
-- **Dashboards:** Liste mehrerer Dashboards (`dashList`, `currentDash()`, Auswahl `#dashSelect`), Widgets im
+- **Dashboards:** Liste mehrerer Dashboards (`dashList`, `currentDash()`; Wechseln, Anpassen, Kopie, Einstellungen,
+  Neu im Menü `#dashMenuBtn`/`#dashMenu` in der Kopfzeile des Dashboards; Anpassen-Leiste `#dashEditTools`), Widgets im
   12-Spalten-Raster. Sichtbarkeit `standard` (eingebaut: `standard`, `detail` = „Detaillierte Auswertung“; ändern nur
   manager/admin, `widgets: null` = ausgeliefertes Layout aus `DASH_BUILTIN`), `public` (alle sehen, ändern/löschen
   nur Ersteller + admin), `private` (nur Besitzer). Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
   alter `users.dashboard`-Layouts → private Dashboards), `routes/dashboards.js`; `/api/user/dashboard` speichert nur
   das zuletzt gewählte (`{v:2,current}`). Lokal: `sfm-dashboards-v1`. `sanitizeWidgets` prüft gespeicherte Layouts,
   `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
-  (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen).
+  (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen). Achse je Widget `scale` (`auto` | `fixed` = 0–100 % bzw. ab 0)
+  für Diagramme und KPI-Karten fpy/otd (`sparkline(…, fixed)`, `multiFieldChartSvg` mit `group.scale`).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).
-- **Anwenderdoku** im Array `DOCS` — bei neuen Funktionen mitpflegen.
+- **Anwenderdoku** im Array `DOCS` (Gruppen `DOC_GROUPS`; je Thema `intro`, optional `flow`, `sections` mit
+  `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
+  `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
+- **TV-Modus** (`enterTv`/`renderTv`, Seiten `TV_PAGES`, 20 s je Seite): Stand = `latestDailyIso()`, Einstellungen je
+  Gerät in `sfm-tv-v1` (Theme, Pause), setzt `data-theme` nur während des TV-Modus; Tageswechsel → Neuladen mit
+  `sessionStorage` `sfm-tv-resume`; Wake Lock; muss auf 1920×1080 und 1366×768 ohne Scrollen passen.
 
 ## Betrieb
 - `./deploy.sh` installiert/aktualisiert (Sicherung → `git pull` → bauen → starten); `./deploy.sh config`
