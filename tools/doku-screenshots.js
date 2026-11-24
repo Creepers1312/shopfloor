@@ -57,7 +57,7 @@ const W = 1440, H = 900;
     await p.click(`.side-item[data-spane="${pane}"]`); await wait(500); await shot(name);
   }
   // TV-Modus
-  await p.click('#tvBtn'); await wait(1200); await shot('tv-modus'); await p.keyboard.press('Escape');
+  await p.click('#tvBtn'); await wait(1200); await p.mouse.move(W / 2, H / 2); await wait(4500); await shot('tv-modus'); await p.keyboard.press('Escape');
   console.log(errs.join('\n') || 'keine Seitenfehler');
   await b.close();
   // PNG → WebP (Qualität 80) nach frontend/docs/

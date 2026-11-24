@@ -9,6 +9,14 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **TV-Modus neu für den Hallenmonitor:** vier automatisch wechselnde Seiten in großer Schrift und
+  Alltagssprache — „Auf einen Blick“ (Tage ohne Unfall, SQIDP-Status, produziert gegenüber Plan, Ausschuss,
+  Stillstand, pünktliche Lieferungen), „Monat“ (SQIDP-Board), „Kennzahlen“ (mit Verlauf und Erklärung) und
+  „Abweichungen & Maßnahmen“ (Begründungen, wer macht was bis wann). Hinweis auf den nächsten Huddle (blinkt
+  während des Huddles), dunkle oder helle Darstellung, Vollbild-Knopf, Pause; die Bedienleiste erscheint nur bei
+  Mausbewegung oder Berührung. Der Bildschirm bleibt an, und um Mitternacht aktualisiert sich die Anzeige von selbst.
+
 ### Geändert
 - **Anwenderdoku komplett überarbeitet:** 25 Themen in fünf Gruppen (Grundlagen, Täglicher Ablauf, Auswertung,
   Regeln & Kennzahlen, Verwaltung) mit Bildschirmfotos, Prozessabläufen (z. B. Daily Huddle, Abweichung begründen,
