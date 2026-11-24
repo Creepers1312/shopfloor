@@ -3,6 +3,8 @@
 Deutsche Web-App für das digitale Shopfloor Management mit SQIDP-Board, Kennzahlen und Huddle.
 Läuft als Docker-Compose-Stack mit PostgreSQL. Alle Geräte einer Linie sehen denselben Stand.
 
+Änderungen je Version: [CHANGELOG.md](CHANGELOG.md).
+
 ## Funktionen
 
 | Bereich | Inhalt |
