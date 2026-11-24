@@ -9,6 +9,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.4.0] – 2026-11-24
+
 ### Neu
 - **TV-Modus neu für den Hallenmonitor:** vier automatisch wechselnde Seiten in großer Schrift und
   Alltagssprache — „Auf einen Blick“ (Tage ohne Unfall, SQIDP-Status, produziert gegenüber Plan, Ausschuss,
@@ -138,7 +140,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Creepers1312/shopfloor/compare/5b2d566...v1.2.0
 [1.1.0]: https://github.com/Creepers1312/shopfloor/compare/856e513...5b2d566
