@@ -758,6 +758,8 @@ fieldset.ag-form legend { padding: 0 6px; font-size: 14px; font-weight: 600; }
 .linklike:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .login-demo { border-top: 1px solid var(--line-soft); margin-top: 4px; padding-top: 14px; text-align: center; }
 .login-hint { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 2px; }
+.app-version { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 16px; font-variant-numeric: tabular-nums; }
+.app-version.side-version { text-align: left; margin-top: 8px; padding: 0 10px; }
 
 .user-chip { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .avatar {
@@ -2064,6 +2066,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <nav class="side-nav" aria-label="Hilfe">
           <button class="side-item" data-spane="doc" type="button"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><span>Anwenderdoku</span></button>
         </nav>
+        <div class="app-version side-version" id="sideVersion" hidden></div>
       </div>
       <p class="empty-hint" id="settingsLocked" hidden>Stammdaten, E-Mail-Versand, Benutzerverwaltung sowie Datenbank &amp; Sicherung können nur Administratoren bearbeiten.</p>
     </aside>
@@ -2490,6 +2493,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button class="btn primary" type="submit" id="resetSubmit">Passwort speichern</button>
       <div class="login-alt"><button type="button" class="linklike" id="resetBack">Zurück zur Anmeldung</button></div>
     </form>
+    <div class="app-version" id="loginVersion" hidden></div>
   </div>
 </div>
 
@@ -8623,6 +8627,16 @@ window.SFM = (function () {
     box.appendChild(el("div", "db-stat-val" + (cls ? " " + cls : ""), value));
     return box;
   }
+  // Releaseversion (vom Server, /api/health) auf der Anmeldeseite und in den Einstellungen
+  function renderAppVersion(v) {
+    ["#loginVersion", "#sideVersion"].forEach(function (sel) {
+      var e = $(sel);
+      if (!e) return;
+      e.hidden = !v;
+      e.textContent = v ? (sel === "#loginVersion" ? "Version " : "Shopfloor Board · Version ") + v : "";
+      e.title = v ? "Installierte Version — Änderungen stehen im CHANGELOG" : "";
+    });
+  }
   function renderDbStatus() {
     var box = $("#dbStatus");
     if (!box) return;
@@ -8645,7 +8659,8 @@ window.SFM = (function () {
       return;
     }
     box.appendChild(dbStat("Speicherort", "PostgreSQL (Container)", "ok"));
-    box.appendChild(dbStat("Version", h.db || "unbekannt"));
+    box.appendChild(dbStat("Programmversion", h.version ? "Shopfloor Board " + h.version : "unbekannt"));
+    box.appendChild(dbStat("Datenbank-Version", h.db || "unbekannt"));
     box.appendChild(dbStat("Sicherungswerkzeug", h.pgDump ? "pg_dump bereit" : "pg_dump fehlt", h.pgDump ? "ok" : "warn"));
     box.appendChild(dbStat("Änderungsstand", "Nr. " + SFM.revision()));
     if (!h.pgDump) {
@@ -8942,6 +8957,7 @@ window.SFM = (function () {
     SFM.on("reload", function () { reloadFromStore(); loadBackups(); });
     SFM.on("expired", function () { sessionEnded(); });
     var server = SFM.isServer(), h = SFM.health() || {};
+    renderAppVersion(h.version);
     $("#sideAudit").hidden = !server;
     $("#dbWipeCard").hidden = !server;
     $("#smtpPassServerHint").hidden = !server;

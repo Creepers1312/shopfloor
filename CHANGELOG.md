@@ -14,6 +14,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   **privat** (nur für sich) oder **öffentlich** (für alle sichtbar) —, leer oder als Kopie eines bestehenden
   („Kopie erstellen“). Öffentliche Dashboards ändern und löschen nur Ersteller:in und Administration. Das zuletzt
   gewählte Dashboard bleibt je Konto gespeichert.
+- **Versionsanzeige:** Die installierte Version steht auf der Anmeldeseite, in den Einstellungen unter „Hilfe“
+  und bei „Datenbank & Sicherung“.
 
 ### Geändert
 - **Standard-Dashboards:** Das bisherige Dashboard heißt „Standard“ und ist für alle gleich; anpassen dürfen es
