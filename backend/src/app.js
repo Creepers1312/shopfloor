@@ -79,7 +79,7 @@ function createApp() {
     });
   }));
 
-  ["documents", "auth", "account", "admin"].forEach((m) => require("./routes/" + m).register(app));
+  ["documents", "auth", "account", "admin", "dashboards"].forEach((m) => require("./routes/" + m).register(app));
 
   /* ---------- Rest ---------- */
   app.use("/api", (req, res) => res.status(404).json({ error: "Unbekannter Endpunkt." }));

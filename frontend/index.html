@@ -758,6 +758,8 @@ fieldset.ag-form legend { padding: 0 6px; font-size: 14px; font-weight: 600; }
 .linklike:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .login-demo { border-top: 1px solid var(--line-soft); margin-top: 4px; padding-top: 14px; text-align: center; }
 .login-hint { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 2px; }
+.app-version { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 16px; font-variant-numeric: tabular-nums; }
+.app-version.side-version { text-align: left; margin-top: 8px; padding: 0 10px; }
 
 .user-chip { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .avatar {
@@ -1391,17 +1393,7 @@ kbd {
 .tv-huddle-time { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .tv-huddle-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
-/* ============ Detaillierte Auswertung (Diagramme) ============ */
-.detail-screen {
-  position: fixed; inset: 0; z-index: 150; background: var(--bg);
-  overflow-y: auto; padding: clamp(16px, 2.6vw, 44px) clamp(16px, 3.2vw, 52px) clamp(24px, 3vw, 48px);
-}
-.detail-screen[hidden] { display: none; }
-.detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 20px; }
-.detail-sub { margin: 3px 0 0; color: var(--muted); font-size: 13.5px; max-width: 62ch; }
-#detailExit { width: 44px; height: 44px; font-size: 18px; flex: none; }
-.detail-groups { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
-@media (max-width: 1100px) { .detail-groups { grid-template-columns: 1fr; } }
+/* ============ Diagramm-Widgets ============ */
 .detail-chart-card { display: flex; flex-direction: column; gap: 10px; }
 .detail-chart-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .detail-chart-title { font-weight: 600; font-size: 15px; }
@@ -1441,6 +1433,11 @@ kbd {
 
 
 /* ============ Anpassbares Dashboard (12-Spalten-Raster) ============ */
+.dash-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-right: auto; }
+.dash-picker select { min-width: 220px; max-width: 340px; font-weight: 600; }
+.dm-vis { display: flex; flex-direction: column; gap: 8px; }
+.dm-opt { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; font-weight: 400 !important; color: var(--ink); cursor: pointer; }
+.dm-opt input { margin-top: 3px; }
 .dash-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 14px; }
 .dash-toolbar .mini-hint { margin: 0; flex: 1 1 280px; }
 .dash-edit-tools { display: inline-flex; gap: 8px; flex-wrap: wrap; }
@@ -1595,7 +1592,7 @@ kbd {
 
 /* ============ Druckansicht ============ */
 @media print {
-  .topbar, .toasts, .login-screen, .tv-screen, .detail-screen, dialog,
+  .topbar, .toasts, .login-screen, .tv-screen, dialog,
   .view-head .head-actions, .view-head button, .month-nav button,
   .period-seg, .period-controls button, .period-range-inputs, #dashResetPeriod,
   .filter-row, .kcard-actions, .demo-note { display: none !important; }
@@ -1777,7 +1774,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     <div class="head-actions">
       <button class="btn" id="backupBtn" title="Alle Daten als Datei sichern oder aus einer Sicherung wiederherstellen">Datensicherung</button>
       <button class="btn" id="dashCsvBtn" title="Tages-Kennzahlen (OEE, FPY, Termintreue u. a.) als CSV exportieren">CSV-Export</button>
-      <button class="btn" id="detailDashBtn" title="Detaillierte Auswertung mit Diagrammen zu den Tageswerten öffnen">Detaillierte Auswertung</button>
       <button class="btn primary" data-goto="huddle">Huddle starten</button>
     </div>
   </div>
@@ -1806,10 +1802,17 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     <p class="mini-hint" id="dashCoverageText"></p>
   </div>
   <div class="dash-toolbar" id="dashToolbar">
-    <button class="btn" id="dashEditBtn" title="Karten und Diagramme hinzufügen, verschieben und in der Größe ändern — gilt nur für Ihr Konto">Dashboard anpassen</button>
+    <div class="dash-picker">
+      <select id="dashSelect" class="perm-select" aria-label="Dashboard auswählen"></select>
+      <span class="pill neutral" id="dashVisPill"></span>
+      <button class="btn" id="dashNewBtn" type="button" title="Eigenes Dashboard anlegen — leer oder als Kopie des aktuellen">+ Neues Dashboard</button>
+      <button class="btn" id="dashMetaBtn" type="button" title="Name und Sichtbarkeit ändern oder Dashboard löschen" hidden>Einstellungen</button>
+      <button class="btn" id="dashCopyBtn" type="button" title="Dieses Dashboard als eigenes Dashboard kopieren und anpassen" hidden>Kopie erstellen</button>
+    </div>
+    <button class="btn" id="dashEditBtn" title="Karten und Diagramme hinzufügen, verschieben und in der Größe ändern">Dashboard anpassen</button>
     <span class="dash-edit-tools" id="dashEditTools" hidden>
       <button class="btn primary" id="dashAddBtn">+ Widget hinzufügen</button>
-      <button class="btn" id="dashLayoutReset">Standard-Layout</button>
+      <button class="btn" id="dashLayoutReset" title="Dieses Standard-Dashboard für alle auf das ursprüngliche Layout zurücksetzen">Ursprüngliches Layout</button>
       <button class="btn" id="dashEditDone">Fertig</button>
     </span>
     <span class="mini-hint" id="dashEditHint" hidden>Kopfzeile ziehen = verschieben · Griff unten rechts = Größe ändern · Pfeiltasten verschieben, Umschalt + Pfeiltasten ändern die Größe.</span>
@@ -2063,6 +2066,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <nav class="side-nav" aria-label="Hilfe">
           <button class="side-item" data-spane="doc" type="button"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><span>Anwenderdoku</span></button>
         </nav>
+        <div class="app-version side-version" id="sideVersion" hidden></div>
       </div>
       <p class="empty-hint" id="settingsLocked" hidden>Stammdaten, E-Mail-Versand, Benutzerverwaltung sowie Datenbank &amp; Sicherung können nur Administratoren bearbeiten.</p>
     </aside>
@@ -2489,6 +2493,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button class="btn primary" type="submit" id="resetSubmit">Passwort speichern</button>
       <div class="login-alt"><button type="button" class="linklike" id="resetBack">Zurück zur Anmeldung</button></div>
     </form>
+    <div class="app-version" id="loginVersion" hidden></div>
   </div>
 </div>
 
@@ -2925,6 +2930,42 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </form>
 </dialog>
 
+<!-- Dialog: Dashboard anlegen / Einstellungen -->
+<dialog id="dashMetaDialog">
+  <form method="dialog" id="dashMetaForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="dmTitle">Neues Dashboard</h2>
+      <button type="button" class="btn ghost sm" id="dmClose" aria-label="Schließen">✕</button>
+    </div>
+    <div class="dlg-body">
+      <div class="field">
+        <label for="dmName">Name</label>
+        <input id="dmName" maxlength="60" autocomplete="off" placeholder="z. B. Schichtleitung Früh" required>
+      </div>
+      <div class="field">
+        <label>Sichtbarkeit</label>
+        <div class="dm-vis" role="radiogroup" aria-label="Sichtbarkeit">
+          <label class="dm-opt"><input type="radio" name="dmVis" value="private" checked> <span><b>Privat</b> — nur Sie sehen es</span></label>
+          <label class="dm-opt"><input type="radio" name="dmVis" value="public"> <span><b>Öffentlich</b> — alle sehen es, ändern dürfen nur Sie (und die Administration)</span></label>
+        </div>
+      </div>
+      <div class="field" id="dmTplField">
+        <label for="dmTpl">Inhalt</label>
+        <select id="dmTpl">
+          <option value="copy">Kopie des aktuellen Dashboards</option>
+          <option value="empty">Leer beginnen</option>
+        </select>
+      </div>
+      <p class="login-error" id="dmError" hidden></p>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="btn ghost danger" id="dmDelete" hidden>Löschen</button>
+      <button type="button" class="btn" id="dmCancel">Abbrechen</button>
+      <button type="submit" class="btn primary" id="dmSave">Anlegen</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="confirmDialog">
   <div class="dlg-head">
     <h2 id="cfTitle">Bestätigen</h2>
@@ -3023,7 +3064,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </div>
 </dialog>
 
-<!-- TV-/Andon-Modus, Detaillierte Auswertung, Toasts -->
+<!-- TV-/Andon-Modus, Toasts -->
 <div class="tv-screen" id="tvScreen" hidden>
   <div class="tv-head">
     <img class="tv-logo" alt="RHEINFELDEN" src="data:image/png;base64,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">
@@ -3056,49 +3097,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   </div>
 </div>
 
-<div class="detail-screen" id="detailScreen" hidden>
-  <div class="detail-head">
-    <div>
-      <div class="eyebrow">Detaillierte Auswertung</div>
-      <h1>Diagramme zu den Tageswerten</h1>
-      <p class="detail-sub">Beim Hovern über ein Diagramm zeigt ein Fadenkreuz alle Werte des Tages. Tage mit gestricheltem Ring haben eine Notiz oder Abweichung hinterlegt — Grund, Titel und Sofortmaßnahme erscheinen dann mit im Tooltip. Notizen trägt man im Tages-Dialog beim Erfassen der Werte ein (Feld „Grund / Notiz").</p>
-    </div>
-    <button class="btn icon-btn" id="detailExit" title="Detaillierte Auswertung verlassen (Esc)" aria-label="Detaillierte Auswertung verlassen">✕</button>
-  </div>
-  <div class="card detail-period-card">
-    <div class="period-nav-row">
-      <div class="period-seg" id="detailPeriodSeg" role="radiogroup" aria-label="Zeitraum">
-        <button type="button" data-mode="day">Tag</button>
-        <button type="button" data-mode="week">Arbeitswoche</button>
-        <button type="button" data-mode="month">Monat</button>
-        <button type="button" data-mode="year">Jahr</button>
-        <button type="button" data-mode="range">Zeitraum</button>
-      </div>
-      <div class="period-controls" id="detailPeriodControls">
-        <button class="btn sm icon-btn" id="detailPrevPeriod" aria-label="Vorheriger Zeitraum">◀</button>
-        <span class="month-label" id="detailPeriodLabelBtn"></span>
-        <button class="btn sm icon-btn" id="detailNextPeriod" aria-label="Nächster Zeitraum">▶</button>
-      </div>
-      <div class="period-range-inputs" id="detailPeriodRangeInputs" hidden>
-        <label class="range-field">Von <input type="date" id="detailRangeFromInput"></label>
-        <label class="range-field">Bis <input type="date" id="detailRangeToInput"></label>
-      </div>
-      <button class="btn sm" id="detailResetPeriod"></button>
-      <button class="btn sm" id="detailCurWeek" data-cur-week title="Laufende Arbeitswoche (Montag bis Sonntag) einstellen">Aktuelle Arbeitswoche</button>
-    </div>
-    <p class="mini-hint" id="detailRangeHint"></p>
-  </div>
-  <div class="dash-toolbar" id="detailToolbar">
-    <button class="btn" id="detailEditBtn" title="Diagramme hinzufügen, ändern, verschieben und löschen — gilt nur für Ihr Konto">Auswertung anpassen</button>
-    <span class="dash-edit-tools" id="detailEditTools" hidden>
-      <button class="btn primary" id="detailAddBtn">+ Widget hinzufügen</button>
-      <button class="btn" id="detailLayoutReset">Standard-Layout</button>
-      <button class="btn" id="detailEditDone">Fertig</button>
-    </span>
-    <span class="mini-hint" id="detailEditHint" hidden>Kopfzeile ziehen = verschieben · Griff unten rechts = Größe ändern · ✎ = Diagramm bearbeiten · ✕ = entfernen.</span>
-  </div>
-  <div class="dash-grid" id="detailGrid"></div>
-</div>
 
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 
@@ -4611,13 +4609,11 @@ window.SFM = (function () {
     return label + " · " + entered + " von " + totalDays + " Tagen erfasst";
   }
 
-  // Drei Zeitraum-Steuerungen (Dashboard, Detaillierte Auswertung, Abweichungs-Tracking) teilen
+  // Zwei Zeitraum-Steuerungen (Dashboard, Abweichungs-Tracking) teilen
   // sich denselben Zustand. Jede wird über dieselbe Element-Zuordnung angezeigt und verdrahtet.
   var PERIOD_UIS = [
     { seg: "dashPeriodSeg", controls: "periodControls", range: "periodRangeInputs", from: "dashRangeFromInput", to: "dashRangeToInput",
       label: "dashPeriodLabel", prev: "dashPrevPeriod", next: "dashNextPeriod", reset: "dashResetPeriod" },
-    { seg: "detailPeriodSeg", controls: "detailPeriodControls", range: "detailPeriodRangeInputs", from: "detailRangeFromInput", to: "detailRangeToInput",
-      label: "detailPeriodLabelBtn", prev: "detailPrevPeriod", next: "detailNextPeriod", reset: "detailResetPeriod" },
     { seg: "trkPeriodSeg", controls: "trkPeriodControls", range: "trkRangeInputs", from: "trkRangeFromInput", to: "trkRangeToInput",
       label: "trkPeriodLabel", prev: "trkPrevPeriod", next: "trkNextPeriod", reset: "trkResetPeriod" }
   ];
@@ -4657,13 +4653,11 @@ window.SFM = (function () {
     });
   }
   // Beim Wechsel des Zeitraums aktualisiert sich das gesamte Dashboard: Monatsbilanz, KPI-Kacheln
-  // (OEE/FPY/Termintreue inkl. Verlauf), OEE-Komponenten und die kleinen Kennzahlenkacheln — sowie,
-  // falls gerade geöffnet, die Detaillierte Auswertung mit ihrer eigenen Zeitraum-Steuerung.
+  // (OEE/FPY/Termintreue inkl. Verlauf), OEE-Komponenten und die Widgets des gewählten Dashboards.
   // Sicherheit und Offene Maßnahmen zeigen bewusst weiter den laufenden, aktuellen Stand.
   function renderDashboardForPeriod() {
     renderDashboardStats();
     renderDashGrid();
-    if (detailActive) renderDetailDashboard();
     renderTracking();
   }
   function setDashMode(mode) {
@@ -4966,7 +4960,7 @@ window.SFM = (function () {
     return tile;
   }
 
-  /* ---------- Detaillierte Auswertung (Diagramme zu den Tageswerte-Kacheln) ---------- */
+  /* ---------- Diagramm-Daten (Tageswerte über einen Zeitraum) ---------- */
   // Rohwerte mehrerer Tagesfelder parallel über einen Zeitraum einsammeln — Grundlage für die
   // kombinierten Diagramme (z. B. Geplante/Produzierte/Fakturierte Menge in einem Chart).
   // Abweichungen, die an einem bestimmten Tag angelegt wurden — Kontext für die Tooltips der
@@ -5244,9 +5238,9 @@ window.SFM = (function () {
     return item;
   }
   /* ---------- Anpassbares Dashboard: Widgets im 12-Spalten-Raster ---------- */
-  // Jeder Benutzer hat sein eigenes Layout (Karten + Diagramme, Position, Größe) — getrennt für das
-  // Dashboard und die Detaillierte Auswertung. Gespeichert wird lokal je Benutzername; im
-  // Server-Modus zusätzlich am Konto (beide Raster in einem Layout-Dokument).
+  // Es gibt mehrere Dashboards (Liste weiter unten): Standard-Dashboards für alle, öffentliche und
+  // private. Jedes hat ein eigenes Layout (Karten + Diagramme, Position, Größe); am Server liegen sie
+  // in der Tabelle „dashboards“, im lokalen Modus im Browser.
   var DASH_COLS = 12;
   var DASH_SERIES_COLORS = ["var(--cat-s)", "var(--cat-q)", "var(--cat-c)", "var(--cat-d)", "var(--cat-p)"];
   var DASH_MAX_SERIES = DASH_SERIES_COLORS.length;
@@ -5260,30 +5254,20 @@ window.SFM = (function () {
   }
   var dashDrag = null;
   // Die Raster. B ist das Raster, das gerade bedient wird (Detail-Overlay offen → detail).
+  // Ein Raster („dash“); was es zeigt, bestimmt das gewählte Dashboard aus der Dashboard-Liste
   var BOARDS = {
     dash: {
-      key: "dash", grid: "dashGrid", store: "sfm-dashlayout-v1", remote: "widgets",
+      key: "dash", grid: "dashGrid",
       editBtn: "dashEditBtn", tools: "dashEditTools", hint: "dashEditHint",
       emptyEdit: "Das Dashboard ist leer — mit „+ Widget hinzufügen“ Karten oder Diagramme einfügen.",
       emptyView: "Das Dashboard ist leer. Über „Dashboard anpassen“ lassen sich Karten und Diagramme hinzufügen.",
-      resetText: "Ihre eigene Anordnung (Karten, Diagramme, Größen) wird verworfen und das ursprüngliche Dashboard-Layout geladen.",
-      defaults: function () { return defaultDashWidgets(); },
-      edit: false, layout: null, user: null, ro: null
-    },
-    detail: {
-      key: "detail", grid: "detailGrid", store: "sfm-detaillayout-v1", remote: "detail",
-      editBtn: "detailEditBtn", tools: "detailEditTools", hint: "detailEditHint",
-      emptyEdit: "Die Auswertung ist leer — mit „+ Widget hinzufügen“ Diagramme oder Karten einfügen.",
-      emptyView: "Die Auswertung ist leer. Über „Auswertung anpassen“ lassen sich Diagramme hinzufügen.",
-      resetText: "Ihre eigene Anordnung der Detaillierten Auswertung wird verworfen und die ursprünglichen Diagramme geladen.",
-      defaults: function () { return defaultDetailWidgets(); },
-      edit: false, layout: null, user: null, ro: null
+      edit: false, layout: null, layoutFor: null, ro: null
     }
   };
   var B = BOARDS.dash;
-  function useBoard(key) { B = BOARDS[key]; }
   function resetBoards() {
-    Object.keys(BOARDS).forEach(function (k) { BOARDS[k].layout = null; BOARDS[k].user = null; BOARDS[k].edit = false; });
+    B.layout = null; B.layoutFor = null; B.edit = false;
+    dashList = null; currentDashId = "standard";
   }
 
   function newWidgetId() { return "w" + Date.now().toString(36) + Math.floor(Math.random() * 1296).toString(36); }
@@ -5352,53 +5336,140 @@ window.SFM = (function () {
     });
     return out;
   }
-  function dashUserKey() { return currentUser ? currentUser.name : "_anon"; }
-  function loadDashLayoutAll(bd) {
-    try {
-      var o = JSON.parse(LS.getItem((bd || B).store) || "{}");
-      return o && typeof o === "object" && !Array.isArray(o) ? o : {};
-    } catch (e) { return {}; }
+  /* -- Dashboard-Liste --
+     Standard-Dashboards: „Standard“ und „Detaillierte Auswertung“ — für alle gleich, ändern dürfen Teamleitung
+     und Administration; widgets = null heißt eingebautes Layout. Dazu öffentliche (alle sehen sie, ändern darf
+     der Ersteller und die Administration) und private Dashboards (nur der Ersteller). Am Server liegen sie in
+     der Tabelle dashboards, im lokalen Modus im Browser. Welches Dashboard gewählt ist, merkt sich das Board
+     je Benutzer (lokal und am Konto). */
+  var DASH_BUILTIN = {
+    standard: { name: "Standard", defaults: function () { return defaultDashWidgets(); } },
+    detail: { name: "Detaillierte Auswertung", defaults: function () { return defaultDetailWidgets(); } }
+  };
+  var DASH_STORE = "sfm-dashboards-v1", DASH_CURRENT_STORE = "sfm-dash-current-v1";
+  var dashList = null, currentDashId = "standard", dashSaveTimer = null;
+  function dashMe() { return currentUser && !currentUser.demo ? currentUser.name : ""; }
+  function dashIsBuiltin(d) { return !!(d && DASH_BUILTIN[d.id]); }
+  function dashFallbackList() {
+    return Object.keys(DASH_BUILTIN).map(function (id) {
+      return { id: id, name: DASH_BUILTIN[id].name, visibility: "standard", owner: "", widgets: null, canEdit: can("stamm") };
+    });
+  }
+  function currentDash() {
+    var list = dashList || dashFallbackList();
+    return list.filter(function (d) { return d.id === currentDashId; })[0] || list[0];
+  }
+  // Lokaler Modus: alle Dashboards im Browser, Rechte wie am Server
+  function localDashAll() {
+    var all;
+    try { all = JSON.parse(LS.getItem(DASH_STORE) || "null"); } catch (e) { all = null; }
+    if (!Array.isArray(all)) all = [];
+    Object.keys(DASH_BUILTIN).forEach(function (id) {
+      if (!all.some(function (d) { return d.id === id; })) all.push({ id: id, name: DASH_BUILTIN[id].name, visibility: "standard", owner: "", widgets: null });
+    });
+    return all;
+  }
+  function localDashSave(all) {
+    try { LS.setItem(DASH_STORE, JSON.stringify(all)); } catch (e) { /* Speichern optional */ }
+  }
+  function localCanEdit(d) {
+    if (!currentUser || currentUser.demo) return false;
+    if (d.visibility === "standard") return can("stamm");
+    return can("manageUsers") || String(d.owner).toLowerCase() === dashMe().toLowerCase();
+  }
+  function localDashList() {
+    var me = dashMe().toLowerCase(), order = { standard: 0, "public": 1, "private": 2 };
+    return localDashAll().filter(function (d) {
+      return d.visibility !== "private" || String(d.owner).toLowerCase() === me;
+    }).map(function (d) {
+      var c = {}; Object.keys(d).forEach(function (k) { c[k] = d[k]; });
+      c.canEdit = localCanEdit(d);
+      return c;
+    }).sort(function (a, b) {
+      var bi = ["standard", "detail"];
+      var ra = bi.indexOf(a.id), rb = bi.indexOf(b.id);
+      return order[a.visibility] - order[b.visibility] || (ra < 0 ? 9 : ra) - (rb < 0 ? 9 : rb) || a.name.localeCompare(b.name, "de");
+    });
+  }
+  // Frühere persönliche Layouts (lokaler Modus) einmalig als private Dashboards übernehmen
+  function localDashMigrate() {
+    var me = dashMe();
+    if (!me) return;
+    var all = localDashAll(), changed = false;
+    [["sfm-dashlayout-v1", "Mein Dashboard"], ["sfm-detaillayout-v1", "Meine Auswertung"]].forEach(function (x) {
+      var old;
+      try { old = JSON.parse(LS.getItem(x[0]) || "{}"); } catch (e) { old = {}; }
+      var mine = old && old[me];
+      if (!mine || !Array.isArray(mine.widgets) || !mine.widgets.length) return;
+      all.push({ id: "d" + newWidgetId(), name: x[1], visibility: "private", owner: me, widgets: mine.widgets, updatedAt: Date.now() });
+      delete old[me];
+      try { LS.setItem(x[0], JSON.stringify(old)); } catch (e) {}
+      changed = true;
+    });
+    if (changed) localDashSave(all);
+  }
+  function rememberDash(id) {
+    var store;
+    try { store = JSON.parse(LS.getItem(DASH_CURRENT_STORE) || "{}"); } catch (e) { store = {}; }
+    store[dashMe() || "_anon"] = id;
+    try { LS.setItem(DASH_CURRENT_STORE, JSON.stringify(store)); } catch (e) {}
+    if (SFM.isServer() && dashMe()) {
+      SFM.api("/api/user/dashboard", { method: "PUT", body: { layout: { v: 2, current: id } } }).catch(function () {});
+    }
+  }
+  function rememberedDash() {
+    try { return (JSON.parse(LS.getItem(DASH_CURRENT_STORE) || "{}") || {})[dashMe() || "_anon"] || null; } catch (e) { return null; }
+  }
+  // Liste laden (Server oder Browser) und das gemerkte Dashboard wählen
+  function loadDashList(preferId) {
+    var finish = function (list, serverPref) {
+      dashList = list;
+      var want = preferId || serverPref || rememberedDash() || currentDashId;
+      currentDashId = list.some(function (d) { return d.id === want; }) ? want : "standard";
+      B.layout = null;
+      if (!dashDrag) renderDashGrid();
+    };
+    if (!SFM.isServer()) { localDashMigrate(); finish(localDashList(), null); return Promise.resolve(); }
+    if (!currentUser) return Promise.resolve();
+    var who = currentUser.name;
+    return Promise.all([
+      SFM.api("/api/dashboards"),
+      dashMe() ? SFM.api("/api/user/dashboard").catch(function () { return null; }) : Promise.resolve(null)
+    ]).then(function (res) {
+      if (!currentUser || currentUser.name !== who || !res[0].ok) return;
+      var pref = res[1] && res[1].ok && res[1].data && res[1].data.layout && res[1].data.layout.v === 2 ? res[1].data.layout.current : null;
+      finish(res[0].data.dashboards, pref);
+    }).catch(function () {});
   }
   function getDashWidgets(bd) {
     bd = bd || B;
-    var who = dashUserKey();
-    if (bd.layout && bd.user === who) return bd.layout;
-    var saved = loadDashLayoutAll(bd)[who];
-    bd.layout = sanitizeWidgets(saved && saved.widgets) || bd.defaults();
-    bd.user = who;
+    var d = currentDash();
+    var key = d.id + "@" + (d.updatedAt || 0);
+    if (bd.layout && bd.layoutFor === key) return bd.layout;
+    bd.layout = sanitizeWidgets(d.widgets) || (dashIsBuiltin(d) ? DASH_BUILTIN[d.id].defaults() : []);
+    bd.layoutFor = key;
     return bd.layout;
   }
+  // Layout des gewählten Dashboards speichern (am Server gebündelt, damit nicht jeder Pfeiltasten-Schritt
+  // eine eigene Anfrage auslöst)
   function saveDashLayout(bd) {
     bd = bd || B;
-    var all = loadDashLayoutAll(bd);
-    all[bd.user || dashUserKey()] = { v: 1, widgets: bd.layout };
-    try { LS.setItem(bd.store, JSON.stringify(all)); } catch (e) { /* Speichern optional */ }
-    pushDashLayoutRemote();
-  }
-  // Geräteübergreifend (Server-Modus): Layout am Benutzerkonto ablegen/holen. Best effort —
-  // antwortet der Server nicht oder kennt den Endpunkt nicht, bleibt es beim lokalen Layout.
-  function pushDashLayoutRemote() {
-    if (!SFM.isServer() || !currentUser || currentUser.demo) return;
-    SFM.api("/api/user/dashboard", { method: "PUT", body: { layout: {
-      v: 1, widgets: getDashWidgets(BOARDS.dash), detail: getDashWidgets(BOARDS.detail)
-    } } }).catch(function () {});
-  }
-  function pullDashLayoutRemote() {
-    if (!SFM.isServer() || !currentUser || currentUser.demo) return;
-    var who = currentUser.name;
-    SFM.api("/api/user/dashboard").then(function (r) {
-      if (!r.ok || !r.data || !r.data.layout || !currentUser || currentUser.name !== who) return;
-      Object.keys(BOARDS).forEach(function (k) {
-        var bd = BOARDS[k];
-        var ws = sanitizeWidgets(r.data.layout[bd.remote]);
-        if (!ws) return;
-        var all = loadDashLayoutAll(bd);
-        all[who] = { v: 1, widgets: ws };
-        try { LS.setItem(bd.store, JSON.stringify(all)); } catch (e) {}
-        bd.layout = ws; bd.user = who;
-      });
-      if (!dashDrag) { renderDashGrid(); if (detailActive) renderDetailDashboard(); }
-    }).catch(function () {});
+    var d = currentDash();
+    if (!d || !d.canEdit) return;
+    d.widgets = bd.layout;
+    if (!SFM.isServer()) {
+      var all = localDashAll();
+      all.forEach(function (x) { if (x.id === d.id) { x.widgets = bd.layout; x.updatedAt = Date.now(); } });
+      localDashSave(all);
+      return;
+    }
+    clearTimeout(dashSaveTimer);
+    var id = d.id, widgets = bd.layout;
+    dashSaveTimer = setTimeout(function () {
+      SFM.api("/api/dashboards/" + encodeURIComponent(id), { method: "PUT", body: { widgets: widgets } }).then(function (r) {
+        if (!r.ok) toast((r.data && r.data.error) || "Dashboard nicht gespeichert");
+      }).catch(function () { toast("Dashboard nicht gespeichert — Server nicht erreichbar"); });
+    }, 400);
   }
 
   /* -- Raster-Geometrie: Kollisionen auflösen und nach oben verdichten -- */
@@ -5600,26 +5671,26 @@ window.SFM = (function () {
       grid.querySelectorAll(DW_AUTOSIZE).forEach(function (h) { bd.ro.observe(h); });
     }
     grid.querySelectorAll(DW_AUTOSIZE).forEach(dwRenderChart);
-    byId(bd.editBtn).hidden = bd.edit;
+    byId(bd.editBtn).hidden = bd.edit || !currentDash().canEdit;
     byId(bd.tools).hidden = !bd.edit;
     byId(bd.hint).hidden = !bd.edit;
     return ctx;
   }
-  function renderDetailDashboard() {
-    var range = detailChartRange();
-    $("#detailRangeHint").textContent = "Zeitraum: " + fmtDate(range.from) + " – " + fmtDate(range.to) +
-      (range.widened ? " · ein einzelner Tag ergibt kein Diagramm, daher die letzten 14 Tage" : "");
-    renderBoardGrid(BOARDS.detail);
-  }
   function renderDashGrid() {
+    renderDashPicker();
     var ctx = renderBoardGrid(BOARDS.dash);
     if (!ctx) return;
     var hint = $("#miniHint");
-    if (hint) hint.textContent = ctx.iso ? (dashMode === "day" ? "Tageswerte Stand: " + fmtDate(ctx.iso)
+    var txt = ctx.iso ? (dashMode === "day" ? "Tageswerte Stand: " + fmtDate(ctx.iso)
       : "Mengen und Ausfallzeiten: Summe " + dashPeriodNoun() + " · Inventory: Stand " + fmtDate(ctx.iso)) :
       (dashIsCurrentPeriod() ? "Noch keine Tageskennzahlen erfasst — im Huddle eintragen." : "Keine Tageskennzahlen " + dashPeriodNoun() + " erfasst.");
+    // Diagramme brauchen mehr als einen Tag — im Tagesmodus zeigen sie die letzten 14 Tage
+    if (dashMode === "day" && getDashWidgets().some(function (w) { return w.type === "chart"; })) {
+      txt += " · Diagramme zeigen im Tagesmodus die letzten 14 Tage.";
+    }
+    if (hint) hint.textContent = txt;
   }
-  function renderActiveBoard() { if (B === BOARDS.detail) renderDetailDashboard(); else renderDashGrid(); }
+  function renderActiveBoard() { renderDashGrid(); }
 
   /* -- Verschieben und Größe ändern (Zeiger: Maus, Touch, Stift) -- */
   function dwMetrics() {
@@ -5741,7 +5812,7 @@ window.SFM = (function () {
       cur.push(w);
       bd.layout = cur;
       saveDashLayout(bd);
-      if (bd === BOARDS.detail) { if (detailActive) renderDetailDashboard(); } else renderDashGrid();
+      renderDashGrid();
     });
   }
   function addDashWidget(cfg) {
@@ -5766,21 +5837,158 @@ window.SFM = (function () {
     B.edit = on;
     renderActiveBoard();
   }
-  // Bedienelemente beider Raster: Präfix dash… bzw. detail…
-  [["dash", "dash"], ["detail", "detail"]].forEach(function (x) {
-    var key = x[0], pre = x[1];
-    byId(pre + "EditBtn").addEventListener("click", function () { useBoard(key); setDashEdit(true); });
-    byId(pre + "EditDone").addEventListener("click", function () { useBoard(key); setDashEdit(false); });
-    byId(pre + "AddBtn").addEventListener("click", function () { useBoard(key); openWidgetDialog(null); });
-    byId(pre + "LayoutReset").addEventListener("click", function () {
-      useBoard(key);
-      var bd = B;
-      appConfirm("Standard-Layout wiederherstellen", bd.resetText, "Wiederherstellen", true, function () {
-        bd.layout = bd.defaults(); bd.user = dashUserKey();
-        saveDashLayout(bd); renderActiveBoard();
-        toast("Standard-Layout wiederhergestellt");
+  function renderDashPicker() {
+    var sel = $("#dashSelect");
+    if (!sel) return;
+    var list = dashList || dashFallbackList(), d = currentDash(), me = dashMe().toLowerCase();
+    sel.innerHTML = "";
+    [["standard", "Standard"], ["public", "Öffentlich"], ["private", "Privat"]].forEach(function (g) {
+      var items = list.filter(function (x) { return x.visibility === g[0]; });
+      if (!items.length) return;
+      var og = document.createElement("optgroup");
+      og.label = g[1];
+      items.forEach(function (x) {
+        var o = document.createElement("option");
+        o.value = x.id;
+        o.textContent = x.name + (x.visibility === "public" && String(x.owner).toLowerCase() !== me ? " · " + x.owner : "");
+        og.appendChild(o);
       });
+      sel.appendChild(og);
     });
+    sel.value = d.id;
+    var mine = String(d.owner).toLowerCase() === me && !!me;
+    $("#dashVisPill").textContent = d.visibility === "standard" ? "Für alle" : d.visibility === "public" ? "Öffentlich · " + (mine ? "von Ihnen" : "von " + d.owner) : "Privat";
+    $("#dashVisPill").title = d.visibility === "standard" ? "Standard-Dashboard — gleich für alle, gepflegt von Teamleitung und Administration"
+      : d.visibility === "public" ? "Alle sehen dieses Dashboard; ändern darf nur, wer es angelegt hat (und die Administration)" : "Nur Sie sehen dieses Dashboard";
+    $("#dashNewBtn").hidden = !dashMe();
+    $("#dashMetaBtn").hidden = !(d.canEdit && !dashIsBuiltin(d));
+    $("#dashCopyBtn").hidden = !dashMe();
+    $("#dashLayoutReset").hidden = !dashIsBuiltin(d);
+    $("#dashEditBtn").title = dashIsBuiltin(d)
+      ? "„" + d.name + "“ für alle anpassen (Teamleitung und Administration)"
+      : "Karten und Diagramme hinzufügen, verschieben und in der Größe ändern";
+  }
+  function selectDash(id) {
+    if (id === currentDashId) return;
+    B.edit = false;
+    currentDashId = id;
+    B.layout = null;
+    rememberDash(id);
+    renderDashGrid();
+    // Öffentliche Dashboards ändern andere — beim Wechsel den aktuellen Stand holen
+    if (SFM.isServer()) loadDashList(id);
+  }
+  $("#dashSelect").addEventListener("change", function () { selectDash(this.value); });
+
+  var dmDlg = $("#dashMetaDialog"), dmMode = "new";
+  function dmError(msg) { var e = $("#dmError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function dmVis() { return dmDlg.querySelector('input[name="dmVis"]:checked').value; }
+  function openDashMeta(mode) {
+    var d = currentDash();
+    dmMode = mode;
+    var edit = mode === "edit";
+    $("#dmTitle").textContent = edit ? "Dashboard-Einstellungen" : mode === "copy" ? "Dashboard kopieren" : "Neues Dashboard";
+    $("#dmName").value = edit ? d.name : mode === "copy" ? ("Kopie von " + d.name).slice(0, 60) : "";
+    dmDlg.querySelector('input[name="dmVis"][value="' + (edit ? d.visibility : "private") + '"]').checked = true;
+    $("#dmTplField").hidden = mode !== "new";
+    $("#dmTpl").value = "copy";
+    $("#dmTpl").options[0].textContent = "Kopie von „" + d.name + "“";
+    $("#dmDelete").hidden = !edit;
+    $("#dmSave").textContent = edit ? "Speichern" : "Anlegen";
+    dmError(null);
+    dmDlg.showModal();
+    setTimeout(function () { $("#dmName").focus(); $("#dmName").select(); }, 0);
+  }
+  $("#dashNewBtn").addEventListener("click", function () { openDashMeta("new"); });
+  $("#dashCopyBtn").addEventListener("click", function () { openDashMeta("copy"); });
+  $("#dashMetaBtn").addEventListener("click", function () { openDashMeta("edit"); });
+  $("#dmCancel").addEventListener("click", function () { dmDlg.close(); });
+  $("#dmClose").addEventListener("click", function () { dmDlg.close(); });
+  $("#dashMetaForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("#dmName").value.trim().replace(/\s+/g, " ");
+    if (!name) { dmError("Bitte einen Namen angeben."); return; }
+    var vis = dmVis(), d = currentDash();
+    if (dmMode === "edit") {
+      var applyEdit = function (fresh) {
+        d.name = fresh.name; d.visibility = fresh.visibility;
+        dmDlg.close(); renderDashGrid();
+        toast("Dashboard „" + d.name + "“ gespeichert" + (fresh.visibility === "public" ? " — für alle sichtbar" : " — nur für Sie sichtbar"));
+      };
+      if (!SFM.isServer()) {
+        var all = localDashAll();
+        all.forEach(function (x) { if (x.id === d.id) { x.name = name; x.visibility = vis; } });
+        localDashSave(all); applyEdit({ name: name, visibility: vis }); return;
+      }
+      SFM.api("/api/dashboards/" + encodeURIComponent(d.id), { method: "PUT", body: { name: name, visibility: vis } }).then(function (r) {
+        if (!r.ok) { dmError((r.data && r.data.error) || "Nicht gespeichert"); return; }
+        applyEdit(r.data.dashboard);
+      }).catch(function () { dmError("Server nicht erreichbar"); });
+      return;
+    }
+    // Neu oder Kopie: Widgets des aktuellen Dashboards übernehmen oder leer beginnen
+    var widgets = dmMode === "copy" || $("#dmTpl").value === "copy" ? JSON.parse(JSON.stringify(getDashWidgets())) : [];
+    var created = function (nd) {
+      dashList = (dashList || dashFallbackList()).concat([nd]);
+      dmDlg.close();
+      currentDashId = nd.id; B.layout = null; rememberDash(nd.id);
+      B.edit = true;   // gleich anpassen
+      renderDashGrid();
+      toast("Dashboard „" + nd.name + "“ angelegt" + (nd.visibility === "public" ? " — für alle sichtbar" : ""));
+    };
+    if (!SFM.isServer()) {
+      var nd = { id: "d" + newWidgetId(), name: name, visibility: vis, owner: dashMe(), widgets: widgets, updatedAt: Date.now() };
+      var all2 = localDashAll(); all2.push(nd); localDashSave(all2);
+      nd = JSON.parse(JSON.stringify(nd)); nd.canEdit = true;
+      created(nd); return;
+    }
+    SFM.api("/api/dashboards", { method: "POST", body: { name: name, visibility: vis, widgets: widgets } }).then(function (r) {
+      if (!r.ok) { dmError((r.data && r.data.error) || "Nicht angelegt"); return; }
+      created(r.data.dashboard);
+    }).catch(function () { dmError("Server nicht erreichbar"); });
+  });
+  $("#dmDelete").addEventListener("click", function () {
+    var d = currentDash();
+    appConfirm("Dashboard löschen?", "„" + d.name + "“ wird gelöscht" + (d.visibility === "public" ? " — auch für alle anderen" : "") + ".", "Löschen", true, function () {
+      var removed = function () {
+        dashList = (dashList || []).filter(function (x) { return x.id !== d.id; });
+        dmDlg.close();
+        currentDashId = "standard"; B.layout = null; B.edit = false; rememberDash("standard");
+        renderDashGrid(); toast("Dashboard „" + d.name + "“ gelöscht");
+      };
+      if (!SFM.isServer()) {
+        localDashSave(localDashAll().filter(function (x) { return x.id !== d.id; })); removed(); return;
+      }
+      SFM.api("/api/dashboards/" + encodeURIComponent(d.id), { method: "DELETE" }).then(function (r) {
+        if (!r.ok) { dmError((r.data && r.data.error) || "Nicht gelöscht"); return; }
+        removed();
+      }).catch(function () { dmError("Server nicht erreichbar"); });
+    });
+  });
+
+  $("#dashEditBtn").addEventListener("click", function () { setDashEdit(true); });
+  $("#dashEditDone").addEventListener("click", function () { setDashEdit(false); });
+  $("#dashAddBtn").addEventListener("click", function () { openWidgetDialog(null); });
+  $("#dashLayoutReset").addEventListener("click", function () {
+    var d = currentDash();
+    if (!dashIsBuiltin(d) || !d.canEdit) return;
+    appConfirm("Ursprüngliches Layout wiederherstellen",
+      "„" + d.name + "“ wird für alle auf das ursprüngliche Layout zurückgesetzt. Eigene Dashboards sind davon nicht betroffen.",
+      "Wiederherstellen", true, function () {
+        var done = function () {
+          d.widgets = null; d.updatedAt = Date.now(); B.layout = null;
+          renderActiveBoard(); toast("Ursprüngliches Layout wiederhergestellt");
+        };
+        if (!SFM.isServer()) {
+          var all = localDashAll();
+          all.forEach(function (x) { if (x.id === d.id) x.widgets = null; });
+          localDashSave(all); done(); return;
+        }
+        SFM.api("/api/dashboards/" + encodeURIComponent(d.id), { method: "PUT", body: { widgets: null } }).then(function (r) {
+          if (!r.ok) { toast((r.data && r.data.error) || "Nicht gespeichert"); return; }
+          done();
+        }).catch(function () { toast("Server nicht erreichbar"); });
+      });
   });
   // Nach Fenster-/Ansichtswechsel Diagramme neu einpassen (falls kein ResizeObserver vorhanden)
   window.addEventListener("resize", function () {
@@ -8199,26 +8407,6 @@ window.SFM = (function () {
     if (tvActive && e.key === "Escape") exitTv();
   });
 
-  /* ---------- Detaillierte Auswertung (Diagramme) ---------- */
-  var detailActive = false;
-  function enterDetail() {
-    detailActive = true;
-    useBoard("detail");
-    $("#detailScreen").hidden = false;
-    syncPeriodUis();
-    renderDetailDashboard();
-  }
-  function exitDetail() {
-    detailActive = false;
-    BOARDS.detail.edit = false;
-    useBoard("dash");
-    $("#detailScreen").hidden = true;
-  }
-  $("#detailDashBtn").addEventListener("click", enterDetail);
-  $("#detailExit").addEventListener("click", exitDetail);
-  document.addEventListener("keydown", function (e) {
-    if (detailActive && e.key === "Escape") exitDetail();
-  });
 
   /* ---------- Export ---------- */
   // Dateien werden über die Artifact-„downloads"-Capability angeboten (die Ansicht erlaubt
@@ -8439,6 +8627,16 @@ window.SFM = (function () {
     box.appendChild(el("div", "db-stat-val" + (cls ? " " + cls : ""), value));
     return box;
   }
+  // Releaseversion (vom Server, /api/health) auf der Anmeldeseite und in den Einstellungen
+  function renderAppVersion(v) {
+    ["#loginVersion", "#sideVersion"].forEach(function (sel) {
+      var e = $(sel);
+      if (!e) return;
+      e.hidden = !v;
+      e.textContent = v ? (sel === "#loginVersion" ? "Version " : "Shopfloor Board · Version ") + v : "";
+      e.title = v ? "Installierte Version — Änderungen stehen im CHANGELOG" : "";
+    });
+  }
   function renderDbStatus() {
     var box = $("#dbStatus");
     if (!box) return;
@@ -8461,7 +8659,8 @@ window.SFM = (function () {
       return;
     }
     box.appendChild(dbStat("Speicherort", "PostgreSQL (Container)", "ok"));
-    box.appendChild(dbStat("Version", h.db || "unbekannt"));
+    box.appendChild(dbStat("Programmversion", h.version ? "Shopfloor Board " + h.version : "unbekannt"));
+    box.appendChild(dbStat("Datenbank-Version", h.db || "unbekannt"));
     box.appendChild(dbStat("Sicherungswerkzeug", h.pgDump ? "pg_dump bereit" : "pg_dump fehlt", h.pgDump ? "ok" : "warn"));
     box.appendChild(dbStat("Änderungsstand", "Nr. " + SFM.revision()));
     if (!h.pgDump) {
@@ -8758,6 +8957,7 @@ window.SFM = (function () {
     SFM.on("reload", function () { reloadFromStore(); loadBackups(); });
     SFM.on("expired", function () { sessionEnded(); });
     var server = SFM.isServer(), h = SFM.health() || {};
+    renderAppVersion(h.version);
     $("#sideAudit").hidden = !server;
     $("#dbWipeCard").hidden = !server;
     $("#smtpPassServerHint").hidden = !server;
@@ -9297,7 +9497,13 @@ window.SFM = (function () {
       ["Automatische Abmeldung", "Nach 12 Stunden ohne Bedienung (einstellbar) wird abgemeldet — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage."],
       ["Konten verwalten", "Administratoren legen Konten mit Anzeigename, Anmeldename und optionaler E-Mail an, ändern sie über „Bearbeiten“, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen. Offene Passwort-Anfragen stehen oben in der Benutzerverwaltung."],
       ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
-    { title: "Dashboard anpassen", intro: "Das Dashboard und die Detaillierte Auswertung bestehen aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet beide Ansichten für sich ein (in der Detaillierten Auswertung über „Auswertung anpassen“).", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
+    { title: "Dashboards", intro: "Über die Auswahl links oben im Dashboard wechseln Sie zwischen mehreren Dashboards. „Standard“ und „Detaillierte Auswertung“ sind für alle gleich; zusätzlich kann jede Person eigene Dashboards anlegen — privat (nur für sich) oder öffentlich (alle sehen es).", tip: "Das zuletzt gewählte Dashboard wird beim nächsten Öffnen wieder angezeigt.", steps: [
+      ["Neues Dashboard", "Auf „Neu“ klicken, Namen eingeben, „Privat“ oder „Öffentlich“ wählen und festlegen, ob als Kopie des aktuellen Dashboards oder leer begonnen wird. Danach öffnet sich gleich das Anpassen."],
+      ["Kopie erstellen", "„Kopie erstellen“ übernimmt das gerade gezeigte Dashboard (auch ein fremdes öffentliches oder ein Standard-Dashboard) als eigenes, das Sie frei ändern können."],
+      ["Wer darf was?", "Standard-Dashboards ändern nur Teamleitung und Administration — die Änderung gilt für alle. Ein öffentliches Dashboard ändern oder löschen nur die Person, die es angelegt hat, und die Administration; alle anderen sehen es nur. Private Dashboards sieht und ändert nur ihr Besitzer."],
+      ["Einstellungen", "Bei eigenen Dashboards öffnet „Einstellungen“ Name und Sichtbarkeit; dort lässt sich ein Dashboard auch löschen. Wird ein Konto gelöscht, verschwinden seine privaten Dashboards, öffentliche bleiben erhalten."]
+    ] },
+    { title: "Dashboard anpassen", intro: "Jedes Dashboard besteht aus Widgets auf einem 12-Spalten-Raster. Anpassen kann, wer das Dashboard ändern darf (siehe „Dashboards“).", tip: "Bei Standard-Dashboards stellt „Ursprüngliches Layout“ die ausgelieferte Anordnung für alle wieder her, „Fertig“ beendet das Anpassen. Änderungen werden sofort gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
       ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe). Diagramme, Verlaufslinien und der OEE-Ring passen sich der neuen Größe an; bei kleinen Widgets fallen Zusatzangaben wie Ø/Min/Max weg, damit nichts gescrollt werden muss."],
       ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Karten, Kacheln und Diagramme für alle Werte aus dem Huddle — erfasste (z. B. Mengen, Ausfälle je Art) und berechnete (z. B. OEE, Technische Anlagenverfügbarkeit, Laufzeit, Gutmenge). Kacheln zeigen über einen Zeitraum die Summe, bei Kennzahlen den Wert für den ganzen Zeitraum (Ø) und bei Beständen den jüngsten Stand."],
       ["Multigraph", "Bis zu fünf Werte mit bis zu zwei Einheiten in einem Diagramm: Die erste Einheit steht auf der linken, die zweite auf der rechten Achse (z. B. Ausschuss in t links, Ausfälle in h rechts). Die Legende nennt zu jedem Wert Einheit und Achse."],
@@ -9832,7 +10038,7 @@ window.SFM = (function () {
     resetBoards();
     applyPermissions();
     renderAll();
-    pullDashLayoutRemote();
+    loadDashList();
   }
   // Abmeldung nach Inaktivität (ohne Maus, Tastatur, Touch) — außer im TV-Modus.
   // Der Server setzt dieselbe Frist durch; das hier meldet nur rechtzeitig sichtbar ab.
@@ -10396,7 +10602,6 @@ window.SFM = (function () {
   function renderAll() {
     renderDashboardStats(); renderDashGrid(); renderBoard(); renderKanban(); renderAgenda();
     renderHuddleCalendar(); renderReport(); renderUsers(); updateBadges(); renderTracking();
-    if (detailActive) renderDetailDashboard();
   }
   applySettings();
   applyPermissions();
