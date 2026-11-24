@@ -1436,13 +1436,52 @@ kbd {
 }
 .dw-body { flex: 1; min-height: 0; min-width: 0; overflow: auto; border-radius: 14px; }
 .dw-body > .card { height: 100%; }
-.dw-body > .bilanz-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 0; }
+.dw-body > .bilanz-grid { margin: 0; }
 .dw-tile .dw-body { overflow: hidden; }
 .dw-tile .dw-body > .card { justify-content: center; }
-.dw-chart-card { padding: 14px 16px; gap: 8px; overflow: hidden; }
+.dw-chart-card { padding: 14px 16px; gap: 8px; overflow: hidden; container-type: size; }
 .dw-chart-card .detail-chart-head { flex-wrap: wrap; gap: 6px 16px; }
-.dw-chart-body { flex: 1; min-height: 70px; }
+.dw-chart-body { flex: 1 1 0; min-height: 0; }
+/* Diagramm-Widgets passen ihren Inhalt der Fläche an: erst fallen die Kennzahlen weg, dann
+   wird die Legende knapper — das Diagramm selbst behält immer den Rest der Höhe */
+@container (max-width: 480px) {
+  .dw-chart-card { padding: 12px 12px; }
+  .dw-chart-card .detail-chart-title { font-size: 13px; }
+  .dw-chart-card .detail-chart-legend { gap: 2px 10px; }
+  .dw-chart-card .detail-legend-item { font-size: 11.5px; gap: 4px; }
+  .dw-chart-card .detail-stat-val { font-size: 13px; }
+}
 .dw-chart-body .trend-chart { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Kennzahl-Karten im Widget: Verlauf füllt die freie Höhe statt mit der Breite zu wachsen */
+.dw .kpi { overflow: hidden; }
+.dw .kpi-spark { flex: 1 1 0; min-height: 0; position: relative; }
+.dw .kpi-spark svg { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; }
+.dw-kpi .dw-body, .dw-bilanz .dw-body { container-type: size; }
+@container (max-height: 230px) {
+  .dw .kpi-target { display: none; }
+  .dw .kpi-value { font-size: 28px; }
+}
+/* OEE-Ring wächst mit der Fläche */
+.dw .oee-card-body { flex: 1 1 auto; min-height: 0; }
+.dw .oee-ring-wrap { width: clamp(80px, min(48cqh, 34cqw), 190px); }
+/* Monatsbilanz im Widget: eine Reihe, Karten füllen die Höhe, Inhalt wird bei wenig Platz knapper */
+.dw-body > .bilanz-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); height: 100%; }
+.dw-body > .bilanz-grid .bilanz-card { min-height: 0; overflow: hidden; justify-content: center; }
+.dw-body > .bilanz-grid .bilanz-card:last-child { grid-column: auto; }
+@container (max-width: 620px) {
+  .dw .bilanz-card .sum-card-name { display: none; }
+  .dw .bilanz-card { padding: 8px 9px; }
+  .dw .bilanz-pct { font-size: 21px; }
+  .dw .sum-counts { gap: 8px; }
+  /* nur die farbigen Zahlen, ohne „grün“/„rot“ (die Kachel nennt beides im Tooltip) */
+  .dw .sum-count { font-size: 0; gap: 0; }
+  .dw .sum-count b { font-size: 16px; }
+}
+@container (max-height: 160px) {
+  .dw .bilanz-card { gap: 4px; padding-top: 6px; padding-bottom: 6px; }
+  .dw .bilanz-pct { font-size: 20px; }
+  .dw .sum-count b { font-size: 15px; }
+}
 .dw-empty { grid-column: 1 / -1; grid-row: 1 / span 4; display: grid; place-items: center; text-align: center;
   border: 2px dashed var(--line); border-radius: 14px; color: var(--muted); padding: 20px; }
 /* Bearbeitungsmodus */
@@ -4143,14 +4182,16 @@ window.SFM = (function () {
     for (var t = Math.ceil(min / step) * step; t <= max + step * 1e-6; t += step) out.push(Math.round(t / step) * step);
     return { ticks: out, step: step };
   }
-  function sparkline(values, target, labels, color) {
+  // width/height: echte Pixelgröße (im Dashboard-Widget), sonst 420×190 und mit der Breite skaliert
+  function sparkline(values, target, labels, color, width, height) {
     color = color || "var(--accent)";
-    var w = 420, h = 190, padL = 38, padR = 12, padT = 12, padB = 26;
+    var w = width || 420, h = height || 190, padL = 38, padR = 12, padT = 12, padB = h < 80 ? 6 : 26;
+    if (h < 80) labels = null;   // sehr flach: keine Datumsachse, nur der Verlauf
     var lo = Math.min.apply(null, values.concat(target != null ? [target] : []));
     var hi = Math.max.apply(null, values.concat(target != null ? [target] : []));
     var span = (hi - lo) || 1;
     var min = lo - span * 0.12, max = hi + span * 0.12;
-    var nt = niceTicks(min, max, 4);
+    var nt = niceTicks(min, max, h < 110 ? 2 : 4);
     // Achse so weit aufspannen, dass die äußeren Stufen noch im Bild liegen
     if (nt.ticks.length) { min = Math.min(min, nt.ticks[0]); max = Math.max(max, nt.ticks[nt.ticks.length - 1]); }
     span = max - min;
@@ -4672,12 +4713,13 @@ window.SFM = (function () {
     }
     card.appendChild(row);
     card.appendChild(el("div", "kpi-target", "Ziel: " + fmtNum(meta.target, 0) + " % · gestrichelte Linie"));
-    var svgWrap = el("div");
+    var svgWrap = el("div", "kpi-spark");
     var dateLabels = historySeriesWithDatesForRange(id, b.from, b.to);
-    svgWrap.innerHTML = sparkline(
-      vals.length > 1 ? vals : [vals[0], vals[0]], meta.target,
-      dateLabels.length > 1 ? dateLabels : [dateLabels[0], dateLabels[0]], lineColor
-    );
+    var sVals = vals.length > 1 ? vals : [vals[0], vals[0]];
+    var sLabels = dateLabels.length > 1 ? dateLabels : [dateLabels[0], dateLabels[0]];
+    svgWrap.innerHTML = sparkline(sVals, meta.target, sLabels, lineColor);
+    // Im Dashboard-Widget füllt der Verlauf die freie Fläche (siehe dwRenderChart)
+    svgWrap._draw = function (W, H) { return sparkline(sVals, meta.target, sLabels, lineColor, W, H); };
     card.appendChild(svgWrap);
     return card;
   }
@@ -5295,23 +5337,43 @@ window.SFM = (function () {
       head.appendChild(legend);
     }
     card.appendChild(head);
-    if (w.h >= 7) {
-      var stats = el("div", "detail-chart-stats");
-      group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], group.unit)); });
-      card.appendChild(stats);
-    }
+    // Kennzahl-Zeile (Ø/Min/Max) immer erzeugen — ob sie Platz hat, entscheidet das CSS nach der
+    // echten Widget-Größe (Container-Abfrage), damit dem Diagramm genug Höhe bleibt
+    var stats = el("div", "detail-chart-stats");
+    group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], group.unit)); });
+    card.appendChild(stats);
     var host = el("div", "dw-chart-body detail-chart-svg-wrap");
     host._group = group; host._data = data;
     card.appendChild(host);
     return card;
   }
-  // Diagramm in der echten Pixelgröße seines Widgets zeichnen (Schrift bleibt lesbar, füllt die Fläche)
+  // Diagramm in der echten Pixelgröße seines Widgets zeichnen (Schrift bleibt lesbar, füllt die Fläche).
+  // Für Diagramm-Widgets (_group) und die Verlaufslinie der Kennzahl-Karten (_draw).
+  var DW_AUTOSIZE = ".dw-chart-body, .dw .kpi-spark";
   function dwRenderChart(host) {
-    if (!host || !host._group) return;
+    if (!host || (!host._group && !host._draw)) return;
     var W = Math.round(host.clientWidth), H = Math.round(host.clientHeight);
-    if (W < 40 || H < 40) return;
     if (host._w === W && host._h === H) return;
     host._w = W; host._h = H;
+    if (host._draw) {
+      // Zu wenig Platz: Verlauf ausblenden statt winzig zu zeichnen
+      host.innerHTML = W >= 120 && H >= 40 ? host._draw(W, H) : "";
+      return;
+    }
+    // Ändert sich die Größe der Karte, neu entscheiden, was neben dem Diagramm Platz hat:
+    // Bleibt zu wenig Höhe, fallen erst die Kennzahlen (Ø/Min/Max), dann die Legende weg
+    var card = host.parentNode, key = card.clientWidth + "x" + card.clientHeight;
+    if (host._cardKey !== key) {
+      host._cardKey = key;
+      var st = card.querySelector(".detail-chart-stats"), lg = card.querySelector(".detail-chart-legend");
+      if (st) st.hidden = false;
+      if (lg) lg.hidden = false;
+      if (st && host.clientHeight < 110) st.hidden = true;
+      if (lg && host.clientHeight < 70) lg.hidden = true;
+      W = Math.round(host.clientWidth); H = Math.round(host.clientHeight);
+      host._w = W; host._h = H;
+    }
+    if (W < 40 || H < 40) return;
     var g = {};
     Object.keys(host._group).forEach(function (k) { g[k] = host._group[k]; });
     g.width = W; g.height = H;
@@ -5382,9 +5444,9 @@ window.SFM = (function () {
     // Diagramme erst nach dem Einfügen zeichnen (Pixelgröße bekannt) und bei Größenänderung neu zeichnen
     if (typeof ResizeObserver === "function") {
       if (!bd.ro) bd.ro = new ResizeObserver(function (entries) { entries.forEach(function (en) { dwRenderChart(en.target); }); });
-      grid.querySelectorAll(".dw-chart-body").forEach(function (h) { bd.ro.observe(h); });
+      grid.querySelectorAll(DW_AUTOSIZE).forEach(function (h) { bd.ro.observe(h); });
     }
-    grid.querySelectorAll(".dw-chart-body").forEach(dwRenderChart);
+    grid.querySelectorAll(DW_AUTOSIZE).forEach(dwRenderChart);
     byId(bd.editBtn).hidden = bd.edit;
     byId(bd.tools).hidden = !bd.edit;
     byId(bd.hint).hidden = !bd.edit;
@@ -8906,7 +8968,7 @@ window.SFM = (function () {
       ["Konten verwalten", "Administratoren legen Konten mit Anzeigename, Anmeldename und optionaler E-Mail an, ändern sie über „Bearbeiten“, setzen Passwörter neu (das Konto wird dabei überall abgemeldet) und sperren Konten — gesperrte Konten verlieren sofort alle Sitzungen. Offene Passwort-Anfragen stehen oben in der Benutzerverwaltung."],
       ["Sicherheitsprotokoll", "Unter Einstellungen → Sicherheitsprotokoll sehen Administratoren Anmeldungen, Fehlversuche, Kontenänderungen, Sicherungen und Speichervorgänge mit Zeit und IP-Adresse."]] },
     { title: "Dashboard anpassen", intro: "Das Dashboard und die Detaillierte Auswertung bestehen aus Widgets auf einem 12-Spalten-Raster. Jede Person richtet beide Ansichten für sich ein (in der Detaillierten Auswertung über „Auswertung anpassen“).", tip: "Mit „Standard-Layout“ kehrt die ursprüngliche Anordnung zurück, „Fertig“ beendet das Anpassen. Das Layout wird je Benutzer gespeichert und am Server mit allen Geräten abgeglichen.", steps: [
-      ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe)."],
+      ["Anpassen starten", "Auf „Dashboard anpassen“ klicken. Widgets lassen sich am Kopfbalken ziehen, am Rand in der Größe ändern oder mit den Pfeiltasten verschieben (Umschalt + Pfeil ändert die Größe). Diagramme, Verlaufslinien und der OEE-Ring passen sich der neuen Größe an; bei kleinen Widgets fallen Zusatzangaben wie Ø/Min/Max weg, damit nichts gescrollt werden muss."],
       ["Widgets hinzufügen", "„Widget hinzufügen“ bietet Kennzahl-Kacheln und Diagramme. Ein Diagramm zeigt einen Wert oder mehrere Werte mit gleicher Einheit."],
       ["Entfernen", "Das ✕ im Kopfbalken entfernt ein Widget; „Rückgängig“ im Hinweis stellt es wieder her."]] },
     { title: "Abweichungs-Tracking", intro: "Der Reiter „Abweichungs-Tracking“ zeigt alle Abweichungen eines Zeitraums: aus den Tageskennzahlen erkannte, geplante Ausfälle und von Hand erfasste.", tip: "Der Zeitraum ist derselbe wie im Dashboard. „Aktuelle Arbeitswoche“ stellt immer die laufende Woche von Montag bis Sonntag ein.", steps: [
