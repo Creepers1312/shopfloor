@@ -1146,6 +1146,17 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .host-port { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
 .seg-wrap { display: flex; justify-content: flex-end; }
 @media (max-width: 780px) { .seg-wrap, .set-ctl.ctl-right { justify-content: flex-start; } }
+.theme-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 480px) { .theme-choice { grid-template-columns: 1fr; } }
+.theme-choice .theme-opt { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; margin: 0; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 400; text-transform: none; letter-spacing: 0; }
+.theme-choice .theme-opt:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.theme-choice input[type="radio"] { width: auto; height: auto; margin: 0; padding: 0; flex: none; box-shadow: none; }
+.theme-opt b { display: block; font-size: 13.5px; color: var(--ink); }
+.theme-opt small { display: block; font-size: 12px; color: var(--muted); }
+.theme-swatch { width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); flex: none; }
+.theme-swatch.light { background: linear-gradient(135deg, #ffffff 50%, #e8e8ec 50%); }
+.theme-swatch.dark { background: linear-gradient(135deg, #2a2a2e 50%, #18181a 50%); }
+.theme-swatch.auto { background: linear-gradient(135deg, #ffffff 50%, #18181a 50%); }
 .seg {
   display: flex; gap: 2px; padding: 3px;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px;
@@ -2707,6 +2718,16 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="button" class="btn ghost sm" id="pwClose" aria-label="Schließen">✕</button>
     </div>
     <div class="dlg-body">
+      <div class="field">
+        <label>Darstellung</label>
+        <div class="theme-choice" role="radiogroup" aria-label="Darstellung">
+          <label class="theme-opt"><input type="radio" name="acTheme" value="auto"><span class="theme-swatch auto" aria-hidden="true"></span><span><b>Automatisch</b><small>wie das Gerät</small></span></label>
+          <label class="theme-opt"><input type="radio" name="acTheme" value="light"><span class="theme-swatch light" aria-hidden="true"></span><span><b>Hell</b><small>heller Hintergrund</small></span></label>
+          <label class="theme-opt"><input type="radio" name="acTheme" value="dark"><span class="theme-swatch dark" aria-hidden="true"></span><span><b>Dunkel</b><small>dunkler Hintergrund</small></span></label>
+        </div>
+        <p class="mini-hint">Gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert.</p>
+      </div>
+      <div id="pwAccount">
       <div class="login-error" id="pwError" hidden></div>
       <div class="field-row">
         <div class="field">
@@ -2731,10 +2752,11 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <input id="pwCurrent" type="password" required autocomplete="current-password">
       </div>
       <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
+      </div>
     </div>
     <div class="dlg-foot">
       <button type="button" class="btn" id="pwCancel">Abbrechen</button>
-      <button type="submit" class="btn primary">Speichern</button>
+      <button type="submit" class="btn primary" id="pwSave">Speichern</button>
     </div>
   </form>
 </dialog>
@@ -10016,7 +10038,7 @@ window.SFM = (function () {
           ["Mit E-Mail-Adresse", "Ist eine E-Mail hinterlegt und der Mailserver eingerichtet, kommt ein Link. Er gilt 60 Minuten und nur einmal."],
           ["Ohne E-Mail-Adresse", "Die Anfrage erscheint bei der Administration in der Benutzerverwaltung; dort wird ein neues Passwort gesetzt und persönlich mitgeteilt."]
         ] },
-        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“: E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
+        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert. Außerdem lassen sich E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
         { h: "Abmelden", p: "Über das Pfeil-Symbol neben dem Namen. Nach 12 Stunden ohne Bedienung (einstellbar) meldet das Board automatisch ab — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage." }
       ],
       tip: "Das Board sollte nur über HTTPS geöffnet werden (Schloss-Symbol in der Adresszeile) — sonst gehen Passwörter ungeschützt über das Netz." },
@@ -10026,7 +10048,7 @@ window.SFM = (function () {
       sections: [
         { h: "Werkzeuge in der Kopfzeile", img: "kopfzeile", cap: "Rechts: Datum, Konto, Abmelden, TV-Modus, Touch-Modus", list: [
           "<b>Datum</b> — ein Klick öffnet direkt den Huddle von heute.",
-          "<b>Name</b> — „Mein Konto“ (E-Mail, Passwort).",
+          "<b>Name</b> — „Mein Konto“ (Darstellung hell/dunkel, E-Mail, Passwort).",
           "<b>Pfeil</b> — Abmelden.",
           "<b>Monitor</b> — TV-Modus für den Hallenmonitor.",
           "<b>Zeiger</b> — Touch-Modus mit größeren Bedienelementen für Touch-Terminals.",
@@ -11015,10 +11037,11 @@ window.SFM = (function () {
     $("#userRole").textContent = u.role + " · " + permName(currentUser.perm);
     $("#userChip").hidden = false;
     var canPw = SFM.isServer() && !currentUser.demo;
-    $("#userChip").classList.toggle("clickable", canPw);
-    $("#userChip").tabIndex = canPw ? 0 : -1;
-    $("#userChip").setAttribute("role", canPw ? "button" : "group");
-    $("#userChip").title = canPw ? "Mein Konto — E-Mail und Passwort" : "";
+    $("#userChip").classList.add("clickable");
+    $("#userChip").tabIndex = 0;
+    $("#userChip").setAttribute("role", "button");
+    $("#userChip").title = canPw ? "Mein Konto — Darstellung, E-Mail und Passwort" : "Mein Konto — Darstellung (hell/dunkel)";
+    applyTheme(themeGet(), false);
     $("#logoutBtn").hidden = false;
     lastActivity = Date.now();
     if (typeof fitTabs === "function") fitTabs();
@@ -11267,7 +11290,28 @@ window.SFM = (function () {
     }).catch(function () {});
   }
 
-  /* ---------- Eigenes Passwort ändern (nur am Server) ---------- */
+  /* ---------- Darstellung hell/dunkel (je Konto auf diesem Gerät) ---------- */
+  var THEME_KEY = "sfm-theme-v1";
+  function themeMap() { try { return JSON.parse(LS.getItem(THEME_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function themeKeyOf() { return currentUser && !currentUser.demo ? String(currentUser.username || currentUser.name).toLowerCase() : "_last"; }
+  function themeGet() { var m = themeMap(); return m[themeKeyOf()] || m._last || "auto"; }
+  function applyTheme(t, redraw) {
+    if (tvActive) return;   // der TV-Modus hat seine eigene Darstellung
+    var before = document.documentElement.getAttribute("data-theme") || "auto";
+    if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    else document.documentElement.removeAttribute("data-theme");
+    // Diagramme mit den Farben des neuen Themes neu zeichnen
+    if (redraw && before !== t && currentUser) renderAll();
+  }
+  function themeSet(t) {
+    var m = themeMap();
+    m[themeKeyOf()] = t; m._last = t;
+    try { LS.setItem(THEME_KEY, JSON.stringify(m)); } catch (e) {}
+    applyTheme(t, true);
+  }
+  applyTheme(themeGet(), true);   // beim Start: gespeicherte Darstellung (auch auf der Anmeldeseite)
+
+  /* ---------- Mein Konto: Darstellung, E-Mail, Passwort (E-Mail/Passwort nur am Server) ---------- */
   var pwDlg = $("#pwDialog");
   function showPwError(msg) {
     var e = $("#pwError");
@@ -11275,7 +11319,14 @@ window.SFM = (function () {
   }
   var myEmail = "";
   function openPwDialog() {
-    if (!SFM.isServer() || !currentUser || currentUser.demo) return;
+    if (!currentUser) return;
+    var acc = SFM.isServer() && !currentUser.demo;
+    pwDlg.querySelector('input[name="acTheme"][value="' + themeGet() + '"]').checked = true;
+    $("#pwAccount").hidden = !acc;
+    $("#pwSave").hidden = !acc;
+    $("#pwCancel").textContent = acc ? "Abbrechen" : "Schließen";
+    $("#pwCurrent").required = acc;
+    if (!acc) { showPwError(null); pwDlg.showModal(); return; }
     $("#pwCurrent").value = ""; $("#pwNew").value = ""; $("#pwNew2").value = "";
     $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
     $("#acLogin").value = currentUser.username || ""; $("#acEmail").value = "";
@@ -11326,6 +11377,9 @@ window.SFM = (function () {
     }).catch(function () { showPwError("Der Server hat nicht geantwortet."); });
   });
   $("#pwCancel").addEventListener("click", function () { pwDlg.close(); });
+  pwDlg.querySelectorAll('input[name="acTheme"]').forEach(function (r) {
+    r.addEventListener("change", function () { themeSet(this.value); });
+  });
   $("#pwClose").addEventListener("click", function () { pwDlg.close(); });
   $("#userChip").addEventListener("click", openPwDialog);
   $("#userChip").addEventListener("keydown", function (e) {

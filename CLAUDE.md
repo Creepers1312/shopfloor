@@ -94,6 +94,9 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
   `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
+- **Darstellung** hell/dunkel/automatisch in „Mein Konto“ (`#pwDialog`, `themeSet`/`applyTheme`): `data-theme` auf
+  `<html>`, gespeichert je Konto und Gerät in `sfm-theme-v1` (`_last` für die Anmeldeseite); der TV-Modus
+  überschreibt das nur, solange er läuft.
 - **TV-Modus** (`enterTv`/`renderTv`, Seiten `TV_PAGES`, 20 s je Seite): Stand = `latestDailyIso()`, Einstellungen je
   Gerät in `sfm-tv-v1` (Theme, Pause), setzt `data-theme` nur während des TV-Modus; Tageswechsel → Neuladen mit
   `sessionStorage` `sfm-tv-resume`; Wake Lock; muss auf 1920×1080 und 1366×768 ohne Scrollen passen.

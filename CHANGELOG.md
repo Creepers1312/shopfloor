@@ -13,6 +13,9 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - **Messbereich selbst angeben:** Beim Bearbeiten eines Diagramms (und der Karten First Pass Yield und
   Termintreue) gibt es neben „Automatisch“ und „0–100 %“ die Option „Selbst angeben“ mit „von“ und „bis“ je
   Achse. Leere Grenzen werden automatisch bestimmt.
+- **Helle oder dunkle Darstellung wählbar:** Unter „Mein Konto“ (Klick auf den eigenen Namen oben rechts) gibt es
+  „Automatisch“ (wie das Gerät), „Hell“ und „Dunkel“. Die Wahl gilt sofort und wird je Konto auf dem Gerät
+  gespeichert; „Mein Konto“ ist dafür jetzt auch im lokalen Testmodus erreichbar.
 
 ### Geändert
 - Bei Bestandswerten (Inventory, Inventory-Grenzwert) zeigen die Diagramme keinen Durchschnitt mehr, nur den
