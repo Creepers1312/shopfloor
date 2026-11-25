@@ -17,6 +17,9 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - **Grenzwerte (Ampel) in den Stammdaten:** Ausschuss-Toleranz in % der produzierten Menge (Standard 2 %) und
   ungeplante Ausfälle in Stunden je Tag (Standard 1,5 h). Bis zum Grenzwert werden die Werte gelb, darüber rot
   markiert — im Dashboard, im Tagesbericht, im Kennzahlen-Fenster des Huddles und im TV-Modus.
+- **SQIDP-Board: Abweichungen im Tagesfenster:** Ein Klick auf eine Zelle zeigt jetzt alle Abweichungen des Tages
+  in dieser Kategorie mit Begründung (fehlende Begründungen hervorgehoben) sowie geplante Stillstände — nicht mehr
+  nur die Maßnahmen.
 
 ### Geändert
 - **„Mein Konto“ aufgeräumt:** Die Passwortfelder erscheinen erst nach einem Klick auf „Passwort ändern …“.

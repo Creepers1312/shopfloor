@@ -1367,6 +1367,15 @@ kbd {
 .cd-whys { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.45; }
 .cd-empty { margin: 0; font-size: 13.5px; color: var(--ink-2); }
 .cd-note { border: 1px solid var(--line); border-radius: 11px; padding: 10px 14px; }
+.cd-list { display: flex; flex-direction: column; gap: 8px; }
+.cd-sec-gap { margin-top: 6px; }
+.cd-finding { border: 1px solid var(--line); border-left: 4px solid var(--crit); border-radius: 10px; padding: 9px 12px; background: var(--surface-2); }
+.cd-finding.plan { border-left-color: var(--muted); }
+.cd-finding .btn { margin-top: 6px; }
+.cd-finding-title { font-weight: 600; font-size: 14px; }
+.cd-finding-reason { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cd-finding-reason b { color: var(--ink); font-weight: 600; }
+.cd-finding-reason.missing { color: var(--warn-text); font-weight: 600; }
 .cd-dev .btn { align-self: flex-start; }
 .cf-text { margin: 0; font-size: 14px; color: var(--ink-2); }
 .bk-actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -6608,6 +6617,21 @@ window.SFM = (function () {
   }
   // Tagesdetail (nur Lesen): Status, zugehörige Abweichung(en) und Tagesnotiz
   var cellDlg = $("#cellDialog");
+  function cdFinding(x, kind) {
+    var row = el("div", "cd-finding " + kind);
+    row.appendChild(el("div", "cd-finding-title", x.title));
+    var r = el("div", "cd-finding-reason" + (x.reason ? "" : " missing"));
+    if (x.reason) { r.appendChild(el("b", "", "Begründung: ")); r.appendChild(document.createTextNode(x.reason)); }
+    else r.textContent = "Begründung fehlt noch — im Huddle nachtragen";
+    row.appendChild(r);
+    if (x.dev) {
+      var op = el("button", "btn sm", "Öffnen");
+      op.type = "button"; op.title = "Abweichung mit Maßnahme öffnen";
+      op.addEventListener("click", function () { cellDlg.close(); openDialog(x.dev); });
+      row.appendChild(op);
+    }
+    return row;
+  }
   function openCellDetail(catKey, iso, st) {
     var c = catOf(catKey);
     var body = $("#cdBody");
@@ -6620,10 +6644,28 @@ window.SFM = (function () {
     head.appendChild(el("span", "pill " + (st === "ok" ? "ok" : st === "nok" ? "crit" : "neutral"),
       st === "ok" ? "In Ordnung" : st === "nok" ? "Abweichung" : "Offen"));
     body.appendChild(head);
-    var devs = deviationsForIso(iso).filter(function (d) { return d.cat === catKey; });
-    if (st === "ok" && !devs.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde nichts Auffälliges gemeldet."));
-    if (st === "nok" && !devs.length) body.appendChild(el("p", "cd-empty", "Für diese Abweichung ist noch keine Maßnahme erfasst."));
-    if (!st && !devs.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde noch kein Status gesetzt."));
+    // Abweichungen des Tages (aus den Tageswerten erkannt und von Hand erfasst) mit Begründung,
+    // dazu geplante Stillstände — wie im Huddle besprochen
+    var mdl = agendaModel(catKey, iso);
+    var items = mdl.findings.map(function (f) { return { title: f.title, reason: f.reason }; })
+      .concat(mdl.extra.map(function (d) { return { title: d.title || "Abweichung", reason: String(d.desc || "").trim(), dev: d }; }));
+    if (items.length || mdl.notes.length) {
+      var list = el("div", "cd-list");
+      if (items.length) list.appendChild(el("div", "cd-sec-label", items.length === 1 ? "Abweichung" : items.length + " Abweichungen"));
+      items.forEach(function (x) { list.appendChild(cdFinding(x, "bad")); });
+      if (mdl.notes.length) {
+        list.appendChild(el("div", "cd-sec-label cd-sec-gap", "Geplante Stillstände (keine Abweichung)"));
+        mdl.notes.forEach(function (n) { list.appendChild(cdFinding({ title: n.title, reason: n.reason }, "plan")); });
+      }
+      body.appendChild(list);
+    }
+    // Von Hand erfasste Abweichungen stehen schon oben (mit „Öffnen“) — nicht doppelt als Maßnahme zeigen
+    var devs = deviationsForIso(iso).filter(function (d) { return d.cat === catKey && mdl.extra.indexOf(d) < 0; });
+    if (st === "ok" && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde nichts Auffälliges gemeldet."));
+    if (st === "nok" && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diese Abweichung sind keine Details erfasst."));
+    if (!st && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde noch kein Status gesetzt."));
+    if (devs.length) body.appendChild(el("div", "cd-sec-label cd-sec-gap", devs.length === 1 ? "Maßnahme" : "Maßnahmen"));
+    else if (mdl.findings.length) body.appendChild(el("p", "cd-empty", "Zu den erkannten Abweichungen ist noch keine Maßnahme erfasst."));
     devs.forEach(function (d) {
       var box = el("div", "cd-dev");
       box.style.borderLeftColor = catColor(catKey);
@@ -10359,7 +10401,7 @@ window.SFM = (function () {
           "Oben die Monatsbilanz je Kategorie mit Grünquote."
         ] },
         { h: "Details zu einem Tag", img: "board-tag", cap: "Klick auf eine Zelle", small: true,
-          p: "Ein Klick auf eine Zelle zeigt Status, Abweichung mit Maßnahme und Tagesnotiz. Das Board selbst ist nur lesend — den Status setzt der Huddle. Mit ◀ ▶ (oder den Pfeiltasten) durch die Monate blättern; „Drucken“ und „CSV-Export“ stehen oben rechts." }
+          p: "Ein Klick auf eine Zelle zeigt den Status und alle Abweichungen des Tages in dieser Kategorie mit ihrer Begründung (fehlt sie, steht „Begründung fehlt noch“), geplante Stillstände mit Begründung, die zugehörigen Maßnahmen und die Tagesnotiz. Das Board selbst ist nur lesend — den Status setzt der Huddle. Mit ◀ ▶ (oder den Pfeiltasten) durch die Monate blättern; „Drucken“ und „CSV-Export“ stehen oben rechts." }
       ],
       tip: "Eine rote Zelle ohne Maßnahme ist nicht automatisch ein Problem — nicht jede Abweichung braucht eine Maßnahme. Wiederholt sich dieselbe Ursache, sollte eine angelegt werden." },
 
