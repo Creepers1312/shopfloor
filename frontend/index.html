@@ -1146,6 +1146,10 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .host-port { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
 .seg-wrap { display: flex; justify-content: flex-end; }
 @media (max-width: 780px) { .seg-wrap, .set-ctl.ctl-right { justify-content: flex-start; } }
+.pw-section { margin-top: 12px; padding: 12px 14px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.pw-section[hidden] { display: none; }
+#pwChangeBtn { margin-top: 2px; }
+#pwCurrentField { margin-top: 14px; }
 .theme-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 480px) { .theme-choice { grid-template-columns: 1fr; } }
 .theme-choice .theme-opt { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; margin: 0; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 400; text-transform: none; letter-spacing: 0; }
@@ -2725,7 +2729,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <label class="theme-opt"><input type="radio" name="acTheme" value="light"><span class="theme-swatch light" aria-hidden="true"></span><span><b>Hell</b><small>heller Hintergrund</small></span></label>
           <label class="theme-opt"><input type="radio" name="acTheme" value="dark"><span class="theme-swatch dark" aria-hidden="true"></span><span><b>Dunkel</b><small>dunkler Hintergrund</small></span></label>
         </div>
-        <p class="mini-hint">Gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert.</p>
+        <p class="mini-hint">Wird sofort übernommen und für Ihr Konto auf diesem Gerät gespeichert — kein „Speichern“ nötig.</p>
       </div>
       <div id="pwAccount">
       <div class="login-error" id="pwError" hidden></div>
@@ -2739,19 +2743,22 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <input id="acEmail" type="email" autocomplete="email" placeholder="für „Passwort vergessen“">
         </div>
       </div>
-      <div class="field">
-        <label for="pwNew">Neues Passwort <span class="mini-hint">(leer lassen = unverändert)</span></label>
-        <input id="pwNew" type="password" autocomplete="new-password">
+      <button type="button" class="btn" id="pwChangeBtn" aria-expanded="false" aria-controls="pwSection">Passwort ändern …</button>
+      <div class="pw-section" id="pwSection" hidden>
+        <div class="field">
+          <label for="pwNew">Neues Passwort</label>
+          <input id="pwNew" type="password" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="pwNew2">Neues Passwort wiederholen</label>
+          <input id="pwNew2" type="password" autocomplete="new-password">
+        </div>
+        <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
       </div>
-      <div class="field">
-        <label for="pwNew2">Neues Passwort wiederholen</label>
-        <input id="pwNew2" type="password" autocomplete="new-password">
+      <div class="field" id="pwCurrentField" hidden>
+        <label for="pwCurrent">Bisheriges Passwort <span class="mini-hint">(zur Bestätigung der Änderung)</span></label>
+        <input id="pwCurrent" type="password" autocomplete="current-password">
       </div>
-      <div class="field">
-        <label for="pwCurrent">Bisheriges Passwort <span class="mini-hint">(zur Bestätigung jeder Änderung)</span></label>
-        <input id="pwCurrent" type="password" required autocomplete="current-password">
-      </div>
-      <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
       </div>
     </div>
     <div class="dlg-foot">
@@ -10038,7 +10045,7 @@ window.SFM = (function () {
           ["Mit E-Mail-Adresse", "Ist eine E-Mail hinterlegt und der Mailserver eingerichtet, kommt ein Link. Er gilt 60 Minuten und nur einmal."],
           ["Ohne E-Mail-Adresse", "Die Anfrage erscheint bei der Administration in der Benutzerverwaltung; dort wird ein neues Passwort gesetzt und persönlich mitgeteilt."]
         ] },
-        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert. Außerdem lassen sich E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
+        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert; danach das Fenster einfach schließen. Die E-Mail-Adresse lässt sich direkt ändern; für ein neues Passwort auf <b>„Passwort ändern …“</b> klicken. Nur bei diesen beiden Änderungen fragt das Fenster nach dem bisherigen Passwort. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
         { h: "Abmelden", p: "Über das Pfeil-Symbol neben dem Namen. Nach 12 Stunden ohne Bedienung (einstellbar) meldet das Board automatisch ab — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage." }
       ],
       tip: "Das Board sollte nur über HTTPS geöffnet werden (Schloss-Symbol in der Adresszeile) — sonst gehen Passwörter ungeschützt über das Netz." },
@@ -11323,28 +11330,54 @@ window.SFM = (function () {
     var acc = SFM.isServer() && !currentUser.demo;
     pwDlg.querySelector('input[name="acTheme"][value="' + themeGet() + '"]').checked = true;
     $("#pwAccount").hidden = !acc;
-    $("#pwSave").hidden = !acc;
-    $("#pwCancel").textContent = acc ? "Abbrechen" : "Schließen";
-    $("#pwCurrent").required = acc;
+    myEmail = "";
+    $("#pwSection").hidden = true;
+    $("#pwChangeBtn").hidden = false;
+    $("#pwChangeBtn").setAttribute("aria-expanded", "false");
+    pwRefresh();
     if (!acc) { showPwError(null); pwDlg.showModal(); return; }
     $("#pwCurrent").value = ""; $("#pwNew").value = ""; $("#pwNew2").value = "";
     $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
     $("#acLogin").value = currentUser.username || ""; $("#acEmail").value = "";
     showPwError(null);
+    pwRefresh();
     pwDlg.showModal();
     SFM.api("/api/me").then(function (r) {
       if (!r.ok) return;
       myEmail = r.data.email || "";
       $("#acLogin").value = (r.data.user && r.data.user.username) || "";
       $("#acEmail").value = myEmail;
+      pwRefresh();
     }).catch(function () {});
-    $("#acEmail").focus();
   }
+  // „Speichern“ und das bisherige Passwort erscheinen nur, wenn E-Mail oder Passwort geändert werden
+  function pwRefresh() {
+    var acc = SFM.isServer() && currentUser && !currentUser.demo;
+    var emailChanged = acc && $("#acEmail").value.trim().toLowerCase() !== myEmail.toLowerCase();
+    var pwOpen = acc && !$("#pwSection").hidden;
+    var need = emailChanged || pwOpen;
+    $("#pwCurrentField").hidden = !need;
+    $("#pwCurrent").required = need;
+    $("#pwSave").hidden = !need;
+    $("#pwCancel").textContent = need ? "Abbrechen" : "Schließen";
+  }
+  $("#acEmail").addEventListener("input", pwRefresh);
+  $("#pwChangeBtn").addEventListener("click", function () {
+    $("#pwSection").hidden = false;
+    this.hidden = true;
+    this.setAttribute("aria-expanded", "true");
+    pwRefresh();
+    $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
+    $("#pwNew").focus();
+  });
   $("#pwForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var cur = $("#pwCurrent").value, nw = $("#pwNew").value, email = $("#acEmail").value.trim();
     var emailChanged = email.toLowerCase() !== myEmail.toLowerCase();
-    if (!emailChanged && !nw) { showPwError("Es gibt nichts zu speichern."); return; }
+    if (!emailChanged && !nw) {
+      if ($("#pwSection").hidden) { pwDlg.close(); return; }
+      showPwError("Bitte ein neues Passwort eingeben."); return;
+    }
     if (emailChanged && email && !EMAIL_RE.test(email)) { showPwError("Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen."); return; }
     if (nw) {
       var prob = pwProblem(nw, currentUser && currentUser.name);

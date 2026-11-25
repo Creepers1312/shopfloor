@@ -9,6 +9,11 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Geändert
+- **„Mein Konto“ aufgeräumt:** Die Passwortfelder erscheinen erst nach einem Klick auf „Passwort ändern …“.
+  Nach dem bisherigen Passwort wird nur gefragt, wenn E-Mail oder Passwort geändert werden; wer nur die
+  Darstellung umstellt, schließt das Fenster einfach.
+
 ## [1.5.0] – 2026-11-25
 
 ### Neu
