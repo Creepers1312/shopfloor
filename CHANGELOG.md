@@ -31,6 +31,10 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   Nach dem bisherigen Passwort wird nur gefragt, wenn E-Mail oder Passwort geändert werden; wer nur die
   Darstellung umstellt, schließt das Fenster einfach.
 
+### Entfernt
+- Tagesbericht: Knopf „Per E-Mail senden“ (Bericht als Text im eigenen E-Mail-Programm) — für den Versand gibt es
+  den automatischen Monatsbericht; der Tagesbericht bleibt als Ansicht und PDF.
+
 ## [1.5.0] – 2026-11-25
 
 ### Neu

@@ -1076,11 +1076,6 @@ label .help-q { margin-bottom: -1px; }
 .settings-title { margin: 0; font-size: 16px; font-weight: 600; }
 .settings-sub { margin: -4px 0 0; font-size: 13px; color: var(--muted); max-width: 78ch; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-#mailDialog { width: min(680px, calc(100vw - 32px)); }
-#mailText {
-  font-family: ui-monospace, Consolas, "Courier New", monospace;
-  font-size: 12.5px; line-height: 1.55; min-height: 280px; resize: vertical;
-}
 
 .settings-layout {
   display: grid; grid-template-columns: 256px minmax(0, 1fr);
@@ -2624,7 +2619,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <div class="head-actions">
       <button class="btn" id="reportPdfBtn" title="Druckansicht öffnen — dort als PDF speichern">Als PDF exportieren</button>
-      <button class="btn primary" id="reportMailBtn">Per E-Mail senden</button>
     </div>
   </div>
   <div class="report-toolbar" id="reportToolbar">
@@ -3317,24 +3311,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="submit" class="btn primary" id="wdSave">Hinzufügen</button>
     </div>
   </form>
-</dialog>
-
-<!-- Dialog: mailDialog -->
-<dialog id="mailDialog">
-  <div class="dlg-head">
-    <h2>Tagesbericht</h2>
-    <button type="button" class="btn ghost sm" id="mailClose" aria-label="Schließen">✕</button>
-  </div>
-  <div class="dlg-body">
-    <p class="cf-text">Bericht prüfen und bei Bedarf anpassen — dann per E-Mail-Programm senden oder kopieren (z. B. für Teams oder das Intranet).</p>
-    <div class="field">
-      <textarea id="mailText" rows="14" spellcheck="false" aria-label="Berichtstext"></textarea>
-    </div>
-  </div>
-  <div class="dlg-foot">
-    <button type="button" class="btn" id="mailCopy">Kopieren</button>
-    <a class="btn primary" id="mailOpen" href="#" target="_blank" rel="noopener">E-Mail-Programm öffnen</a>
-  </div>
 </dialog>
 
 <!-- Dialog: backupDialog -->
@@ -9724,7 +9700,7 @@ window.SFM = (function () {
       chip.tabIndex = 0;
       chip.setAttribute("role", "button");
       chip.title = "Datenbank & Sicherung öffnen";
-      $("#mailPaneSub").textContent = "Mailserver und Absender nutzt der Server für „Passwort vergessen“ und Test-E-Mails. Den Tagesbericht versenden Sie weiterhin über Ihr E-Mail-Programm; Verteiler und Betreff gelten dafür.";
+      $("#mailPaneSub").textContent = "Mailserver und Absender nutzt der Server für „Passwort vergessen“, Test-E-Mails und den Monatsbericht.";
       $("#testMailBtn").textContent = "Test-E-Mail senden";
       $("#testMailBtn").closest(".set-row").querySelector(".set-desc").textContent = "Der Server sendet eine Test-E-Mail an den Verteiler (ohne Verteiler an Ihre eigene Adresse).";
       chip.hidden = true;
@@ -10495,8 +10471,7 @@ window.SFM = (function () {
       intro: "Der Tagesbericht fasst einen Tag zusammen: Kennzahlen mit Zielen, alle Tageswerte, Abweichungen mit Begründung, SQIDP-Status und offene Maßnahmen.",
       sections: [
         { h: "Bericht ansehen", img: "tagesbericht", cap: "Tagesbericht des Vortags", steps: [
-          ["Tag wählen", "Mit ◀ ▶ oder dem Datumsfeld; „Heute“ springt zurück. Bericht, E-Mail und PDF beziehen sich immer auf den gewählten Tag."],
-          ["Per E-Mail senden", "Öffnet den Bericht als E-Mail im eigenen E-Mail-Programm, an den Verteiler aus „E-Mail-Versand“. Alternativ lässt sich der Text kopieren, z. B. für Teams."],
+          ["Tag wählen", "Mit ◀ ▶ oder dem Datumsfeld; „Heute“ springt zurück. Bericht und PDF beziehen sich immer auf den gewählten Tag."],
           ["Als PDF exportieren", "Öffnet die Druckansicht — dort „Als PDF speichern“ wählen."]
         ] }
       ],
@@ -10703,14 +10678,14 @@ window.SFM = (function () {
       tip: "Die Teamleitung kann keine Administrator-Konten anlegen oder ändern." },
 
     { id: "email", group: "Verwaltung", title: "E-Mail-Versand & Monatsbericht",
-      intro: "Hier stehen Absender, Mailserver, der Verteiler für den Tagesbericht und der automatische Monatsbericht. Der Server nutzt den Mailserver für „Passwort vergessen“, Test-E-Mails und den Monatsbericht; den Tagesbericht verschicken Sie über Ihr eigenes E-Mail-Programm.",
+      intro: "Hier stehen Absender, Mailserver, ein Verteiler und der automatische Monatsbericht. Der Server nutzt den Mailserver für „Passwort vergessen“, Test-E-Mails und den Monatsbericht.",
       flow: ["Mailserver einrichten", "Verteiler eintragen", "Vorschau / Probe", "Automatik einschalten", "Bericht kommt monatlich"],
       sections: [
         { h: "Mailserver einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
           ["Absender", "Absendername, Absenderadresse und Antwortadresse."],
           ["SMTP-Server", "Server, Port und Verschlüsselung (üblich: STARTTLS auf Port 587), Benutzer und Passwort. Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt — Feld leer lassen, um es zu behalten."],
           ["Verbindung testen", "Prüft Server, Anmeldung und Verschlüsselung direkt."],
-          ["Verteiler Tagesbericht", "Empfänger des Tagesberichts und die Betreff-Vorlage ({linie} und {datum} werden ersetzt)."]
+          ["Verteiler", "Empfänger für Test-E-Mails; „Verteiler des Tagesberichts übernehmen“ kopiert sie in den Monatsbericht."]
         ] },
         { h: "Monatsbericht (automatisch)", p: "Am eingestellten Tag schickt der Server eine Übersicht des abgeschlossenen Vormonats an einen eigenen Verteiler — auch wenn niemand das Board geöffnet hat.", list: [
           "<b>Inhalt:</b> OEE, First Pass Yield und Termintreue mit Ziel und Vergleich zum Vormonat, SQIDP-Grünquote je Kategorie, Produktion (Mengen, Ausschuss-Anteil, Nacharbeit, Inventory), Produktionsausfälle je Art, Arbeitssicherheit und Maßnahmen (angelegt, offen, überfällig) — mit Ampelfarben nach Zielen und Grenzwerten.",
@@ -10899,92 +10874,10 @@ window.SFM = (function () {
   $("#docSelect").addEventListener("change", function () { showDoc(+this.value); });
   renderDoc();
 
-  /* ---------- Tagesbericht (E-Mail) ---------- */
-  function buildDailyReport() {
-    var lines = [];
-    var rp = parseIso(reportIso);
-    lines.push("Shopfloor-Tagesbericht — " + settings.lineName + ", " + rp.d + ". " + MONTH_NAMES[rp.m] + " " + rp.y);
-    lines.push("");
-    lines.push("SQIDP-Status " + (reportIso === TODAY_ISO ? "heute" : "am " + fmtDate(reportIso)) + ":");
-    CATS.forEach(function (c) {
-      var as = agendaStateOf(c.key, reportIso);
-      lines.push("  " + letterOf(c.key) + " " + c.name + ": " + (as.st === "ok" ? "in Ordnung" : as.st === "nok" ? "ABWEICHUNG (" + as.count + ")" : "offen"));
-    });
-    lines.push("");
-    var dayList = dayDeviationList(reportIso);
-    lines.push("Abweichungen des Tages mit Begründung (" + dayList.length + "):");
-    if (!dayList.length) lines.push("  keine");
-    dayList.forEach(function (x) {
-      lines.push("  [" + letterOf(x.cat) + "] " + x.title);
-      lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
-    });
-    lines.push("");
-    var planList = dayPlannedList(reportIso);
-    if (planList.length) {
-      lines.push("Geplante Stillstände mit Begründung (" + planList.length + "):");
-      planList.forEach(function (x) {
-        lines.push("  [" + letterOf(x.cat) + "] " + x.title);
-        lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
-      });
-      lines.push("");
-    }
-    var data = boardDataFor(rp.y, rp.m);
-    var rpDays = new Date(rp.y, rp.m + 1, 0).getDate();
-    var quotes = CATS.map(function (c) {
-      var ok = 0, nok = 0, col = data[c.key] || {};
-      for (var d = 1; d <= rpDays; d++) {
-        if (col[d] === "ok") ok++; else if (col[d] === "nok") nok++;
-      }
-      var rated = ok + nok;
-      return letterOf(c.key) + " " + (rated ? Math.round(ok * 100 / rated) + " %" : "–");
-    });
-    lines.push("Grünquote " + MONTH_NAMES[rp.m] + ": " + quotes.join(" · "));
-    lines.push("");
-    var repDIso = dailyRecord(reportIso) ? reportIso : null, repDRec = repDIso ? dailyRecord(repDIso) : null;
-    lines.push("Tages-Kennzahlen (" + fmtDate(reportIso) + "):");
-    if (!repDRec) {
-      lines.push("  für diesen Tag keine Tageskennzahlen erfasst");
-    } else {
-      DAILY_FIELD_TILES.forEach(function (f) {
-        var v = valueOf(f.key, repDRec);
-        lines.push("  " + f.label + ": " + (v == null ? "–" : fmtNum(v, f.digits) + " " + f.unit));
-      });
-    }
-    var msi = safetyInfo();
-    if (msi.days !== null) {
-      lines.push("Arbeitssicherheit: " + msi.days + (msi.days === 1 ? " Tag" : " Tage") + " unfallfrei" +
-        (msi.base === "accident" ? " (letzter meldepflichtiger Unfall " + fmtDate(msi.iso) + ")" : " (Zählbeginn " + fmtDate(msi.iso) + ")") +
-        ", Sicherheitsabweichungen im Monat: " + msi.devs +
-        " · Unfälle " + Y + ": " + msi.reportable + " meldepflichtig, " + msi.nonReportable + " nicht meldepflichtig");
-    }
-    lines.push("");
-    var open = state.deviations.filter(function (d) { return d.phase !== "done"; });
-    lines.push("Offene Abweichungen (" + open.length + "):");
-    if (!open.length) lines.push("  keine — alle Maßnahmen abgeschlossen");
-    open.slice(0, 12).forEach(function (d) {
-      lines.push("  [" + letterOf(d.cat) + "] " + d.title +
-        (d.owner ? " — " + d.owner : "") +
-        (d.due ? ", fällig " + fmtDate(d.due) : "") +
-        (isOverdue(d) ? " (ÜBERFÄLLIG)" : ""));
-    });
-    if (open.length > 12) lines.push("  … und " + (open.length - 12) + " weitere");
-    return lines.join("\n");
-  }
+  /* ---------- Tagesbericht: PDF; Betreff-Vorlage für die Test-E-Mail des Verteilers ---------- */
   function mailSubject() {
-    var dateStr = fmtDate(reportIso);
-    return settings.mail.subject.replace(/\{linie\}/g, settings.lineName).replace(/\{datum\}/g, dateStr);
+    return settings.mail.subject.replace(/\{linie\}/g, settings.lineName).replace(/\{datum\}/g, fmtDate(TODAY_ISO));
   }
-  function mailHref() {
-    return "mailto:" + encodeURIComponent(settings.mail.recipients.join(",")).replace(/%2C/gi, ",") +
-      "?subject=" + encodeURIComponent(mailSubject()) +
-      "&body=" + encodeURIComponent($("#mailText").value);
-  }
-  function openMailReport() {
-    $("#mailText").value = buildDailyReport();
-    $("#mailOpen").href = mailHref();
-    $("#mailDialog").showModal();
-  }
-  $("#reportMailBtn").addEventListener("click", openMailReport);
   $("#reportPdfBtn").addEventListener("click", function () { window.print(); });
 
   /* ---------- Tagesbericht-Ansicht ---------- */
@@ -11192,26 +11085,6 @@ window.SFM = (function () {
   $("#reportNext").addEventListener("click", function () { shiftReportDay(1); });
   $("#reportToday").addEventListener("click", function () { setReportDay(TODAY_ISO); });
   $("#reportDate").addEventListener("change", function () { setReportDay($("#reportDate").value); });
-  $("#mailClose").addEventListener("click", function () { $("#mailDialog").close(); });
-  $("#mailOpen").addEventListener("click", function () {
-    this.href = mailHref();
-    logMail("Tagesbericht — E-Mail-Programm geöffnet (" + settings.mail.recipients.length + " Empfänger)");
-  });
-  $("#mailCopy").addEventListener("click", function () {
-    var ta = $("#mailText");
-    ta.focus(); ta.select();
-    var done = false;
-    try { done = document.execCommand("copy"); } catch (e) {}
-    if (done) { toast("Bericht in die Zwischenablage kopiert"); logMail("Tagesbericht kopiert"); return; }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(ta.value).then(
-        function () { toast("Bericht in die Zwischenablage kopiert"); },
-        function () { toast("Kopieren nicht möglich — Text bitte manuell markieren"); }
-      );
-      return;
-    }
-    toast("Kopieren nicht möglich — Text bitte manuell markieren");
-  });
 
   /* ---------- Tastaturkürzel (PC) ---------- */
   var VIEW_KEYS = { "1": "dashboard", "2": "board", "3": "actions", "4": "huddle", "5": "report", "6": "settings" };
