@@ -5,6 +5,7 @@ const backups = require("../backups");
 const smb = require("../smb");
 const audit = require("../audit");
 const mailer = require("../mailer");
+const monthly = require("../monthlyreport");
 const { HttpError, wrap, requireAdmin } = require("../http");
 
 function register(app) {
@@ -31,6 +32,46 @@ function register(app) {
     const result = await mailer.test(body.settings || {}, to, req.user.name);
     await audit.log(req, "mail.test", { ok: result.ok, to: to.length || undefined, error: result.error || undefined });
     res.json({ result });
+  }));
+
+  /* ---------- Monatsbericht per E-Mail ---------- */
+  app.get("/api/reports/monthly", wrap(async (req, res) => {
+    requireAdmin(req);
+    const prev = monthly.previousMonth();
+    res.json({ config: await monthly.getConfig(), mailReady: await mailer.isConfigured(),
+      previous: `${prev.y}-${String(prev.m + 1).padStart(2, "0")}` });
+  }));
+  app.put("/api/reports/monthly", wrap(async (req, res) => {
+    requireAdmin(req);
+    const cfg = await monthly.setConfig(req.body || {});
+    await audit.log(req, "report.monthly.config", { enabled: cfg.enabled, day: cfg.day, time: cfg.time, recipients: cfg.recipients.length });
+    res.json({ config: cfg });
+  }));
+  // Vorschau als HTML (für die Oberfläche) — Monat als JJJJ-MM, sonst Vormonat
+  app.get("/api/reports/monthly/preview", wrap(async (req, res) => {
+    requireAdmin(req);
+    const ym = monthly.parseMonth(req.query.month) || monthly.previousMonth();
+    const mail = await monthly.build(ym);
+    // Eingebettetes Logo (cid:) für die Vorschau im Browser als data:-Bild einsetzen
+    let html = mail.html;
+    (mail.attachments || []).forEach((a) => { if (a.cid) html = html.split("cid:" + a.cid).join(`data:${a.contentType};base64,${a.content.toString("base64")}`); });
+    res.json({ subject: mail.subject, html });
+  }));
+  // Jetzt senden: an den Verteiler oder nur an die eigene Adresse („test“)
+  app.post("/api/reports/monthly/send", wrap(async (req, res) => {
+    requireAdmin(req);
+    const body = req.body || {};
+    const ym = monthly.parseMonth(body.month) || monthly.previousMonth();
+    let to = null;
+    if (body.test) {
+      const r = await db.pool.query("SELECT email FROM users WHERE lower(name) = lower($1)", [req.user.name]);
+      const own = r.rows[0] && r.rows[0].email;
+      if (!own) throw new HttpError(400, "Für eine Probe an Sie selbst bitte unter „Mein Konto“ eine E-Mail-Adresse hinterlegen.");
+      to = [own];
+    }
+    const last = await monthly.send(ym, { to, by: req.user.name });
+    await audit.log(req, "report.monthly.send", { month: last.month, to: last.to, test: !!body.test });
+    res.json({ last });
   }));
 
   /* ---------- Sicherheitsprotokoll ---------- */

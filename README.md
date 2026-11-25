@@ -196,6 +196,9 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
   Datenbank (Schlüssel `APP_SECRET`) und wird nie wieder angezeigt.
 - Die `SMTP_*`-Werte aus der `.env` sind nur Startwerte: Sie gelten, solange in der Oberfläche nichts gespeichert ist,
   und werden beim ersten Speichern übernommen. Prüfen von der Kommandozeile: `./deploy.sh mail-test adresse@firma.de`.
+- **Monatsbericht:** ebenfalls unter *Einstellungen → E-Mail-Versand*. Der API-Container verschickt am eingestellten
+  Tag (1–28) zur eingestellten Uhrzeit (Zeitzone `TZ`, Standard Europe/Berlin) eine Übersicht des Vormonats an den
+  eigenen Verteiler; fehlgeschlagene Versuche werden stündlich wiederholt. Für den Link „Board öffnen“ `PUBLIC_URL` setzen.
 
 ### Testdaten
 

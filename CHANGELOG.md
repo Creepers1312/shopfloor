@@ -10,6 +10,11 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 ## [Unveröffentlicht]
 
 ### Neu
+- **Monatsbericht per E-Mail (automatisch):** Unter Einstellungen → E-Mail-Versand lässt sich ein Monatsbericht
+  einrichten. Der Server schickt am eingestellten Tag (1–28, mit Uhrzeit) eine Übersicht des Vormonats an einen
+  eigenen Verteiler: OEE, First Pass Yield, Termintreue mit Vormonatsvergleich, SQIDP-Grünquote, Produktion,
+  Ausfälle je Art, Arbeitssicherheit und Maßnahmen — mit Ampelfarben. Mit Vorschau, „Probe an mich“, „Jetzt an
+  Verteiler senden“ und Anzeige des letzten Versands; bei Fehlern stündlicher neuer Versuch.
 - **Profilbild:** Unter „Mein Konto“ lässt sich ein Foto hochladen (JPEG, PNG oder WebP). Es wird im Browser
   quadratisch zugeschnitten und verkleinert und erscheint oben rechts und in der Benutzerverwaltung. Teamleitung
   und Administration können unpassende Bilder entfernen („Bild entfernen“). Profilbilder sind in den Sicherungen

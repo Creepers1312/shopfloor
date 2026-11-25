@@ -1264,6 +1264,21 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 .recip-x:hover { color: var(--crit-text); background: color-mix(in srgb, var(--crit) 12%, transparent); }
 .recip-add { display: flex; gap: 8px; }
+.mr-local, .mr-warn { margin: 10px 0 0; padding: 10px 12px; border-radius: 9px; font-size: 13px; }
+.mr-local { background: var(--surface-2); color: var(--ink-2); }
+.mr-warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn-text); font-weight: 600; }
+.mr-when { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mr-when span { font-size: 13px; color: var(--ink-2); }
+.mr-when select, .mr-when input { width: auto; flex: none; }
+.mr-when #mrTime { width: 140px; min-width: 0; }
+.mr-when #mrDay { width: 80px; }
+.mr-copy { margin-top: 8px; }
+.mr-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.mr-actions select { width: auto; }
+.mr-foot { margin-top: 6px; }
+.mr-preview-dialog { width: min(720px, calc(100vw - 32px)); padding: 0; }
+.mr-preview-body { padding: 0 16px 16px; }
+.mr-preview-body iframe { width: 100%; height: min(75vh, 900px); border: 1px solid var(--line); border-radius: 10px; background: #f3f4f6; }
 .recip-add .btn { flex: none; }
 .mail-log { display: flex; flex-direction: column; padding-bottom: 8px; }
 .ml-row { display: flex; align-items: center; gap: 12px; font-size: 13.5px; padding: 11px 2px; border-bottom: 1px solid var(--line-soft); }
@@ -2402,6 +2417,47 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <button class="btn ghost" id="mailRevert" type="button">Verwerfen</button>
           <button class="btn primary" id="mailSave" type="button">Speichern</button>
         </div>
+        <div class="card set-card" id="mrCard">
+          <div class="set-card-title">Monatsbericht (automatisch)</div>
+          <div class="set-desc">Der Server schickt am eingestellten Tag eine Übersicht des Vormonats an den Verteiler: OEE, First Pass Yield, Termintreue (mit Vormonat), SQIDP-Grünquote, Produktion, Ausfälle, Arbeitssicherheit und Maßnahmen.</div>
+          <p class="mr-local" id="mrLocal" hidden>Der automatische Monatsbericht braucht die Server-Installation (./deploy.sh) — im lokalen Testmodus kann der Browser keine E-Mails selbst versenden.</p>
+          <div id="mrBody">
+            <p class="mr-warn" id="mrMailWarn" hidden>Der E-Mail-Versand des Servers ist noch nicht eingerichtet — oben Absender und SMTP-Server eintragen und speichern.</p>
+            <div class="set-row">
+              <div><div class="set-name">Automatisch versenden</div><div class="set-desc" id="mrAutoText"></div></div>
+              <div class="set-ctl ctl-right"><button class="switch" id="mrSwitch" type="button" role="switch" aria-checked="false" aria-label="Monatsbericht automatisch versenden"></button></div>
+            </div>
+            <div class="set-row">
+              <div><div class="set-name">Versandzeitpunkt</div><div class="set-desc">Tag im Monat (1–28) und Uhrzeit — verschickt wird jeweils der abgeschlossene Vormonat.</div></div>
+              <div class="set-ctl mr-when"><span>am</span><select id="mrDay" class="perm-select" aria-label="Tag im Monat"></select><span>um</span><input id="mrTime" type="time" class="time-input" aria-label="Uhrzeit"></div>
+            </div>
+            <div class="set-row row-top">
+              <div><div class="set-name">Empfänger (<span id="mrRecipCount">0</span>)</div><div class="set-desc">Eigener Verteiler für den Monatsbericht.</div>
+                <button class="btn sm mr-copy" id="mrCopyDaily" type="button">Verteiler des Tagesberichts übernehmen</button></div>
+              <div class="set-ctl">
+                <div class="recip-list" id="mrRecipList"></div>
+                <div class="recip-add">
+                  <input id="mrNewRecipient" type="email" placeholder="name@firma.de" autocomplete="off">
+                  <button class="btn" id="mrAddRecipient" type="button">Hinzufügen</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row">
+              <div><div class="set-name">Bericht ansehen oder senden</div><div class="set-desc" id="mrStatus">Noch nicht versendet.</div></div>
+              <div class="set-ctl mr-actions">
+                <select id="mrMonth" class="perm-select" aria-label="Monat für Vorschau und Versand"></select>
+                <button class="btn" id="mrPreviewBtn" type="button">Vorschau</button>
+                <button class="btn" id="mrTestBtn" type="button" title="Nur an die eigene E-Mail-Adresse aus „Mein Konto“">Probe an mich</button>
+                <button class="btn" id="mrSendBtn" type="button">Jetzt an Verteiler senden</button>
+              </div>
+            </div>
+            <p class="login-error" id="mrError" hidden></p>
+            <div class="pane-foot mr-foot">
+              <span class="saved-flash" id="mrSaved" hidden>Gespeichert ✓</span>
+              <button class="btn primary" id="mrSave" type="button">Monatsbericht speichern</button>
+            </div>
+          </div>
+        </div>
         <div class="card set-card">
           <div class="set-card-title">Letzte Sendungen</div>
           <div class="mail-log" id="mailLog"></div>
@@ -3184,6 +3240,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 <dialog id="docImgDialog" class="doc-img-dialog" aria-label="Bild vergrößert">
   <img id="docImgBig" alt="">
   <p id="docImgCap"></p>
+</dialog>
+
+<dialog id="mrPreviewDialog" class="mr-preview-dialog" aria-labelledby="mrPrevTitle">
+  <div class="dlg-head">
+    <h2 id="mrPrevTitle">Vorschau Monatsbericht</h2>
+    <button type="button" class="btn ghost sm" id="mrPrevClose" aria-label="Schließen">✕</button>
+  </div>
+  <div class="mr-preview-body"><iframe id="mrPrevFrame" title="Vorschau der E-Mail" sandbox=""></iframe></div>
 </dialog>
 
 <dialog id="confirmDialog">
@@ -9705,7 +9769,7 @@ window.SFM = (function () {
     "user.create": "Konto angelegt", "user.password": "Passwort neu gesetzt (Administration)",
     "user.password.self": "Eigenes Passwort geändert", "user.password.self.failed": "Passwortänderung abgelehnt",
     "users.update": "Benutzerliste geändert", "document.save": "Gespeichert",
-    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert", "user.avatar.self": "Profilbild geändert", "user.avatar.remove": "Profilbild entfernt",
+    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert", "user.avatar.self": "Profilbild geändert", "user.avatar.remove": "Profilbild entfernt", "report.monthly.send": "Monatsbericht gesendet", "report.monthly.config": "Monatsbericht eingestellt",
     "user.reset.mail": "Passwort-Link per E-Mail verschickt", "user.reset.requested": "Passwort-Anfrage an die Administration",
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
@@ -9842,7 +9906,7 @@ window.SFM = (function () {
       if (settingsPane === "db") { renderDbStatus(); loadBackups(); }
       if (settingsPane === "audit") loadAudit(false);
       if (settingsPane === "users") loadResetRequests();
-      if (settingsPane === "mail") loadServerMail();
+      if (settingsPane === "mail") { loadServerMail(); loadMonthlyReport(); }
     });
   });
   $("#settingsSearch").addEventListener("input", function () {
@@ -9873,6 +9937,115 @@ window.SFM = (function () {
       ? "Vorgemerkt für täglich " + settings.mail.sendTime + " Uhr — aktiv, sobald eine Server-Anbindung den Versand übernimmt. Der Browser selbst kann nicht automatisch senden."
       : "Deaktiviert — der Bericht wird nur manuell versendet.";
   }
+  /* ---------- Monatsbericht (nur am Server; Einstellungen und Versand macht der Server) ---------- */
+  var mr = null, mrMonthOpts = [];
+  function mrError(msg) { var e = $("#mrError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function mrMonthLabel(ym) { var p = ym.split("-"); return MONTH_NAMES[+p[1] - 1] + " " + p[0]; }
+  function loadMonthlyReport() {
+    var server = SFM.isServer() && can("manageUsers");
+    $("#mrLocal").hidden = server;
+    $("#mrBody").hidden = !server;
+    if (!server) return;
+    SFM.api("/api/reports/monthly").then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Monatsbericht konnte nicht geladen werden."); return; }
+      mr = r.data.config;
+      mr.mailReady = r.data.mailReady;
+      // Monatsauswahl: Vormonat und die elf davor
+      var p = r.data.previous.split("-"), y = +p[0], m = +p[1] - 1;
+      mrMonthOpts = [];
+      for (var i = 0; i < 12; i++) { mrMonthOpts.push(y + "-" + String(m + 1).padStart(2, "0")); m--; if (m < 0) { m = 11; y--; } }
+      renderMonthlyReport();
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  }
+  function renderMonthlyReport() {
+    if (!mr) return;
+    mrError(null);
+    $("#mrMailWarn").hidden = !!mr.mailReady;
+    $("#mrSwitch").setAttribute("aria-checked", mr.enabled ? "true" : "false");
+    var daySel = $("#mrDay");
+    if (!daySel.options.length) for (var d = 1; d <= 28; d++) { var o = document.createElement("option"); o.value = d; o.textContent = d + "."; daySel.appendChild(o); }
+    daySel.value = String(mr.day);
+    $("#mrTime").value = mr.time;
+    $("#mrAutoText").textContent = mr.enabled
+      ? "An — am " + mr.day + ". jedes Monats um " + mr.time + " Uhr geht der Bericht des Vormonats an " + mr.recipients.length + (mr.recipients.length === 1 ? " Empfänger." : " Empfänger.")
+      : "Aus — der Bericht wird nur auf Knopfdruck versendet.";
+    var list = $("#mrRecipList");
+    list.innerHTML = "";
+    $("#mrRecipCount").textContent = String(mr.recipients.length);
+    if (!mr.recipients.length) list.appendChild(el("div", "empty-hint", "Noch keine Empfänger."));
+    mr.recipients.forEach(function (mail, i) {
+      var row = el("div", "recip-item");
+      row.appendChild(el("span", "", mail));
+      var x = el("button", "recip-x", "✕");
+      x.type = "button"; x.title = "Entfernen"; x.setAttribute("aria-label", mail + " entfernen");
+      x.addEventListener("click", function () { mr.recipients.splice(i, 1); renderMonthlyReport(); });
+      row.appendChild(x);
+      list.appendChild(row);
+    });
+    var ms = $("#mrMonth"), keep = ms.value;
+    ms.innerHTML = "";
+    mrMonthOpts.forEach(function (ym) { var o = document.createElement("option"); o.value = ym; o.textContent = mrMonthLabel(ym); ms.appendChild(o); });
+    if (keep && mrMonthOpts.indexOf(keep) >= 0) ms.value = keep;
+    var l = mr.last;
+    $("#mrStatus").textContent = !l ? "Noch nicht an den Verteiler versendet."
+      : (l.ok ? "Zuletzt versendet: " : "Letzter Versuch fehlgeschlagen: ") + mrMonthLabel(l.month) + " am " + fmtStamp(l.at) +
+        (l.ok ? " an " + l.to + " Empfänger" + (l.auto ? " (automatisch)" : "") : " — " + (l.error || "unbekannter Fehler"));
+  }
+  $("#mrSwitch").addEventListener("click", function () { if (!mr) return; mr.enabled = !mr.enabled; renderMonthlyReport(); });
+  $("#mrDay").addEventListener("change", function () { if (mr) { mr.day = +this.value; renderMonthlyReport(); } });
+  $("#mrTime").addEventListener("change", function () { if (mr && /^\d\d:\d\d$/.test(this.value)) { mr.time = this.value; renderMonthlyReport(); } });
+  function mrAdd() {
+    var v = $("#mrNewRecipient").value.trim().toLowerCase();
+    if (!v) return;
+    if (!EMAIL_RE.test(v)) { mrError("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+    if (mr.recipients.indexOf(v) < 0) mr.recipients.push(v);
+    $("#mrNewRecipient").value = "";
+    renderMonthlyReport();
+  }
+  $("#mrAddRecipient").addEventListener("click", mrAdd);
+  $("#mrNewRecipient").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); mrAdd(); } });
+  $("#mrCopyDaily").addEventListener("click", function () {
+    if (!mr) return;
+    var added = 0;
+    (settings.mail.recipients || []).forEach(function (x) { x = String(x).toLowerCase(); if (mr.recipients.indexOf(x) < 0) { mr.recipients.push(x); added++; } });
+    renderMonthlyReport();
+    toast(added ? added + " Empfänger übernommen — noch speichern" : "Keine neuen Empfänger im Verteiler des Tagesberichts");
+  });
+  $("#mrSave").addEventListener("click", function () {
+    if (!mr) return;
+    SFM.api("/api/reports/monthly", { method: "PUT", body: { enabled: mr.enabled, day: mr.day, time: mr.time, recipients: mr.recipients } }).then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Nicht gespeichert."); return; }
+      var ready = mr.mailReady; mr = r.data.config; mr.mailReady = ready;
+      renderMonthlyReport(); flash("mrSaved"); toast("Monatsbericht gespeichert");
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  });
+  $("#mrPreviewBtn").addEventListener("click", function () {
+    var ym = $("#mrMonth").value;
+    SFM.api("/api/reports/monthly/preview?month=" + encodeURIComponent(ym)).then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Vorschau nicht möglich."); return; }
+      $("#mrPrevTitle").textContent = r.data.subject;
+      $("#mrPrevFrame").srcdoc = r.data.html;
+      $("#mrPreviewDialog").showModal();
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  });
+  $("#mrPrevClose").addEventListener("click", function () { $("#mrPreviewDialog").close(); });
+  function mrSend(test) {
+    var ym = $("#mrMonth").value;
+    var btn = test ? $("#mrTestBtn") : $("#mrSendBtn");
+    btn.disabled = true; mrError(null);
+    SFM.api("/api/reports/monthly/send", { method: "POST", body: { month: ym, test: !!test } }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) { mrError((r.data && r.data.error) || "Nicht versendet."); if (!test) loadMonthlyReport(); return; }
+      toast(test ? "Probe für " + mrMonthLabel(ym) + " an Ihre Adresse gesendet" : "Monatsbericht " + mrMonthLabel(ym) + " an " + r.data.last.to + " Empfänger gesendet");
+      if (!test) loadMonthlyReport();
+    }).catch(function () { btn.disabled = false; mrError("Server nicht erreichbar."); });
+  }
+  $("#mrTestBtn").addEventListener("click", function () { mrSend(true); });
+  $("#mrSendBtn").addEventListener("click", function () {
+    if (!mr || !mr.recipients.length) { mrError("Bitte zuerst Empfänger eintragen und speichern."); return; }
+    appConfirm("Monatsbericht senden?", "Den Bericht für " + mrMonthLabel($("#mrMonth").value) + " jetzt an " + mr.recipients.length +
+      " Empfänger senden? (Es gilt der zuletzt gespeicherte Verteiler.)", "Senden", false, function () { mrSend(false); });
+  });
   function renderRecipients() {
     var list = $("#recipList");
     list.innerHTML = "";
@@ -10327,7 +10500,7 @@ window.SFM = (function () {
           ["Als PDF exportieren", "Öffnet die Druckansicht — dort „Als PDF speichern“ wählen."]
         ] }
       ],
-      tip: "Fehlt bei einer Abweichung die Begründung, steht im Bericht „FEHLT“ — ein guter Anlass, den Agenda-Punkt im Huddle noch einmal zu öffnen." },
+      tip: "Fehlt bei einer Abweichung die Begründung, steht im Bericht „FEHLT“ — ein guter Anlass, den Agenda-Punkt im Huddle noch einmal zu öffnen. Eine Übersicht über den ganzen Monat verschickt der Server automatisch als Monatsbericht (siehe „E-Mail-Versand & Monatsbericht“)." },
 
     /* ===== Auswertung ===== */
     { id: "dashboard", group: "Auswertung", title: "Dashboard & Zeiträume",
@@ -10529,17 +10702,25 @@ window.SFM = (function () {
       ],
       tip: "Die Teamleitung kann keine Administrator-Konten anlegen oder ändern." },
 
-    { id: "email", group: "Verwaltung", title: "E-Mail-Versand",
-      intro: "Hier stehen Absender, Mailserver und Verteiler. Der Server nutzt den Mailserver für „Passwort vergessen“ und Test-E-Mails; den Tagesbericht verschicken Sie über Ihr eigenes E-Mail-Programm an den Verteiler.",
+    { id: "email", group: "Verwaltung", title: "E-Mail-Versand & Monatsbericht",
+      intro: "Hier stehen Absender, Mailserver, der Verteiler für den Tagesbericht und der automatische Monatsbericht. Der Server nutzt den Mailserver für „Passwort vergessen“, Test-E-Mails und den Monatsbericht; den Tagesbericht verschicken Sie über Ihr eigenes E-Mail-Programm.",
+      flow: ["Mailserver einrichten", "Verteiler eintragen", "Vorschau / Probe", "Automatik einschalten", "Bericht kommt monatlich"],
       sections: [
-        { h: "Einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
+        { h: "Mailserver einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
           ["Absender", "Absendername, Absenderadresse und Antwortadresse."],
           ["SMTP-Server", "Server, Port und Verschlüsselung (üblich: STARTTLS auf Port 587), Benutzer und Passwort. Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt — Feld leer lassen, um es zu behalten."],
           ["Verbindung testen", "Prüft Server, Anmeldung und Verschlüsselung direkt."],
-          ["Verteiler", "Empfänger des Tagesberichts und die Betreff-Vorlage ({linie} und {datum} werden ersetzt)."]
-        ] }
+          ["Verteiler Tagesbericht", "Empfänger des Tagesberichts und die Betreff-Vorlage ({linie} und {datum} werden ersetzt)."]
+        ] },
+        { h: "Monatsbericht (automatisch)", p: "Am eingestellten Tag schickt der Server eine Übersicht des abgeschlossenen Vormonats an einen eigenen Verteiler — auch wenn niemand das Board geöffnet hat.", list: [
+          "<b>Inhalt:</b> OEE, First Pass Yield und Termintreue mit Ziel und Vergleich zum Vormonat, SQIDP-Grünquote je Kategorie, Produktion (Mengen, Ausschuss-Anteil, Nacharbeit, Inventory), Produktionsausfälle je Art, Arbeitssicherheit und Maßnahmen (angelegt, offen, überfällig) — mit Ampelfarben nach Zielen und Grenzwerten.",
+          "<b>Versandzeitpunkt:</b> Tag im Monat (1–28) und Uhrzeit, z. B. am 1. um 07:00 Uhr für den Vormonat. Schlägt der Versand fehl, versucht es der Server stündlich erneut.",
+          "<b>Empfänger:</b> eigener Verteiler; „Verteiler des Tagesberichts übernehmen“ kopiert die Adressen von oben.",
+          "<b>Vorschau</b> zeigt den Bericht für einen gewählten Monat, <b>Probe an mich</b> schickt ihn nur an die eigene Adresse aus „Mein Konto“, <b>Jetzt an Verteiler senden</b> verschickt ihn sofort.",
+          "Unter dem Knopf steht, wann der Bericht zuletzt verschickt wurde — oder warum es nicht geklappt hat."
+        ], note: "„Monatsbericht speichern“ übernimmt Schalter, Zeitpunkt und Empfänger. Der Monatsbericht braucht die Server-Installation; im lokalen Testmodus steht hier nur ein Hinweis." }
       ],
-      tip: "Nur die Administration sieht diesen Bereich." },
+      tip: "Nur die Administration sieht diesen Bereich. Versand und Einstellungen stehen im Sicherheitsprotokoll." },
 
     { id: "sicherung", group: "Verwaltung", title: "Datenbank & Sicherung",
       intro: "Am Server liegen alle Daten in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand. Der Server sichert sie selbstständig.",

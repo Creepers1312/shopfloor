@@ -53,6 +53,7 @@ backend/src/            Node/Express + PostgreSQL (pg)
   secrets.js            AES-256-GCM für gespeicherte Passwörter, Schlüssel APP_SECRET (.env)
   monitor.js            Checkmk-Ausgabe (Local Check)
   avatars.js            Profilbilder prüfen und speichern (Tabelle user_avatars)
+  monthlyreport.js      Monatsbericht: Berechnung (Formeln wie Oberfläche), HTML-Mail, Zeitplan, meta „monthly_report“
   cli.js                create-admin, reset-password, list-users, mail-test, audit, backup, smb-sync, checkmk
 deploy.sh               Installer/Updater (Docker-Installation, .env, Bauen, Sicherung vor Update, Checkmk)
 docker-compose.yml      db (postgres:17), api, web; gehärtet (read_only, cap_drop, no-new-privileges)
@@ -109,6 +110,11 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
 - **TV-Modus** (`enterTv`/`renderTv`, Seiten `TV_PAGES`, 20 s je Seite): Stand = `latestDailyIso()`, Einstellungen je
   Gerät in `sfm-tv-v1` (Theme, Pause), setzt `data-theme` nur während des TV-Modus; Tageswechsel → Neuladen mit
   `sessionStorage` `sfm-tv-resume`; Wake Lock; muss auf 1920×1080 und 1366×768 ohne Scrollen passen.
+
+- **Monatsbericht:** Server-seitig (`monthlyreport.js`, Routen `/api/reports/monthly…` in `routes/admin.js`, nur Admin);
+  rechnet aus den Dokumenten `state`/`settings` mit denselben Formeln wie die Oberfläche (`oeeAvailability`,
+  `periodRatio`, `outageTotal` …) — Formeländerungen dort hier mitziehen. Zeitplan alle 5 min, Versand am Tag/Uhrzeit
+  für den Vormonat, merkt sich `last` (Probe an eigene Adresse zählt nicht). UI-Karte `#mrCard` im Bereich E-Mail.
 
 ## Betrieb
 - `./deploy.sh` installiert/aktualisiert (Sicherung → `git pull` → bauen → starten); `./deploy.sh config`
