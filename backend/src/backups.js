@@ -1,5 +1,5 @@
 "use strict";
-// Sicherungen per pg_dump (Custom-Format) der Tabellen documents, users und dashboards.
+// Sicherungen per pg_dump (Custom-Format) der Tabellen documents, users, dashboards und user_avatars.
 // Sitzungen, Sicherungsliste und Zähler gehören nicht dazu — eine Wiederherstellung
 // meldet also niemanden ab und löscht keine anderen Sicherungen.
 const fs = require("fs");
@@ -11,7 +11,7 @@ const { HttpError } = require("./http");
 const smb = require("./smb");
 
 const FILE_RE = config.backupFileRe;
-const TABLES = ["documents", "users", "dashboards"];
+const TABLES = ["documents", "users", "dashboards", "user_avatars"];
 
 let busy = false;
 let toolInfo = { ok: false, info: "noch nicht geprüft" };

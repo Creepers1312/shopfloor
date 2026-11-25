@@ -9,6 +9,12 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Profilbild:** Unter „Mein Konto“ lässt sich ein Foto hochladen (JPEG, PNG oder WebP). Es wird im Browser
+  quadratisch zugeschnitten und verkleinert und erscheint oben rechts und in der Benutzerverwaltung. Teamleitung
+  und Administration können unpassende Bilder entfernen („Bild entfernen“). Profilbilder sind in den Sicherungen
+  enthalten und werden beim Löschen eines Kontos mit entfernt.
+
 ### Geändert
 - **„Mein Konto“ aufgeräumt:** Die Passwortfelder erscheinen erst nach einem Klick auf „Passwort ändern …“.
   Nach dem bisherigen Passwort wird nur gefragt, wenn E-Mail oder Passwort geändert werden; wer nur die

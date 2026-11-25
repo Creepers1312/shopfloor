@@ -44,6 +44,7 @@ function createApp() {
   // Große Anfragen nur für Dokumente; alles andere klein halten
   app.use("/api/document", express.json({ limit: config.bodyLimit }));
   app.use("/api/user/dashboard", express.json({ limit: "256kb" }));
+  app.use("/api/me/avatar", express.json({ limit: "400kb" }));
   app.use("/api", express.json({ limit: config.smallBodyLimit }));
   app.use("/api", (req, res, next) => { res.setHeader("Cache-Control", "no-store"); next(); });
   app.use("/api", sessions.middleware);

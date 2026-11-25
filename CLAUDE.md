@@ -52,6 +52,7 @@ backend/src/            Node/Express + PostgreSQL (pg)
   mailer.js mailtemplates.js   nodemailer, Einstellungen aus der Oberfläche (meta) vor .env, HTML-Mails
   secrets.js            AES-256-GCM für gespeicherte Passwörter, Schlüssel APP_SECRET (.env)
   monitor.js            Checkmk-Ausgabe (Local Check)
+  avatars.js            Profilbilder prüfen und speichern (Tabelle user_avatars)
   cli.js                create-admin, reset-password, list-users, mail-test, audit, backup, smb-sync, checkmk
 deploy.sh               Installer/Updater (Docker-Installation, .env, Bauen, Sicherung vor Update, Checkmk)
 docker-compose.yml      db (postgres:17), api, web; gehärtet (read_only, cap_drop, no-new-privileges)
@@ -94,6 +95,11 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
   `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
+- **Profilbilder:** im Browser auf 256 × 256 zugeschnitten (`shrinkAvatar`), Server `avatars.js` (Data-URL, JPEG/PNG/WebP,
+  max. 200 KB, Dateikennung geprüft) in Tabelle `user_avatars` (ohne Fremdschlüssel, damit alte Sicherungen sich
+  wiederherstellen lassen); Version `avatarV` in der Benutzerliste, Bild unter `/api/avatar/<Anmeldename>?v=…`.
+  Eigene Änderung nie über die Benutzerliste speichern (nur Teamleitung/Admin dürfen sie schreiben) — dafür
+  `avatarOverride`. Lokal: `sfm-avatars-v1`. `fillAvatar()` zeigt Bild oder Initialen.
 - **Darstellung** hell/dunkel/automatisch in „Mein Konto“ (`#pwDialog`, `themeSet`/`applyTheme`): `data-theme` auf
   `<html>`, gespeichert je Konto und Gerät in `sfm-theme-v1` (`_last` für die Anmeldeseite); der TV-Modus
   überschreibt das nur, solange er läuft.

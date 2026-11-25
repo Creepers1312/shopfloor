@@ -218,7 +218,7 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Täglich automatisch zur eingestellten Uhrzeit, alte automatische Sicherungen werden nach `BACKUP_KEEP` entfernt.
 - Von Hand in der Oberfläche unter *Einstellungen → Datenbank & Sicherung* oder per `./deploy.sh backup`.
 - Vor jedem `./deploy.sh` und vor jeder Wiederherstellung wird der aktuelle Stand automatisch gesichert.
-- Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents`, `users` und `dashboards`).
+- Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents`, `users`, `dashboards` und `user_avatars`).
   Für den Ernstfall zusätzlich auf ein NAS kopieren (siehe unten) und die Wiederherstellung einmal ausprobieren.
 - Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
 - **Herunterladen:** In der Liste *Vorhandene Sicherungen* lädt „Herunterladen“ die `.dump`-Datei direkt im Browser

@@ -1146,6 +1146,12 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .host-port { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
 .seg-wrap { display: flex; justify-content: flex-end; }
 @media (max-width: 780px) { .seg-wrap, .set-ctl.ctl-right { justify-content: flex-start; } }
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar.avatar-lg { width: 72px; height: 72px; font-size: 24px; }
+.ac-avatar-row { display: flex; align-items: center; gap: 16px; }
+.ac-avatar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ac-avatar-actions .mini-hint { flex-basis: 100%; margin: 0; }
 .pw-section { margin-top: 12px; padding: 12px 14px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
 .pw-section[hidden] { display: none; }
 #pwChangeBtn { margin-top: 2px; }
@@ -2722,6 +2728,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="button" class="btn ghost sm" id="pwClose" aria-label="Schließen">✕</button>
     </div>
     <div class="dlg-body">
+      <div class="field" id="acAvatarField">
+        <label>Profilbild</label>
+        <div class="ac-avatar-row">
+          <span class="avatar avatar-lg" id="acAvatar"></span>
+          <div class="ac-avatar-actions">
+            <button type="button" class="btn" id="acAvatarPick">Bild hochladen …</button>
+            <button type="button" class="btn ghost danger" id="acAvatarRemove" hidden>Entfernen</button>
+            <input type="file" id="acAvatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+            <p class="mini-hint">JPEG, PNG oder WebP. Das Bild wird automatisch quadratisch zugeschnitten und verkleinert.</p>
+            <p class="login-error" id="acAvatarError" hidden></p>
+          </div>
+        </div>
+      </div>
       <div class="field">
         <label>Darstellung</label>
         <div class="theme-choice" role="radiogroup" aria-label="Darstellung">
@@ -9574,7 +9593,7 @@ window.SFM = (function () {
     "user.create": "Konto angelegt", "user.password": "Passwort neu gesetzt (Administration)",
     "user.password.self": "Eigenes Passwort geändert", "user.password.self.failed": "Passwortänderung abgelehnt",
     "users.update": "Benutzerliste geändert", "document.save": "Gespeichert",
-    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert",
+    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert", "user.avatar.self": "Profilbild geändert", "user.avatar.remove": "Profilbild entfernt",
     "user.reset.mail": "Passwort-Link per E-Mail verschickt", "user.reset.requested": "Passwort-Anfrage an die Administration",
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
@@ -10045,7 +10064,7 @@ window.SFM = (function () {
           ["Mit E-Mail-Adresse", "Ist eine E-Mail hinterlegt und der Mailserver eingerichtet, kommt ein Link. Er gilt 60 Minuten und nur einmal."],
           ["Ohne E-Mail-Adresse", "Die Anfrage erscheint bei der Administration in der Benutzerverwaltung; dort wird ein neues Passwort gesetzt und persönlich mitgeteilt."]
         ] },
-        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert; danach das Fenster einfach schließen. Die E-Mail-Adresse lässt sich direkt ändern; für ein neues Passwort auf <b>„Passwort ändern …“</b> klicken. Nur bei diesen beiden Änderungen fragt das Fenster nach dem bisherigen Passwort. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
+        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Profilbild</b> lässt sich mit „Bild hochladen …“ ein Foto wählen (JPEG, PNG oder WebP) — es wird automatisch quadratisch zugeschnitten und erscheint oben rechts und in der Benutzerverwaltung; „Entfernen“ zeigt wieder die Initialen. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert; danach das Fenster einfach schließen. Die E-Mail-Adresse lässt sich direkt ändern; für ein neues Passwort auf <b>„Passwort ändern …“</b> klicken. Nur bei diesen beiden Änderungen fragt das Fenster nach dem bisherigen Passwort. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
         { h: "Abmelden", p: "Über das Pfeil-Symbol neben dem Namen. Nach 12 Stunden ohne Bedienung (einstellbar) meldet das Board automatisch ab — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage." }
       ],
       tip: "Das Board sollte nur über HTTPS geöffnet werden (Schloss-Symbol in der Adresszeile) — sonst gehen Passwörter ungeschützt über das Netz." },
@@ -10055,7 +10074,7 @@ window.SFM = (function () {
       sections: [
         { h: "Werkzeuge in der Kopfzeile", img: "kopfzeile", cap: "Rechts: Datum, Konto, Abmelden, TV-Modus, Touch-Modus", list: [
           "<b>Datum</b> — ein Klick öffnet direkt den Huddle von heute.",
-          "<b>Name</b> — „Mein Konto“ (Darstellung hell/dunkel, E-Mail, Passwort).",
+          "<b>Name</b> — „Mein Konto“ (Profilbild, Darstellung hell/dunkel, E-Mail, Passwort).",
           "<b>Pfeil</b> — Abmelden.",
           "<b>Monitor</b> — TV-Modus für den Hallenmonitor.",
           "<b>Zeiger</b> — Touch-Modus mit größeren Bedienelementen für Touch-Terminals.",
@@ -10386,7 +10405,8 @@ window.SFM = (function () {
           ["Bearbeiten", "Name, E-Mail, Rolle und Berechtigung ändern."],
           ["Passwort", "Neues Passwort setzen — das Konto wird dabei auf allen Geräten abgemeldet."],
           ["Sperren / Entfernen", "Gesperrte Konten verlieren sofort alle Sitzungen. Beim Entfernen verschwinden auch die privaten Dashboards des Kontos."],
-          ["Offene Passwort-Anfragen", "Wer „Passwort vergessen“ gewählt hat, aber keinen Link bekommen konnte, steht oben in der Liste."]
+          ["Offene Passwort-Anfragen", "Wer „Passwort vergessen“ gewählt hat, aber keinen Link bekommen konnte, steht oben in der Liste."],
+          ["Profilbilder", "Jede Person lädt ihr Bild selbst unter „Mein Konto“ hoch. Ein unpassendes Bild entfernt die Teamleitung oder Administration mit „Bild entfernen“ (Bilder von Administrator-Konten nur die Administration)."]
         ] }
       ],
       tip: "Die Teamleitung kann keine Administrator-Konten anlegen oder ändern." },
@@ -10991,6 +11011,71 @@ window.SFM = (function () {
     }
     return Promise.resolve("plain:" + txt);
   }
+  /* ---------- Profilbilder ----------
+     Server: Bild unter /api/avatar/<Anmeldename>?v=<Version> (Version = avatarV in der Benutzerliste).
+     Lokaler Modus: Data-URL im Browser (sfm-avatars-v1). */
+  var AVATAR_KEY = "sfm-avatars-v1";
+  function localAvatars() { try { return JSON.parse(LS.getItem(AVATAR_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function userRecord(name) {
+    var key = String(name || "").toLowerCase();
+    return loadUsers().filter(function (x) { return String(x.name).toLowerCase() === key; })[0] || null;
+  }
+  // Nach eigenem Hochladen/Entfernen sofort anzeigen, bis die Benutzerliste vom Server nachgeladen ist
+  // (die Liste selbst nicht ändern — sonst würde sie gespeichert, was nur Teamleitung/Administration dürfen)
+  var avatarOverride = {};
+  function avatarUrl(u) {
+    if (!u) return null;
+    if (SFM.isServer()) {
+      var k = String(u.name).toLowerCase(), v = k in avatarOverride ? avatarOverride[k] : u.avatarV;
+      return v && u.username ? "/api/avatar/" + encodeURIComponent(u.username) + "?v=" + v : null;
+    }
+    return localAvatars()[String(u.name).toLowerCase()] || null;
+  }
+  // Kreis mit Bild oder — ohne Bild bzw. wenn es nicht lädt — mit den Initialen
+  function fillAvatar(node, u, name) {
+    node.innerHTML = "";
+    var url = avatarUrl(u);
+    var label = initials(name || (u && u.name) || "?");
+    if (!url) { node.textContent = label; return node; }
+    var img = document.createElement("img");
+    img.alt = "";
+    img.addEventListener("error", function () { node.textContent = label; });
+    img.src = url;
+    node.appendChild(img);
+    return node;
+  }
+  // Bild im Browser quadratisch zuschneiden und auf 256 × 256 verkleinern (spart Speicher, keine Metadaten)
+  function shrinkAvatar(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) { reject(new Error("Bitte eine Bilddatei wählen.")); return; }
+      if (file.size > 15 * 1024 * 1024) { reject(new Error("Die Datei ist zu groß (höchstens 15 MB).")); return; }
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var side = Math.min(img.naturalWidth, img.naturalHeight);
+        if (!side) { reject(new Error("Das Bild konnte nicht gelesen werden.")); return; }
+        var size = Math.min(256, side), c = document.createElement("canvas");
+        c.width = size; c.height = size;
+        var g = c.getContext("2d");
+        g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);   // durchsichtige Bereiche weiß statt schwarz
+        g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+        var out = c.toDataURL("image/webp", 0.85);
+        if (out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/jpeg", 0.85);
+        resolve(out);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Das Bild konnte nicht gelesen werden.")); };
+      img.src = url;
+    });
+  }
+  function renderOwnAvatar() {
+    if (!currentUser) return;
+    var u = userRecord(currentUser.name);
+    fillAvatar($("#userAvatar"), u, currentUser.name);
+    if ($("#acAvatar")) {
+      fillAvatar($("#acAvatar"), u, currentUser.name);
+      $("#acAvatarRemove").hidden = !avatarUrl(u);
+    }
+  }
   function initials(name) {
     var p = name.trim().split(/\s+/);
     return (p[0].charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : "")).toUpperCase();
@@ -11040,6 +11125,7 @@ window.SFM = (function () {
       try { LS.setItem(SESSION_KEY, JSON.stringify(currentUser)); } catch (e) {}
     }
     $("#userAvatar").textContent = initials(u.name);
+    renderOwnAvatar();
     $("#userName").textContent = u.name;
     $("#userRole").textContent = u.role + " · " + permName(currentUser.perm);
     $("#userChip").hidden = false;
@@ -11329,6 +11415,9 @@ window.SFM = (function () {
     if (!currentUser) return;
     var acc = SFM.isServer() && !currentUser.demo;
     pwDlg.querySelector('input[name="acTheme"][value="' + themeGet() + '"]').checked = true;
+    $("#acAvatarField").hidden = !!currentUser.demo;
+    avatarError(null);
+    renderOwnAvatar();
     $("#pwAccount").hidden = !acc;
     myEmail = "";
     $("#pwSection").hidden = true;
@@ -11362,6 +11451,47 @@ window.SFM = (function () {
     $("#pwCancel").textContent = need ? "Abbrechen" : "Schließen";
   }
   $("#acEmail").addEventListener("input", pwRefresh);
+  function setOwnAvatarV(v) { avatarOverride[currentUser.name.toLowerCase()] = v || null; }
+  function avatarChanged(msg) {
+    renderOwnAvatar();
+    if ($("#view-settings").classList.contains("active")) renderUsers();
+    toast(msg);
+  }
+  function avatarError(msg) { var e = $("#acAvatarError"); e.hidden = !msg; e.textContent = msg || ""; }
+  $("#acAvatarPick").addEventListener("click", function () { $("#acAvatarFile").value = ""; $("#acAvatarFile").click(); });
+  $("#acAvatarFile").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f || !currentUser) return;
+    avatarError(null);
+    shrinkAvatar(f).then(function (dataUrl) {
+      if (!SFM.isServer()) {
+        var m = localAvatars();
+        m[currentUser.name.toLowerCase()] = dataUrl;
+        try { LS.setItem(AVATAR_KEY, JSON.stringify(m)); } catch (e) { avatarError("Kein Platz im Browser-Speicher für das Bild."); return; }
+        avatarChanged("Profilbild gespeichert");
+        return;
+      }
+      return SFM.api("/api/me/avatar", { method: "PUT", body: { image: dataUrl } }).then(function (r) {
+        if (!r.ok) { avatarError((r.data && r.data.error) || "Das Bild wurde nicht gespeichert."); return; }
+        setOwnAvatarV(r.data.avatarV || Date.now());
+        avatarChanged("Profilbild gespeichert");
+      });
+    }).catch(function (err) { avatarError(err && err.message ? err.message : "Das Bild wurde nicht gespeichert."); });
+  });
+  $("#acAvatarRemove").addEventListener("click", function () {
+    if (!SFM.isServer()) {
+      var m = localAvatars();
+      delete m[currentUser.name.toLowerCase()];
+      try { LS.setItem(AVATAR_KEY, JSON.stringify(m)); } catch (e) {}
+      avatarChanged("Profilbild entfernt");
+      return;
+    }
+    SFM.api("/api/me/avatar", { method: "DELETE" }).then(function (r) {
+      if (!r.ok) { avatarError((r.data && r.data.error) || "Nicht entfernt."); return; }
+      setOwnAvatarV(null);
+      avatarChanged("Profilbild entfernt");
+    }).catch(function () { avatarError("Der Server hat nicht geantwortet."); });
+  });
   $("#pwChangeBtn").addEventListener("click", function () {
     $("#pwSection").hidden = false;
     this.hidden = true;
@@ -11467,7 +11597,7 @@ window.SFM = (function () {
     }
     users.forEach(function (u) {
       var row = el("div", "user-row2" + (u.disabled ? " inactive" : ""));
-      row.appendChild(el("span", "avatar", initials(u.name)));
+      row.appendChild(fillAvatar(el("span", "avatar"), u, u.name));
       var idBox = el("div", "u-id");
       idBox.appendChild(el("div", "u-name", u.name + (isSelf(u.name) ? " (Sie)" : "")));
       idBox.appendChild(el("div", "u-role", [u.role, u.username ? "@" + u.username : "", u.email || ""].filter(Boolean).join(" · ")));
@@ -11519,6 +11649,20 @@ window.SFM = (function () {
       ed.title = "Anmeldename, E-Mail und Rolle ändern";
       ed.addEventListener("click", function () { openUserDialog("edit", u.name); });
       actions.appendChild(ed);
+      if (SFM.isServer() && avatarUrl(u) && !isSelf(u.name)) {
+        var rmAv = el("button", "btn sm", "Bild entfernen");
+        rmAv.title = "Profilbild dieses Kontos entfernen";
+        rmAv.addEventListener("click", function () {
+          appConfirm("Profilbild entfernen", "Das Profilbild von „" + u.name + "“ entfernen?", "Entfernen", true, function () {
+            SFM.api("/api/users/avatar/" + encodeURIComponent(u.name), { method: "DELETE" }).then(function (r) {
+              if (!r.ok) { appAlert("Nicht entfernt", (r.data && r.data.error) || "Bitte erneut versuchen."); return; }
+              avatarOverride[u.name.toLowerCase()] = null;
+              renderUsers(); toast("Profilbild von „" + u.name + "“ entfernt");
+            }).catch(function () { appAlert("Nicht entfernt", "Der Server hat nicht geantwortet."); });
+          });
+        });
+        actions.appendChild(rmAv);
+      }
       var pw = el("button", "btn sm", "Passwort");
       pw.title = "Passwort zurücksetzen";
       pw.addEventListener("click", function () { openUserDialog("password", u.name); });
