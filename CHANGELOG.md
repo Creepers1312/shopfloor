@@ -9,6 +9,20 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.5.0] – 2026-11-25
+
+### Neu
+- **Messbereich selbst angeben:** Beim Bearbeiten eines Diagramms (und der Karten First Pass Yield und
+  Termintreue) gibt es neben „Automatisch“ und „0–100 %“ die Option „Selbst angeben“ mit „von“ und „bis“ je
+  Achse. Leere Grenzen werden automatisch bestimmt.
+- **Helle oder dunkle Darstellung wählbar:** Unter „Mein Konto“ (Klick auf den eigenen Namen oben rechts) gibt es
+  „Automatisch“ (wie das Gerät), „Hell“ und „Dunkel“. Die Wahl gilt sofort und wird je Konto auf dem Gerät
+  gespeichert; „Mein Konto“ ist dafür jetzt auch im lokalen Testmodus erreichbar.
+
+### Geändert
+- Bei Bestandswerten (Inventory, Inventory-Grenzwert) zeigen die Diagramme keinen Durchschnitt mehr, nur den
+  aktuellen Stand.
+
 ## [1.4.0] – 2026-11-24
 
 ### Neu
@@ -140,7 +154,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Creepers1312/shopfloor/compare/5b2d566...v1.2.0

@@ -85,7 +85,8 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   alter `users.dashboard`-Layouts → private Dashboards), `routes/dashboards.js`; `/api/user/dashboard` speichert nur
   das zuletzt gewählte (`{v:2,current}`). Lokal: `sfm-dashboards-v1`. `sanitizeWidgets` prüft gespeicherte Layouts,
   `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
-  (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen). Achse je Widget `scale` (`auto` | `fixed` = 0–100 % bzw. ab 0)
+  (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen). Achse je Widget `scale` (`auto` | `fixed` = 0–100 % bzw. ab 0 | `custom` mit
+  `ranges` = `[[min|null, max|null], …]` je Achse, `dwCleanScale`)
   für Diagramme und KPI-Karten fpy/otd (`sparkline(…, fixed)`, `multiFieldChartSvg` mit `group.scale`).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).
@@ -93,6 +94,9 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
   `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
+- **Darstellung** hell/dunkel/automatisch in „Mein Konto“ (`#pwDialog`, `themeSet`/`applyTheme`): `data-theme` auf
+  `<html>`, gespeichert je Konto und Gerät in `sfm-theme-v1` (`_last` für die Anmeldeseite); der TV-Modus
+  überschreibt das nur, solange er läuft.
 - **TV-Modus** (`enterTv`/`renderTv`, Seiten `TV_PAGES`, 20 s je Seite): Stand = `latestDailyIso()`, Einstellungen je
   Gerät in `sfm-tv-v1` (Theme, Pause), setzt `data-theme` nur während des TV-Modus; Tageswechsel → Neuladen mit
   `sessionStorage` `sfm-tv-resume`; Wake Lock; muss auf 1920×1080 und 1366×768 ohne Scrollen passen.
