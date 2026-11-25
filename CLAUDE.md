@@ -89,6 +89,9 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen). Achse je Widget `scale` (`auto` | `fixed` = 0–100 % bzw. ab 0 | `custom` mit
   `ranges` = `[[min|null, max|null], …]` je Achse, `dwCleanScale`)
   für Diagramme und KPI-Karten fpy/otd (`sparkline(…, fixed)`, `multiFieldChartSvg` mit `group.scale`).
+- **Ampel-Grenzwerte** `settings.limits` (`scrapPct` = Ausschuss % der produzierten Menge, `outageHours` = ungeplante
+  Ausfälle je Tag): `scrapState`/`outageState` → ok/warn/crit, `tileLimit`/`applyTileLimit` für Kacheln (Zeitraum:
+  Anteil an Summen bzw. Ø je erfasstem Tag). Unabhängig von den Abweichungsregeln (jeder Wert > 0 bleibt Abweichung).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).
 - **Anwenderdoku** im Array `DOCS` (Gruppen `DOC_GROUPS`; je Thema `intro`, optional `flow`, `sections` mit

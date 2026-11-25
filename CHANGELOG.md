@@ -14,6 +14,9 @@ als `SCRIPT_VERSION` in `deploy.sh`.
   quadratisch zugeschnitten und verkleinert und erscheint oben rechts und in der Benutzerverwaltung. Teamleitung
   und Administration können unpassende Bilder entfernen („Bild entfernen“). Profilbilder sind in den Sicherungen
   enthalten und werden beim Löschen eines Kontos mit entfernt.
+- **Grenzwerte (Ampel) in den Stammdaten:** Ausschuss-Toleranz in % der produzierten Menge (Standard 2 %) und
+  ungeplante Ausfälle in Stunden je Tag (Standard 1,5 h). Bis zum Grenzwert werden die Werte gelb, darüber rot
+  markiert — im Dashboard, im Tagesbericht, im Kennzahlen-Fenster des Huddles und im TV-Modus.
 
 ### Geändert
 - **„Mein Konto“ aufgeräumt:** Die Passwortfelder erscheinen erst nach einem Klick auf „Passwort ändern …“.

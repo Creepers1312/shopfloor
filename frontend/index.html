@@ -297,6 +297,10 @@ h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: -.01em; text-
 .mini-tile.clickable:hover { transform: translateY(-1px); }
 .mini-tile.crit { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); background: color-mix(in srgb, var(--crit) 7%, var(--surface)); }
 .mini-tile.crit .mini-value { color: var(--crit-text); }
+.mini-tile.warn { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); }
+.mini-tile.warn .mini-value { color: var(--warn-text); }
+.daily-preview-val.warn { color: var(--warn-text); }
+.daily-preview-val.crit { color: var(--crit-text); }
 
 /* ============ Dashboard: Zeitraum-Auswahl (Tag/Monat/Jahr/Zeitraum) ============ */
 .period-nav-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -2271,6 +2275,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           </div>
         </div>
         <div class="card set-card">
+          <div class="set-card-title">Grenzwerte (Ampel)</div>
+          <div class="set-desc">Färben Dashboard, Tagesbericht, Huddle und TV-Modus: 0 = in Ordnung, bis zum Grenzwert gelb, darüber rot. Über einen Zeitraum zählt der Ausschuss-Anteil an der Gesamtmenge bzw. der Durchschnitt der ungeplanten Ausfälle je erfasstem Tag.</div>
+          <div class="targets-grid">
+            <div><label class="mini-label" for="setScrapPct">Ausschuss-Toleranz % der produzierten Menge</label><input id="setScrapPct" type="number" min="0" max="100" step="0.1" inputmode="decimal"></div>
+            <div><label class="mini-label" for="setOutageH">Ungeplante Ausfälle h je Tag</label><input id="setOutageH" type="number" min="0" max="24" step="0.1" inputmode="decimal"></div>
+          </div>
+        </div>
+        <div class="card set-card">
           <div class="set-card-title">Arbeitssicherheit</div>
           <div class="set-desc">Grundlage für den Zähler „Tage unfallfrei“ im Dashboard — er zählt ab dem hinterlegten Datum.</div>
           <div class="set-row">
@@ -3705,6 +3717,8 @@ window.SFM = (function () {
     huddleTime: "13:00",
     inventoryLimit: 2000, // t — Vorgabe für den täglichen Inventory-Grenzwert
     shiftHours: 24,
+    // Ampel-Grenzwerte: bis zur Grenze gelb, darüber rot (0 = grün/neutral)
+    limits: { scrapPct: 2, outageHours: 1.5 },
     targets: DEFAULT_TARGETS,
     safety: { lastAccident: "", countSince: "", accidents: [] },
     mail: {
@@ -3751,6 +3765,11 @@ window.SFM = (function () {
         v = Number(v);
         return isFinite(v) && v > 0 && v <= 100000 ? Math.round(v * 100) / 100 : DEFAULT_SETTINGS.inventoryLimit;
       })(s.inventoryLimit),
+      limits: (function (l) {
+        l = l && typeof l === "object" ? l : {};
+        var num = function (v, max, dflt) { v = Number(v); return isFinite(v) && v >= 0 && v <= max ? Math.round(v * 100) / 100 : dflt; };
+        return { scrapPct: num(l.scrapPct, 100, DEFAULT_SETTINGS.limits.scrapPct), outageHours: num(l.outageHours, 24, DEFAULT_SETTINGS.limits.outageHours) };
+      })(s.limits),
       targets: {
         oee: clampNum(t.oee, 1, 100, DEFAULT_SETTINGS.targets.oee),
         fpy: clampNum(t.fpy, 1, 100, DEFAULT_SETTINGS.targets.fpy),
@@ -5120,6 +5139,47 @@ window.SFM = (function () {
   function miniTileDef(key) {
     return MINI_TILES.filter(function (m) { return (m.kind === "field" ? m.key : m.kind) === key; })[0] || null;
   }
+  /* ---------- Ampel-Grenzwerte (Stammdaten): Ausschuss-Anteil und ungeplante Ausfälle ----------
+     Ergebnis "ok" (0), "warn" (bis Grenzwert) oder "crit" (darüber); null = keine Daten. */
+  function scrapPctOf(scrap, produced) {
+    if (scrap == null) return null;
+    if (scrap <= 0) return 0;
+    return produced > 0 ? scrap * 100 / produced : null;
+  }
+  function scrapState(scrap, produced) {
+    if (scrap == null) return null;
+    if (scrap <= 0) return "ok";
+    var pct = scrapPctOf(scrap, produced);
+    return pct == null || pct > settings.limits.scrapPct ? "crit" : "warn";
+  }
+  function outageState(hours, days) {
+    if (hours == null) return null;
+    var perDay = hours / Math.max(1, days || 1);
+    if (perDay <= 0) return "ok";
+    return perDay > settings.limits.outageHours ? "crit" : "warn";
+  }
+  // Ampel für eine Kachel (Tag oder Zeitraum); liefert { st, note } oder null
+  function tileLimit(key, rec, b) {
+    if (key !== "ausschuss" && key !== "ausfall") return null;
+    var period = b && dashMode !== "day";
+    if (key === "ausschuss") {
+      var sc = period ? periodSum("ausschuss", b.from, b.to).sum : numOrNull(rec && rec.ausschuss);
+      var pr = period ? periodSum("produziert", b.from, b.to).sum : numOrNull(rec && rec.produziert);
+      var st = scrapState(sc, pr), pct = scrapPctOf(sc, pr);
+      return st ? { st: st, note: (pct != null ? fmtNum(pct, 2) + " % der produzierten Menge" : "Ausschuss ohne produzierte Menge") +
+        " · Toleranz " + fmtNum(settings.limits.scrapPct, 1) + " %" } : null;
+    }
+    var info = period ? periodSum("ausfall", b.from, b.to) : null;
+    var h = period ? info.sum : valueOf("ausfall", rec), days = period ? info.days : 1;
+    var st2 = outageState(h, days);
+    return st2 ? { st: st2, note: (period ? "Ø " + fmtNum(h / Math.max(1, days), 2) + " h je Tag" : fmtNum(h, 1) + " h") +
+      " · Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h je Tag" } : null;
+  }
+  function applyTileLimit(tile, lim) {
+    if (!lim || lim.st === "ok") return;
+    tile.classList.add(lim.st === "crit" ? "crit" : "warn");
+    tile.title = (tile.title ? tile.title + " · " : "") + lim.note;
+  }
   function buildMiniTile(m, ctx) {
     var tile = el("div", "card mini-tile");
     var rec = ctx.rec, si = ctx.si;
@@ -5156,6 +5216,7 @@ window.SFM = (function () {
       } else if (m.agg === "last" && dashMode !== "day" && ctx.iso) {
         tile.title = "Stand vom " + fmtDate(ctx.iso) + " (jüngster erfasster Tag " + dashPeriodNoun() + ")";
       }
+      applyTileLimit(tile, tileLimit(m.key, rec, ctx.b));
       // Inventory über dem Grenzwert (Lagerkapazität) → Kachel rot hervorheben
       if (m.key === "inventory" && rec) {
         var invV = numOrNull(rec.inventory), invMax = numOrNull(rec.inventoryGrenzwert);
@@ -8291,7 +8352,12 @@ window.SFM = (function () {
       lbl.appendChild(document.createTextNode(p[0]));
       lbl.appendChild(helpQ(p[2]));
       item.appendChild(lbl);
-      item.appendChild(el("div", "daily-preview-val", p[1] == null ? "–" : fmtNum(p[1], 1) + " " + (p[3] || "%")));
+      var pv = el("div", "daily-preview-val", p[1] == null ? "–" : fmtNum(p[1], 1) + " " + (p[3] || "%"));
+      if (p[0] === "Ungeplante Produktionsausfälle") {
+        var ost = outageState(p[1], 1);
+        if (ost && ost !== "ok") { pv.classList.add(ost); pv.title = "Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h je Tag"; }
+      }
+      item.appendChild(pv);
       box.appendChild(item);
     });
   }
@@ -8739,13 +8805,17 @@ window.SFM = (function () {
         plan != null ? "Plan " + fmtNum(plan, 1) + " t" + (pct != null ? " · " + fmtNum(pct, 0) + " %" : "") : "kein Plan erfasst",
         pct == null ? "" : tvState(pct >= 98, pct >= 90), pct));
       var aus = numOrNull(rec.ausschuss), na = numOrNull(rec.nacharbeit) || 0;
+      var ast = scrapState(aus, prod), apct = scrapPctOf(aus, prod);
       var ausCard = tvNum("Ausschuss", aus == null ? "–" : fmtNum(aus, 2) + " t",
-        "Nacharbeit " + fmtNum(na, 2) + " t", aus == null ? "" : tvState(!aus, false));
+        (apct != null ? fmtNum(apct, 1) + " % · Toleranz " + fmtNum(settings.limits.scrapPct, 1) + " % · " : "") + "Nacharbeit " + fmtNum(na, 2) + " t",
+        ast == null ? "" : ast === "crit" ? "bad" : ast);
       if (na > 0) ausCard.querySelector(".tv-card-sub").classList.add("warn");
       nums.appendChild(ausCard);
       var u = outageTotal(rec, "U"), g = outageTotal(rec, "G");
+      var ust = outageState(u, 1);
       nums.appendChild(tvNum("Ungeplanter Stillstand", u == null ? "–" : fmtNum(u, 1) + " h",
-        "Geplant " + (g == null ? "–" : fmtNum(g, 1) + " h"), u == null ? "" : tvState(!u, u <= 1)));
+        "Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h · Geplant " + (g == null ? "–" : fmtNum(g, 1) + " h"),
+        ust == null ? "" : ust === "crit" ? "bad" : ust));
       var due = numOrNull(rec.auftraegeFaellig), ok = numOrNull(rec.auftraegePuenktlich);
       nums.appendChild(tvNum("Pünktlich geliefert", due == null || ok == null ? "–" : fmtNum(ok, 0) + " / " + fmtNum(due, 0),
         "Aufträge pünktlich / fällig" + (due ? " · " + fmtNum(ok * 100 / due, 0) + " %" : ""), due == null || ok == null ? "" : tvState(ok >= due, false)));
@@ -9846,6 +9916,8 @@ window.SFM = (function () {
     $("#setFpy").value = settings.targets.fpy;
     $("#setOtd").value = settings.targets.otd;
     $("#setInvLimit").value = settings.inventoryLimit;
+    $("#setScrapPct").value = settings.limits.scrapPct;
+    $("#setOutageH").value = settings.limits.outageHours;
     // Arbeitssicherheit — Zukunft im Datumsfeld sperren
     var maxIso = isoOf(new Date(Y, M, TODAY_D));
     $("#setAccident").max = maxIso; $("#setSafeStart").max = maxIso;
@@ -9941,6 +10013,9 @@ window.SFM = (function () {
     settings.targets.otd = clampNum($("#setOtd").value, 1, 100, settings.targets.otd);
     var invIn = Number($("#setInvLimit").value);
     if (isFinite(invIn) && invIn > 0 && invIn <= 100000) settings.inventoryLimit = Math.round(invIn * 100) / 100;
+    var scIn = Number($("#setScrapPct").value), ouIn = Number($("#setOutageH").value);
+    if ($("#setScrapPct").value !== "" && isFinite(scIn) && scIn >= 0 && scIn <= 100) settings.limits.scrapPct = Math.round(scIn * 100) / 100;
+    if ($("#setOutageH").value !== "" && isFinite(ouIn) && ouIn >= 0 && ouIn <= 24) settings.limits.outageHours = Math.round(ouIn * 100) / 100;
     var accIn = $("#setAccident").value, startIn = $("#setSafeStart").value;
     var dropped = (accIn && !pastDateStr(accIn)) || (startIn && !pastDateStr(startIn));
     settings.safety.lastAccident = pastDateStr(accIn);
@@ -10220,7 +10295,7 @@ window.SFM = (function () {
           "<b>Monatsbilanz SQIDP</b> — Grünquote je Kategorie: Anteil grüner Tage an den bewerteten Tagen.",
           "<b>OEE</b> mit Verfügbarkeit, Leistung und Qualität, <b>First Pass Yield</b> und <b>Termintreue</b> mit Ziellinie und Vergleich zum Vorzeitraum.",
           "<b>Kacheln</b> — Tage unfallfrei, offene Maßnahmen, Ausfälle, Mengen, Inventory und weitere Werte.",
-          "Farben: grün = Ziel erreicht, gelb/orange = knapp darunter, rot = deutlich darunter. Die Ziele stehen in den Stammdaten."
+          "Farben: grün = Ziel erreicht, gelb/orange = knapp darunter, rot = deutlich darunter. Die Kacheln Ausschuss und Ungeplante Produktionsausfälle werden gelb bis zum Grenzwert und rot darüber. Ziele und Grenzwerte stehen in den Stammdaten."
         ] },
         { h: "Zeitraum wählen", steps: [
           ["Tag, Arbeitswoche, Monat, Jahr, Zeitraum", "Oben umschalten und mit ◀ ▶ blättern. „Aktueller Monat“ und „Aktuelle Arbeitswoche“ springen zurück ins Heute."],
@@ -10392,6 +10467,7 @@ window.SFM = (function () {
           "<b>Huddle-Dauer</b> (5–60 min) und <b>Huddle-Uhrzeit</b> — für Timer und TV-Modus.",
           "<b>Geplante Produktionszeit</b> — Schichtlänge pro Tag in Stunden, Grundlage der Verfügbarkeit.",
           "<b>Kennzahlen-Ziele</b> — OEE, First Pass Yield, Termintreue (färben Dashboard, TV-Modus und Bericht) und der Inventory-Grenzwert als Vorgabe für die tägliche Erfassung.",
+          "<b>Grenzwerte (Ampel)</b> — Ausschuss-Toleranz in % der produzierten Menge (Standard 2 %) und ungeplante Ausfälle in Stunden je Tag (Standard 1,5 h). 0 ist in Ordnung, bis zum Grenzwert wird gelb markiert, darüber rot — im Dashboard, im Tagesbericht, im Kennzahlen-Fenster des Huddles und im TV-Modus. Über einen Zeitraum zählt der Ausschuss-Anteil an der Gesamtmenge bzw. der Durchschnitt der ungeplanten Ausfälle je erfasstem Tag.",
           "<b>Arbeitssicherheit</b> — Datum des letzten meldepflichtigen Unfalls bzw. Zählbeginn für „Tage unfallfrei“."
         ] }
       ],
@@ -10782,6 +10858,7 @@ window.SFM = (function () {
         var invMaxRep = numOrNull(dRec.inventoryGrenzwert);
         if (v != null && invMaxRep != null && v > invMaxRep) tile.classList.add("crit");
       }
+      if (dRec) applyTileLimit(tile, tileLimit(f.key, dRec, null));
       tile.appendChild(el("div", "mini-value", v == null ? "–" : fmtNum(v, f.digits) + " " + f.unit));
       tile.appendChild(el("div", "mini-label", f.label));
       dGrid.appendChild(tile);
