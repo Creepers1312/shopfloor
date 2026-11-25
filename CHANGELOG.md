@@ -9,6 +9,15 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+### Neu
+- **Messbereich selbst angeben:** Beim Bearbeiten eines Diagramms (und der Karten First Pass Yield und
+  Termintreue) gibt es neben „Automatisch“ und „0–100 %“ die Option „Selbst angeben“ mit „von“ und „bis“ je
+  Achse. Leere Grenzen werden automatisch bestimmt.
+
+### Geändert
+- Bei Bestandswerten (Inventory, Inventory-Grenzwert) zeigen die Diagramme keinen Durchschnitt mehr, nur den
+  aktuellen Stand.
+
 ## [1.4.0] – 2026-11-24
 
 ### Neu

@@ -1648,6 +1648,14 @@ kbd {
 }
 /* Dialog: Widget hinzufügen */
 .wd-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.wd-choice-3 { grid-template-columns: repeat(3, 1fr); }
+.wd-range { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.wd-range-row { display: grid; grid-template-columns: minmax(110px, auto) 1fr 1fr; gap: 8px; align-items: center; }
+.wd-range-row > span { font-size: 13px; color: var(--ink-2); font-weight: 600; }
+.wd-range-row input { width: 100%; }
+.wd-range-head > span { font-size: 12px; font-weight: 600; color: var(--muted); }
+.wd-range-hint { font-size: 12px; color: var(--muted); margin: 0; }
+@media (max-width: 560px) { .wd-choice-3 { grid-template-columns: 1fr; } }
 @media (max-width: 480px) { .wd-choice { grid-template-columns: 1fr; } }
 .wd-opt {
   display: flex !important; align-items: flex-start; gap: 9px; margin: 0 !important; cursor: pointer;
@@ -3141,13 +3149,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
         <label for="wdCard">Karte</label>
         <select id="wdCard"></select>
       </div>
-      <div class="field" id="wdScaleField" hidden>
-        <label>Höhe der Achse</label>
-        <div class="wd-choice" role="radiogroup" aria-label="Höhe der Achse">
-          <label class="wd-opt"><input type="radio" name="wdScale" value="auto" checked><span><b>Automatisch</b><small>Passt sich den Werten an — kleine Schwankungen gut sichtbar</small></span></label>
-          <label class="wd-opt"><input type="radio" name="wdScale" value="fixed"><span><b>Fest: 0–100 %</b><small>Immer volle Höhe; andere Einheiten beginnen bei 0</small></span></label>
-        </div>
-      </div>
       <div id="wdChartSec" hidden>
         <div class="field">
           <label>Diagrammtyp</label>
@@ -3166,6 +3167,15 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <label for="wdTitleInput">Titel (optional)</label>
           <input id="wdTitleInput" type="text" maxlength="60" placeholder="Automatisch aus den gewählten Werten">
         </div>
+      </div>
+      <div class="field" id="wdScaleField" hidden>
+        <label>Messbereich (Achse)</label>
+        <div class="wd-choice wd-choice-3" role="radiogroup" aria-label="Messbereich der Achse">
+          <label class="wd-opt"><input type="radio" name="wdScale" value="auto" checked><span><b>Automatisch</b><small>Passt sich den Werten an</small></span></label>
+          <label class="wd-opt"><input type="radio" name="wdScale" value="fixed"><span><b>0–100 %</b><small>Volle Höhe; t und h ab 0</small></span></label>
+          <label class="wd-opt"><input type="radio" name="wdScale" value="custom"><span><b>Selbst angeben</b><small>Von … bis … festlegen</small></span></label>
+        </div>
+        <div class="wd-range" id="wdRangeBox" hidden></div>
       </div>
       <p class="login-error" id="wdError" hidden></p>
     </div>
@@ -4452,7 +4462,7 @@ window.SFM = (function () {
     return { ticks: out, step: step };
   }
   // width/height: echte Pixelgröße (im Dashboard-Widget), sonst 420×190 und mit der Breite skaliert
-  // fixed = true: Achse fest von 0 bis 100 (%) statt automatisch an die Werte angepasst
+  // fixed: true = Achse fest von 0 bis 100 (%); [min, max] = eigener Bereich (null = automatisch)
   function sparkline(values, target, labels, color, width, height, fixed) {
     color = color || "var(--accent)";
     var w = width || 420, h = height || 190, padL = 38, padR = 12, padT = 12, padB = h < 80 ? 6 : 26;
@@ -4461,14 +4471,18 @@ window.SFM = (function () {
     var hi = Math.max.apply(null, values.concat(target != null ? [target] : []));
     var span = (hi - lo) || 1;
     var min = lo - span * 0.12, max = hi + span * 0.12;
-    if (fixed) { min = Math.min(0, lo); max = Math.max(100, hi); }
+    if (fixed === true) { min = Math.min(0, lo); max = Math.max(100, hi); }
+    else if (Array.isArray(fixed)) {
+      var cmin = fixed[0] != null ? fixed[0] : min, cmax = fixed[1] != null ? fixed[1] : max;
+      if (cmin < cmax) { min = cmin; max = cmax; } else fixed = null;
+    }
     var nt = niceTicks(min, max, h < 110 ? 2 : 4);
     // Achse so weit aufspannen, dass die äußeren Stufen noch im Bild liegen
     if (nt.ticks.length && !fixed) { min = Math.min(min, nt.ticks[0]); max = Math.max(max, nt.ticks[nt.ticks.length - 1]); }
     span = max - min;
     var n = values.length;
     function px(i) { return padL + (n <= 1 ? 0.5 : i / (n - 1)) * (w - padL - padR); }
-    function py(v) { return h - padB - ((v - min) / span) * (h - padT - padB); }
+    function py(v) { var y = h - padB - ((v - min) / span) * (h - padT - padB); return fixed ? Math.max(padT, Math.min(h - padB, y)) : y; }
     var digits = nt.step < 1 ? 1 : 0;
     var pts = values.map(function (v, i) { return px(i).toFixed(1) + "," + py(v).toFixed(1); });
     var line = "M" + pts.join(" L");
@@ -4936,7 +4950,7 @@ window.SFM = (function () {
     return card;
   }
 
-  function kpiCard(id, scale) {
+  function kpiCard(id, scale, ranges) {
     var meta = KPI_META[id];
     var b = dashPeriodBounds();
     var vals = historySeriesForRange(id, b.from, b.to);
@@ -4984,7 +4998,7 @@ window.SFM = (function () {
     var dateLabels = historySeriesWithDatesForRange(id, b.from, b.to);
     var sVals = vals.length > 1 ? vals : [vals[0], vals[0]];
     var sLabels = dateLabels.length > 1 ? dateLabels : [dateLabels[0], dateLabels[0]];
-    var fixed = scale === "fixed";
+    var fixed = scale === "fixed" ? true : scale === "custom" && ranges ? ranges[0] : null;
     svgWrap.innerHTML = sparkline(sVals, meta.target, sLabels, lineColor, null, null, fixed);
     // Im Dashboard-Widget füllt der Verlauf die freie Fläche (siehe dwRenderChart)
     svgWrap._draw = function (W, H) { return sparkline(sVals, meta.target, sLabels, lineColor, W, H, fixed); };
@@ -5168,6 +5182,14 @@ window.SFM = (function () {
       });
       if (!vals.length) return null;
       var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+      var cr = group.scale === "custom" && group.ranges ? group.ranges[a] : null;
+      if (cr && (cr[0] != null || cr[1] != null)) {
+        // Eigener Bereich: angegebene Grenzen fest, fehlende Grenze automatisch
+        var asp = (mx - mn) || 1;
+        var lo2 = cr[0] != null ? cr[0] : (mn >= 0 ? Math.max(0, mn - asp * 0.1) : mn - asp * 0.1);
+        var hi2 = cr[1] != null ? cr[1] : mx + asp * 0.1;
+        if (lo2 < hi2) return { min: lo2, max: hi2, span: hi2 - lo2, clamp: true };
+      }
       if (group.scale === "fixed") {
         // Feste Achse: Prozentwerte immer 0–100 %, andere Einheiten ab 0 (Höhe bleibt vergleichbar)
         var unit = group.units ? group.units[a] : group.unit;
@@ -5181,7 +5203,10 @@ window.SFM = (function () {
     });
     if (!axes[0]) axes[0] = axes[1] || { min: 0, max: 1, span: 1 };
     function px(i) { return n <= 1 ? (padL + (w - padL - padR) / 2) : padL + (i / (n - 1)) * (w - padL - padR); }
-    function pyA(v, a) { var ax = axes[a] || axes[0]; return h - padB - ((v - ax.min) / ax.span) * (h - padT - padB); }
+    function pyA(v, a) {
+      var ax = axes[a] || axes[0], y = h - padB - ((v - ax.min) / ax.span) * (h - padT - padB);
+      return ax.clamp ? Math.max(padT, Math.min(h - padB, y)) : y;   // Werte außerhalb des eigenen Bereichs am Rand
+    }
     function py(v) { return pyA(v, 0); }
     var plotBottom = h - padB;
     var svg = '<svg viewBox="0 0 ' + w + ' ' + h + '" class="trend-chart" role="img" aria-label="Verlauf ' + defs.map(function (d) { return d.label; }).join(", ") + '" preserveAspectRatio="none">';
@@ -5368,10 +5393,11 @@ window.SFM = (function () {
     return { from: b.from, to: b.to, widened: false };
   }
   // Baut eine Stat-Zeile (jüngster Wert + Ø über den Zeitraum) für ein Feld/eine Kennzahl
-  function buildDetailStat(label, vals, unit) {
+  // noAvg: bei Bestandswerten (Inventory, Grenzwert) ist ein Durchschnitt nicht aussagekräftig — nur der Stand
+  function buildDetailStat(label, vals, unit, noAvg) {
     var clean = vals.filter(function (v) { return v != null; });
     var latest = clean.length ? clean[clean.length - 1] : null;
-    var avg = clean.length ? clean.reduce(function (a, b) { return a + b; }, 0) / clean.length : null;
+    var avg = clean.length && !noAvg ? clean.reduce(function (a, b) { return a + b; }, 0) / clean.length : null;
     var digits = unitDigits(unit);
     var stat = el("div", "detail-stat");
     stat.appendChild(el("div", "detail-stat-lbl", label));
@@ -5453,6 +5479,21 @@ window.SFM = (function () {
     return ws;
   }
   // Gespeichertes Layout prüfen — unbekannte/kaputte Einträge werden verworfen, Werte begrenzt
+  // Achse eines Widgets: "fixed" (0–100 %) oder "custom" mit ranges = [[min|null, max|null], …] je Achse
+  function dwCleanScale(w, o) {
+    if (w.scale === "fixed") { o.scale = "fixed"; return; }
+    if (w.scale !== "custom" || !Array.isArray(w.ranges)) return;
+    var num = function (v) { return typeof v === "number" && isFinite(v) ? v : null; };
+    var rs = w.ranges.slice(0, 2).map(function (r) {
+      if (!Array.isArray(r)) return null;
+      var a = num(r[0]), b = num(r[1]);
+      if (a == null && b == null) return null;
+      if (a != null && b != null && a >= b) return null;
+      return [a, b];
+    });
+    if (!rs.some(Boolean)) return;
+    o.scale = "custom"; o.ranges = rs;
+  }
   function sanitizeWidgets(list) {
     if (!Array.isArray(list)) return null;
     var out = [], seen = {};
@@ -5468,7 +5509,7 @@ window.SFM = (function () {
       if (w.type === "kpi") {
         if (w.kpi !== "oee" && w.kpi !== "fpy" && w.kpi !== "otd") return;
         o.kpi = w.kpi;
-        if (w.scale === "fixed" && w.kpi !== "oee") o.scale = "fixed";
+        if (w.kpi !== "oee") dwCleanScale(w, o);
       } else if (w.type === "tile") {
         if (!miniTileDef(w.tile)) return;
         o.tile = w.tile;
@@ -5484,7 +5525,7 @@ window.SFM = (function () {
         o.mode = o.series.length > 1 && w.mode === "multi" ? "multi" : "single";
         if (o.mode === "single") o.series = o.series.slice(0, 1);
         if (typeof w.title === "string" && w.title.trim()) o.title = w.title.trim().slice(0, 60);
-        if (w.scale === "fixed") o.scale = "fixed";
+        dwCleanScale(w, o);
       }
       out.push(o);
     });
@@ -5702,7 +5743,8 @@ window.SFM = (function () {
   }
   function buildChartWidget(w) {
     var group = chartGroup(w);
-    group.scale = w.scale === "fixed" ? "fixed" : "auto";
+    group.scale = w.scale === "fixed" || w.scale === "custom" ? w.scale : "auto";
+    if (w.scale === "custom") group.ranges = w.ranges;
     var range = detailChartRange();
     var keys = group.fields.map(function (f) { return f.key; });
     var data = valueSeriesForRange(keys, range.from, range.to);
@@ -5719,7 +5761,8 @@ window.SFM = (function () {
     // Kennzahl-Zeile (Ø/Min/Max) immer erzeugen — ob sie Platz hat, entscheidet das CSS nach der
     // echten Widget-Größe (Container-Abfrage), damit dem Diagramm genug Höhe bleibt
     var stats = el("div", "detail-chart-stats");
-    group.fields.forEach(function (f, fi) { stats.appendChild(buildDetailStat(f.label, data.series[fi], f.unit || group.unit)); });
+    group.fields.forEach(function (f, fi) { var vi = valueInfo(f.key);
+      stats.appendChild(buildDetailStat(f.label, data.series[fi], f.unit || group.unit, !!(vi && vi.agg === "last"))); });
     card.appendChild(stats);
     var host = el("div", "dw-chart-body detail-chart-svg-wrap");
     host._group = group; host._data = data;
@@ -5793,7 +5836,7 @@ window.SFM = (function () {
       buildSumCardsForRange(g, ctx.b.from, ctx.b.to);
       body.appendChild(g);
     } else if (w.type === "kpi") {
-      body.appendChild(w.kpi === "oee" ? buildOeeCard() : kpiCard(w.kpi, w.scale));
+      body.appendChild(w.kpi === "oee" ? buildOeeCard() : kpiCard(w.kpi, w.scale, w.ranges));
     } else if (w.type === "tile") {
       var m = miniTileDef(w.tile);
       if (m) body.appendChild(buildMiniTile(m, ctx));
@@ -6244,6 +6287,7 @@ window.SFM = (function () {
       : keys.length + " von " + DASH_MAX_SERIES + " Werten gewählt · " + (units.length > 1
         ? "Achse links: " + units[0] + ", rechts: " + units[1]
         : "alle in " + units[0] + " — eine zweite Einheit erscheint auf der rechten Achse");
+    if (typeof wdRenderRange === "function" && $("#wdRangeBox")) wdRenderRange();
   }
   function wdBuildValueLists(selected) {
     var single = $("#wdSingle"), multi = $("#wdMulti");
@@ -6275,11 +6319,66 @@ window.SFM = (function () {
     wdSyncChecks();
   }
   function wdScale() { return wdDlg.querySelector('input[name="wdScale"]:checked').value; }
+  var wdRanges = [[null, null], [null, null]];
+  // Einheiten der Achsen des gerade bearbeiteten Widgets (Kennzahl-Karten: %)
+  function wdAxisUnits() {
+    if ((wdEditing && wdEditing.type === "kpi") || (!wdEditing && wdKind() === "card")) return ["%"];
+    return wdSelectedUnits(wdMode() === "multi" ? wdCheckedKeys() : [$("#wdSingle").value].filter(Boolean));
+  }
+  function wdRenderRange() {
+    var box = $("#wdRangeBox"), show = wdScale() === "custom";
+    box.hidden = !show;
+    if (!show) return;
+    box.innerHTML = "";
+    var units = wdAxisUnits();
+    if (!units.length) units = [""];
+    var head = el("div", "wd-range-row wd-range-head");
+    head.appendChild(el("span", ""));
+    head.appendChild(el("span", "", "von"));
+    head.appendChild(el("span", "", "bis"));
+    box.appendChild(head);
+    units.forEach(function (u, a) {
+      var row = el("div", "wd-range-row");
+      row.appendChild(el("span", "", (units.length > 1 ? (a ? "Rechts" : "Links") + " " : "Achse ") + (u ? "(" + u + ")" : "")));
+      ["Von", "Bis"].forEach(function (ph, bi) {
+        var inp = document.createElement("input");
+        inp.type = "number"; inp.step = "any"; inp.inputMode = "decimal";
+        inp.placeholder = "automatisch";
+        inp.setAttribute("aria-label", ph + (units.length > 1 ? (a ? " rechte" : " linke") + " Achse" : ""));
+        inp.dataset.axis = a; inp.dataset.bound = bi;
+        if (wdRanges[a][bi] != null) inp.value = wdRanges[a][bi];
+        inp.addEventListener("input", function () {
+          var v = this.value.trim() === "" ? null : Number(this.value);
+          wdRanges[a][bi] = v != null && isFinite(v) ? v : null;
+        });
+        row.appendChild(inp);
+      });
+      box.appendChild(row);
+    });
+    box.appendChild(el("p", "wd-range-hint", "Leer gelassene Grenze wird automatisch bestimmt. Werte außerhalb des Bereichs liegen am Rand."));
+  }
+  // Ergebnis für das Widget: scale/ranges setzen oder Fehlertext liefern
+  function wdApplyScale(target) {
+    delete target.scale; delete target.ranges;
+    var sc = wdScale();
+    if (sc === "fixed") { target.scale = "fixed"; return null; }
+    if (sc !== "custom") return null;
+    var n = Math.max(1, wdAxisUnits().length), rs = [];
+    for (var a = 0; a < n; a++) {
+      var r = wdRanges[a];
+      if (r[0] != null && r[1] != null && r[0] >= r[1]) return "„Von“ muss kleiner sein als „Bis“.";
+      rs.push(r[0] == null && r[1] == null ? null : [r[0], r[1]]);
+    }
+    if (!rs.some(Boolean)) return "Bitte mindestens eine Grenze angeben — oder „Automatisch“ wählen.";
+    target.scale = "custom"; target.ranges = rs;
+    return null;
+  }
   function wdUpdateSections() {
     var kpiEdit = !!(wdEditing && wdEditing.type === "kpi");
     var kind = kpiEdit ? "card" : wdKind(), chart = kind === "chart", multi = chart && wdMode() === "multi";
     var cardVal = $("#wdCard").value || "";
     $("#wdScaleField").hidden = !(chart || kpiEdit || cardVal === "kpi:fpy" || cardVal === "kpi:otd");
+    wdRenderRange();
     $("#wdCardSec").hidden = chart || kpiEdit;
     $("#wdChartSec").hidden = !chart;
     $("#wdSingle").hidden = multi;
@@ -6309,7 +6408,11 @@ window.SFM = (function () {
     wdBuildValueLists(selected);
     $("#wdKindField").hidden = !!editW;
     $("#wdTitle").textContent = kpiEdit ? dwTitle(editW) + " — Verlauf" : editW ? "Diagramm bearbeiten" : "Widget hinzufügen";
-    wdDlg.querySelector('input[name="wdScale"][value="' + (editW && editW.scale === "fixed" ? "fixed" : "auto") + '"]').checked = true;
+    wdDlg.querySelector('input[name="wdScale"][value="' + (editW && (editW.scale === "fixed" || editW.scale === "custom") ? editW.scale : "auto") + '"]').checked = true;
+    wdRanges = [0, 1].map(function (a) {
+      var r = editW && editW.scale === "custom" && editW.ranges && editW.ranges[a];
+      return r ? [r[0], r[1]] : [null, null];
+    });
     $("#wdSave").textContent = editW ? "Speichern" : "Hinzufügen";
     $("#wdTitleInput").value = editW && editW.title ? editW.title : "";
     wdDlg.querySelector('input[name="wdKind"][value="' + (editW ? "chart" : "card") + '"]').checked = true;
@@ -6319,6 +6422,8 @@ window.SFM = (function () {
   }
   wdDlg.querySelectorAll('input[name="wdKind"]').forEach(function (r) { r.addEventListener("change", wdUpdateSections); });
   $("#wdCard").addEventListener("change", wdUpdateSections);
+  $("#wdSingle").addEventListener("change", wdRenderRange);
+  wdDlg.querySelectorAll('input[name="wdScale"]').forEach(function (r) { r.addEventListener("change", wdRenderRange); });
   wdDlg.querySelectorAll('input[name="wdMode"]').forEach(function (r) {
     r.addEventListener("change", function () {
       // Auswahl beim Wechsel mitnehmen: Einzelwert wird erster Haken, erster Haken wird Einzelwert
@@ -6339,7 +6444,8 @@ window.SFM = (function () {
   $("#widgetForm").addEventListener("submit", function (e) {
     e.preventDefault();
     if (wdEditing && wdEditing.type === "kpi") {
-      if (wdScale() === "fixed") wdEditing.scale = "fixed"; else delete wdEditing.scale;
+      var errK = wdApplyScale(wdEditing);
+      if (errK) { wdError(errK); return; }
       wdDlg.close();
       saveDashLayout(); renderActiveBoard();
       return;
@@ -6348,7 +6454,10 @@ window.SFM = (function () {
     if (kind === "card") {
       var v = $("#wdCard").value, cfg;
       if (v === "bilanz") cfg = { type: "bilanz" };
-      else if (v.indexOf("kpi:") === 0) { cfg = { type: "kpi", kpi: v.slice(4) }; if (cfg.kpi !== "oee" && wdScale() === "fixed") cfg.scale = "fixed"; }
+      else if (v.indexOf("kpi:") === 0) {
+        cfg = { type: "kpi", kpi: v.slice(4) };
+        if (cfg.kpi !== "oee") { var errC = wdApplyScale(cfg); if (errC) { wdError(errC); return; } }
+      }
       else cfg = { type: "tile", tile: v.slice(5) };
       wdDlg.close();
       addDashWidget(cfg);
@@ -6361,15 +6470,18 @@ window.SFM = (function () {
     if (wdSelectedUnits(keys).length > DASH_MAX_UNITS) { wdError("Höchstens zwei Einheiten je Diagramm (linke und rechte Achse)."); return; }
     var title = $("#wdTitleInput").value.trim();
     if (wdEditing) {
+      var errE = wdApplyScale({});
+      if (errE) { wdError(errE); return; }
       wdEditing.series = keys; wdEditing.mode = multi ? "multi" : "single";
-      if (wdScale() === "fixed") wdEditing.scale = "fixed"; else delete wdEditing.scale;
+      wdApplyScale(wdEditing);
       if (title) wdEditing.title = title; else delete wdEditing.title;
       wdDlg.close();
       saveDashLayout(); renderActiveBoard();
       return;
     }
     var chart = { type: "chart", mode: multi ? "multi" : "single", series: keys };
-    if (wdScale() === "fixed") chart.scale = "fixed";
+    var errN = wdApplyScale(chart);
+    if (errN) { wdError(errN); return; }
     if (title) chart.title = title;
     wdDlg.close();
     addDashWidget(chart);
@@ -10106,9 +10218,10 @@ window.SFM = (function () {
           ["Karte", "Monatsbilanz, OEE, First Pass Yield, Termintreue oder eine Kachel für jeden Wert aus dem Huddle — erfasst (z. B. Mengen, Ausfälle je Art) oder berechnet (z. B. Laufzeit, Gutmenge, Technische Anlagenverfügbarkeit)."],
           ["Diagramm", "Verlauf über den gewählten Zeitraum. Als Multigraph bis zu fünf Werte mit bis zu zwei Einheiten — die erste Einheit links, die zweite rechts (z. B. Ausschuss in t und Ausfälle in h)."]
         ] },
-        { h: "Höhe der Achse", p: "Bei jedem Diagramm und bei den Karten First Pass Yield und Termintreue lässt sich wählen, wie hoch die Achse reicht — beim Hinzufügen oder später im Anpassen-Modus über ✎ im Kopfbalken.", list: [
+        { h: "Messbereich (Achse)", p: "Bei jedem Diagramm und bei den Karten First Pass Yield und Termintreue lässt sich festlegen, welchen Bereich die Achse zeigt — beim Hinzufügen oder später im Anpassen-Modus über ✎ im Kopfbalken (ganz unten im Fenster).", list: [
           "<b>Automatisch</b> — die Achse passt sich den Werten an. Kleine Schwankungen (z. B. 96 % → 98 %) sind gut zu sehen, wirken aber größer, als sie sind.",
-          "<b>Fest: 0–100 %</b> — Prozentwerte zeigen immer die volle Höhe von 0 bis 100 %; so sieht man auf einen Blick, wie nah ein Wert an 100 % liegt. Andere Einheiten (t, h) beginnen dann bei 0."
+          "<b>0–100 %</b> — Prozentwerte zeigen immer die volle Höhe von 0 bis 100 %. Andere Einheiten (t, h) beginnen dann bei 0.",
+          "<b>Selbst angeben</b> — „von“ und „bis“ eintragen, z. B. Inventory 0 bis 5.000 t. Eine leere Grenze wird automatisch bestimmt. Bei zwei Einheiten gibt es je eine Zeile für die linke und die rechte Achse. Werte außerhalb des Bereichs werden am Rand gezeigt."
         ] }
       ],
       tip: "Bei Standard-Dashboards stellt „Ursprüngliches Layout“ die ausgelieferte Anordnung für alle wieder her." },
