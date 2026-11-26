@@ -52,6 +52,8 @@ backend/src/            Node/Express + PostgreSQL (pg)
   mailer.js mailtemplates.js   nodemailer, Einstellungen aus der Oberfläche (meta) vor .env, HTML-Mails
   secrets.js            AES-256-GCM für gespeicherte Passwörter, Schlüssel APP_SECRET (.env)
   monitor.js            Checkmk-Ausgabe (Local Check)
+  avatars.js            Profilbilder prüfen und speichern (Tabelle user_avatars)
+  monthlyreport.js      Monatsbericht: Berechnung (Formeln wie Oberfläche), HTML-Mail, Zeitplan, meta „monthly_report“
   cli.js                create-admin, reset-password, list-users, mail-test, audit, backup, smb-sync, checkmk
 deploy.sh               Installer/Updater (Docker-Installation, .env, Bauen, Sicherung vor Update, Checkmk)
 docker-compose.yml      db (postgres:17), api, web; gehärtet (read_only, cap_drop, no-new-privileges)
@@ -81,25 +83,77 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   Neu im Menü `#dashMenuBtn`/`#dashMenu` in der Kopfzeile des Dashboards; Anpassen-Leiste `#dashEditTools`), Widgets im
   12-Spalten-Raster. Sichtbarkeit `standard` (eingebaut: `standard`, `detail` = „Detaillierte Auswertung“; ändern nur
   manager/admin, `widgets: null` = ausgeliefertes Layout aus `DASH_BUILTIN`), `public` (alle sehen, ändern/löschen
-  nur Ersteller + admin), `private` (nur Besitzer). Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
+  nur Ersteller + admin), `private` (nur Besitzer). **Besitzer `owner` = Anmeldename (klein)**, nicht der Anzeigename;
+  Änderung des Anmeldenamens zieht die Dashboards mit (`dashboards.renameOwner` in `users.updateProfile`), die Anzeige
+  liefert `owner` (Name per Join) und `ownerUser`; `migrate` stellt alte Zuordnungen über den Namen um. Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
   alter `users.dashboard`-Layouts → private Dashboards), `routes/dashboards.js`; `/api/user/dashboard` speichert nur
   das zuletzt gewählte (`{v:2,current}`). Lokal: `sfm-dashboards-v1`. `sanitizeWidgets` prüft gespeicherte Layouts,
   `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
   (`dwRenderChart` + ResizeObserver, Container-Abfragen). Multigraph: max. 5 Werte, max. 2 Einheiten (Achsen). Achse je Widget `scale` (`auto` | `fixed` = 0–100 % bzw. ab 0 | `custom` mit
   `ranges` = `[[min|null, max|null], …]` je Achse, `dwCleanScale`)
   für Diagramme und KPI-Karten fpy/otd (`sparkline(…, fixed)`, `multiFieldChartSvg` mit `group.scale`).
+- **Ampel-Grenzwerte** `settings.limits` (`scrapPct` = Ausschuss % der produzierten Menge, `outageHours` = ungeplante
+  Ausfälle je Tag): `scrapState`/`outageState` → ok/warn/crit, `tileLimit`/`applyTileLimit` für Kacheln (Zeitraum:
+  Anteil an Summen bzw. Ø je erfasstem Tag). Unabhängig von den Abweichungsregeln (jeder Wert > 0 bleibt Abweichung).
 - **Berechtigungen** `can()`: viewer (Nur Lesen), editor (Bearbeiten), manager (Teamleitung: + Löschen,
   Stammdaten, Benutzer ohne Admin-Konten), admin (alles). Der Server prüft dasselbe (`http.js`, `users.js`).
 - **Anwenderdoku** im Array `DOCS` (Gruppen `DOC_GROUPS`; je Thema `intro`, optional `flow`, `sections` mit
   `h`/`p`/`list`/`steps`/`note`/`img`, `tip`) — bei neuen Funktionen mitpflegen. Bilder liegen als WebP in
   `frontend/docs/` (im Image über Dockerfile + `.dockerignore`), neu erzeugen mit `node tools/doku-screenshots.js`.
 - Kopfzeile: Speicherstatus nur bei Problemen; Datum → heutiger Huddle.
+- **Profilbilder:** im Browser auf 256 × 256 zugeschnitten (`shrinkAvatar`), Server `avatars.js` (Data-URL, JPEG/PNG/WebP,
+  max. 200 KB, Dateikennung geprüft) in Tabelle `user_avatars` (ohne Fremdschlüssel, damit alte Sicherungen sich
+  wiederherstellen lassen); Version `avatarV` in der Benutzerliste, Bild unter `/api/avatar/<Anmeldename>?v=…`.
+  Eigene Änderung nie über die Benutzerliste speichern (nur Teamleitung/Admin dürfen sie schreiben) — dafür
+  `avatarOverride`. Lokal: `sfm-avatars-v1`. `fillAvatar()` zeigt Bild oder Initialen.
 - **Darstellung** hell/dunkel/automatisch in „Mein Konto“ (`#pwDialog`, `themeSet`/`applyTheme`): `data-theme` auf
   `<html>`, gespeichert je Konto und Gerät in `sfm-theme-v1` (`_last` für die Anmeldeseite); der TV-Modus
   überschreibt das nur, solange er läuft.
 - **TV-Modus** (`enterTv`/`renderTv`, Seiten `TV_PAGES`, 20 s je Seite): Stand = `latestDailyIso()`, Einstellungen je
   Gerät in `sfm-tv-v1` (Theme, Pause), setzt `data-theme` nur während des TV-Modus; Tageswechsel → Neuladen mit
   `sessionStorage` `sfm-tv-resume`; Wake Lock; muss auf 1920×1080 und 1366×768 ohne Scrollen passen.
+
+- **Monatsbericht:** Server-seitig (`monthlyreport.js`, Routen `/api/reports/monthly…` in `routes/admin.js`, nur Admin);
+  rechnet aus den Dokumenten `state`/`settings` mit denselben Formeln wie die Oberfläche (`oeeAvailability`,
+  `periodRatio`, `outageTotal` …) — Formeländerungen dort hier mitziehen. Zeitplan alle 5 min, Versand am Tag/Uhrzeit
+  für den Vormonat, merkt sich `last` (Probe an eigene Adresse zählt nicht). UI-Karte `#mrCard` im Bereich E-Mail.
+
+- **Teil-Wiederherstellung:** siehe Standard „Wiederherstellung & Datenkonsistenz“ unten. Code: `backups.inspect`,
+  `backups.restoreParts` (Plan → Prüfung → Transaktion), API `GET /api/backups/:file/contents`,
+  `POST /api/backups/:file/restore` mit `parts`, `select` {days, deviations, users, dashboards, keepPasswords}, `from`/`to`,
+  `dryRun`; UI `#restoreDialog` (Einzelauswahl `rsPick-*`, Vorschau `#rsPreview`, erst danach `#rsOk`).
+
+## Standard: Wiederherstellung & Datenkonsistenz
+Verbindlich für jede Funktion, die Daten aus Sicherungen, Dateien oder anderen Quellen teilweise übernimmt (heute:
+Teil-Wiederherstellung in `backups.js`). Neue Datenfelder oder Tabellen müssen hier einem Teil zugeordnet werden.
+1. **Einheiten statt Einzelfelder.** Zusammengehöriges wird nur gemeinsam übernommen:
+   - **Tag** = `dailyData[iso]` + SQIDP-Zellen `boards["J-M"][Kat][Tag]` + Begründungen `reasons["iso|…"]` +
+     `huddleLog[iso]` + `safetyLog[iso]` (`dayUnit`/`applyDays`).
+   - **Abweichung** = ganzes Objekt aus `state.deviations` (inkl. 5-Why, Phase, `src`).
+   - **Konto** = Zeile `users` + Profilbild `user_avatars` (Passwort-Hash nur auf ausdrücklichen Wunsch).
+   - **Dashboard** = ganze Zeile `dashboards`; **Stammdaten** = ganzes Dokument `settings`.
+   - Berechnete Werte (OEE, FPY, Ampeln, Grünquoten) werden **nie** gespeichert oder übernommen — sie entstehen neu.
+2. **Zuordnung über eindeutige Kennungen:** Abweichung über `id`, Konto über Anmeldenamen (`username`, ohne
+   Groß-/Kleinschreibung), Dashboard über `id`, Tag über das Datum. Vorhanden → auf den Stand der Quelle setzen,
+   fehlt → neu anlegen. Nicht gewählte Datensätze bleiben unverändert. Zähler werden nur erhöht, nie zurückgesetzt
+   (`state.seq` > höchste Abweichungsnummer, Sequenz von `users.id`).
+3. **Verknüpfungen melden:** Abweichung ↔ Tag über `created` (ersatzweise `due`); privates Dashboard ↔ Besitzer
+   (Anmeldename; alte Sicherungen mit Anzeigename werden nach der Übernahme per `dashboards.migrate` umgestellt). Geänderte, nicht mit gewählte Gegenstücke → Hinweis in der Vorschau; fehlender Besitzer → Abbruch.
+4. **Konflikte brechen ab, statt zu überschreiben:** Name oder E-Mail eines Kontos wird heute von einem anderen
+   Konto benutzt; kein aktiver Administrator mit Passwort mehr; privates Dashboard ohne Besitzer → HTTP 409 mit
+   verständlicher Meldung, **nichts** wird geändert.
+5. **Erst Vorschau, dann Ausführung:** `dryRun` liefert ersetzt/neu/entfernt/unverändert je Teil und Hinweise, ohne
+   zu schreiben und ohne Sicherung. Die Oberfläche erlaubt das Ausführen erst nach einer Vorschau zur **gleichen**
+   Auswahl.
+6. **Alles oder nichts:** Alle Änderungen in **einer** Transaktion mit `lockRevision`; vor dem Speichern prüft
+   `validateResult` das Ergebnis (eindeutige Abweichungsnummern, Zähler, gültige Begründungsschlüssel, Administrator,
+   eindeutige Kontonamen, Dashboard-Besitzer) — ein Verstoß bricht ab (Rollback). Danach `bumpRevision`, damit alle
+   Geräte neu laden; offene Bearbeitungen anderer scheitern an der Revisionsprüfung (409) statt alte Daten zu schreiben.
+7. **Rückweg und Nachweis:** Vor jeder echten Übernahme automatische Sicherung („vor Teil-Wiederherstellung …“);
+   Sicherheitsprotokoll mit Teilen, Zeitraum und den betroffenen Datensätzen (`records`, gekürzt).
+8. **Testpflicht:** Am Test-Server Daten gezielt ändern/löschen, einzelne Datensätze zurückholen und prüfen, dass genau
+   diese stimmen und alles andere unverändert ist; dazu die Abbruchfälle (Namenskonflikt, fehlender Besitzer, leere
+   Auswahl) und „Vorschau ändert nichts“ (Vorlage: Skripte wie apitest10/11 aus der Entwicklung).
 
 ## Betrieb
 - `./deploy.sh` installiert/aktualisiert (Sicherung → `git pull` → bauen → starten); `./deploy.sh config`

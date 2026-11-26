@@ -101,6 +101,15 @@ CREATE TABLE IF NOT EXISTS backups (
   error      text
 );
 
+-- Profilbilder (kleines, im Browser zugeschnittenes Bild); bewusst ohne Fremdschlüssel, damit eine
+-- Wiederherstellung älterer Sicherungen (ohne diese Tabelle) die Tabelle users ersetzen kann
+CREATE TABLE IF NOT EXISTS user_avatars (
+  user_id    integer PRIMARY KEY,
+  mime       text NOT NULL,
+  data       bytea NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- Dashboard-Liste (Standard, öffentlich, privat); widgets NULL = eingebautes Layout der Oberfläche
 CREATE TABLE IF NOT EXISTS dashboards (
   id         text PRIMARY KEY,

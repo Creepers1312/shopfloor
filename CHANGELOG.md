@@ -9,6 +9,44 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.6.0] – 2026-11-26
+
+### Neu
+- **Wiederherstellung mit Auswahl und einzelnen Datensätzen:** Beim Zurückspielen einer Sicherung zeigt ein Fenster,
+  was sie enthält. Sie wählen ganze Teile (Tageswerte & Huddle, Abweichungen & Maßnahmen, Stammdaten, Benutzerkonten,
+  Dashboards) oder über „Einzeln auswählen …“ bestimmte Tage, Abweichungen, Konten und Dashboards — z. B. nur eine
+  versehentlich gelöschte Maßnahme. Eine Vorschau zeigt vorher, was ersetzt, neu angelegt oder entfernt wird, und
+  weist auf Zusammenhänge hin; erst danach lässt sich wiederherstellen. Konflikte (z. B. Kontoname schon vergeben)
+  brechen ohne Änderung ab. Vorher wird wie bisher automatisch der aktuelle Stand gesichert.
+- **Monatsbericht per E-Mail (automatisch):** Unter Einstellungen → E-Mail-Versand lässt sich ein Monatsbericht
+  einrichten. Der Server schickt am eingestellten Tag (1–28, mit Uhrzeit) eine Übersicht des Vormonats an einen
+  eigenen Verteiler: OEE, First Pass Yield, Termintreue mit Vormonatsvergleich, SQIDP-Grünquote, Produktion,
+  Ausfälle je Art, Arbeitssicherheit und Maßnahmen — mit Ampelfarben. Mit Vorschau, „Probe an mich“, „Jetzt an
+  Verteiler senden“ und Anzeige des letzten Versands; bei Fehlern stündlicher neuer Versuch.
+- **Profilbild:** Unter „Mein Konto“ lässt sich ein Foto hochladen (JPEG, PNG oder WebP). Es wird im Browser
+  quadratisch zugeschnitten und verkleinert und erscheint oben rechts und in der Benutzerverwaltung. Teamleitung
+  und Administration können unpassende Bilder entfernen („Bild entfernen“). Profilbilder sind in den Sicherungen
+  enthalten und werden beim Löschen eines Kontos mit entfernt.
+- **Grenzwerte (Ampel) in den Stammdaten:** Ausschuss-Toleranz in % der produzierten Menge (Standard 2 %) und
+  ungeplante Ausfälle in Stunden je Tag (Standard 1,5 h). Bis zum Grenzwert werden die Werte gelb, darüber rot
+  markiert — im Dashboard, im Tagesbericht, im Kennzahlen-Fenster des Huddles und im TV-Modus.
+- **SQIDP-Board: Abweichungen im Tagesfenster:** Ein Klick auf eine Zelle zeigt jetzt alle Abweichungen des Tages
+  in dieser Kategorie mit Begründung (fehlende Begründungen hervorgehoben) sowie geplante Stillstände — nicht mehr
+  nur die Maßnahmen.
+
+### Geändert
+- **„Mein Konto“ aufgeräumt:** Die Passwortfelder erscheinen erst nach einem Klick auf „Passwort ändern …“.
+  Nach dem bisherigen Passwort wird nur gefragt, wenn E-Mail oder Passwort geändert werden; wer nur die
+  Darstellung umstellt, schließt das Fenster einfach.
+
+### Entfernt
+- Tagesbericht: Knopf „Per E-Mail senden“ (Bericht als Text im eigenen E-Mail-Programm) — für den Versand gibt es
+  den automatischen Monatsbericht; der Tagesbericht bleibt als Ansicht und PDF.
+
+### Behoben
+- Eigene Dashboards hängen jetzt am Anmeldenamen statt am Anzeigenamen; ändert sich der Anmeldename, ziehen die
+  Dashboards automatisch mit. Vorhandene Dashboards werden beim Update automatisch umgestellt.
+
 ## [1.5.0] – 2026-11-25
 
 ### Neu
@@ -154,7 +192,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.5.0...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Creepers1312/shopfloor/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...v1.3.0

@@ -153,4 +153,4 @@ function testMail({ lineName, host, port, by, sentAt = new Date() }) {
   };
 }
 
-module.exports = { passwordReset, testMail, layout, esc };
+module.exports = { passwordReset, testMail, layout, attachments, esc, C, FONT };

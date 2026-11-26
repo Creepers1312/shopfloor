@@ -80,7 +80,7 @@ async function middleware(req, res, next) {
     const th = tokenHash(token);
     const idle = config.sessionIdleHours;
     const r = await pool.query(
-      `SELECT s.demo, s.last_seen, u.name, u.role, u.perm, u.disabled
+      `SELECT s.demo, s.last_seen, u.name, u.username, u.role, u.perm, u.disabled
          FROM sessions s
          LEFT JOIN users u ON lower(u.name) = lower(s.user_name)
         WHERE s.token_hash = $1 AND s.expires_at > now()
@@ -91,7 +91,7 @@ async function middleware(req, res, next) {
     if (row && row.demo) {
       req.user = config.allowDemo ? Object.assign({}, DEMO_USER) : null;
     } else if (row && row.name && !row.disabled) {
-      req.user = { name: row.name, role: row.role, perm: row.perm, demo: false };
+      req.user = { name: row.name, username: row.username || "", role: row.role, perm: row.perm, demo: false };
     }
     if (!req.user) {
       req.sessionExpired = true;

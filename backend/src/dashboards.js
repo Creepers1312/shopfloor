@@ -5,6 +5,8 @@
 //   Standard:   sehen alle, ändern Teamleitung und Administration (Name fest, nicht löschbar)
 //   Öffentlich: sehen alle, ändern/löschen der Ersteller und die Administration
 //   Privat:     sieht und ändert nur der Ersteller (Administration darf löschen, sieht es aber nicht)
+// Besitzer (owner) ist der Anmeldename in Kleinbuchstaben — nicht der Anzeigename, der sich ändern darf.
+// Ändert sich der Anmeldename, zieht users.updateProfile die Dashboards mit (renameOwner).
 const crypto = require("crypto");
 const { HttpError } = require("./http");
 
@@ -21,12 +23,17 @@ function isBuiltin(id) { return BUILTIN.some((b) => b.id === id); }
 function canEdit(row, user) {
   if (!user || user.demo) return false;
   if (row.visibility === "standard") return user.perm === "admin" || user.perm === "manager";
-  return user.perm === "admin" || String(row.owner || "").toLowerCase() === String(user.name).toLowerCase();
+  return user.perm === "admin" || isOwner(row, user);
 }
+function ownerKey(user) { return String((user && user.username) || "").trim().toLowerCase(); }
+function isOwner(row, user) { return !!ownerKey(user) && String(row.owner || "").toLowerCase() === ownerKey(user); }
+// Mit Anzeigename des Besitzers für die Oberfläche
+const SELECT = `SELECT d.*, u.name AS owner_name FROM dashboards d
+  LEFT JOIN users u ON lower(u.username) = lower(d.owner)`;
 
 function toClient(row, user) {
   return {
-    id: row.id, name: row.name, visibility: row.visibility, owner: row.owner || "",
+    id: row.id, name: row.name, visibility: row.visibility, owner: row.owner_name || (row.owner ? row.owner + " (Konto entfernt)" : ""), ownerUser: row.owner || "",
     widgets: row.widgets, updatedAt: new Date(row.updated_at).getTime(), updatedBy: row.updated_by || "",
     canEdit: canEdit(row, user)
   };
@@ -54,15 +61,15 @@ function cleanWidgets(v) {
 // Sichtbare Dashboards: Standard, öffentliche und die eigenen privaten
 async function list(q, user) {
   const r = await q.query(
-    `SELECT * FROM dashboards
-      WHERE visibility IN ('standard', 'public') OR lower(owner) = lower($1)
-      ORDER BY CASE visibility WHEN 'standard' THEN 0 WHEN 'public' THEN 1 ELSE 2 END, position, lower(name)`,
-    [user && !user.demo ? user.name : ""]);
+    `${SELECT}
+      WHERE d.visibility IN ('standard', 'public') OR (lower(d.owner) = $1 AND $1 <> '')
+      ORDER BY CASE d.visibility WHEN 'standard' THEN 0 WHEN 'public' THEN 1 ELSE 2 END, d.position, lower(d.name)`,
+    [user && !user.demo ? ownerKey(user) : ""]);
   return r.rows.map((row) => toClient(row, user));
 }
 
 async function get(q, id, user) {
-  const r = await q.query("SELECT * FROM dashboards WHERE id = $1", [String(id || "")]);
+  const r = await q.query(`${SELECT} WHERE d.id = $1`, [String(id || "")]);
   const row = r.rows[0];
   // Fremde private Dashboards gibt es für andere nicht
   if (!row || (row.visibility === "private" && !canEdit(row, user) && user.perm !== "admin")) {
@@ -75,14 +82,15 @@ async function create(q, user, body) {
   const name = cleanName(body.name);
   const visibility = cleanVisibility(body.visibility || "private");
   const widgets = cleanWidgets(Array.isArray(body.widgets) ? body.widgets : []);
-  const n = await q.query("SELECT count(*)::int AS n FROM dashboards WHERE lower(owner) = lower($1)", [user.name]);
+  if (!ownerKey(user)) throw new HttpError(400, "Für eigene Dashboards braucht das Konto einen Anmeldenamen.");
+  const n = await q.query("SELECT count(*)::int AS n FROM dashboards WHERE lower(owner) = $1", [ownerKey(user)]);
   if (n.rows[0].n >= MAX_PER_USER) throw new HttpError(400, `Höchstens ${MAX_PER_USER} eigene Dashboards.`);
   const id = "d" + crypto.randomBytes(8).toString("hex");
   const r = await q.query(
     `INSERT INTO dashboards (id, name, visibility, owner, widgets, position, updated_by)
-     VALUES ($1, $2, $3, $4, $5::jsonb, 100, $4) RETURNING *`,
-    [id, name, visibility, user.name, JSON.stringify(widgets)]);
-  return r.rows[0];
+     VALUES ($1, $2, $3, $4, $5::jsonb, 100, $6) RETURNING *`,
+    [id, name, visibility, ownerKey(user), JSON.stringify(widgets), user.name]);
+  return Object.assign(r.rows[0], { owner_name: user.name });
 }
 
 // Änderungen: Name/Sichtbarkeit nur bei eigenen Dashboards, Widgets überall mit Bearbeitungsrecht
@@ -113,7 +121,7 @@ async function update(q, user, id, body) {
     `UPDATE dashboards SET name = $2, visibility = $3, widgets = $4::jsonb, updated_at = now(), updated_by = $5
       WHERE id = $1 RETURNING *`,
     [row.id, next.name, next.visibility, next.widgets === null ? null : JSON.stringify(next.widgets), user.name]);
-  return { row: r.rows[0], before: row, changed };
+  return { row: Object.assign(r.rows[0], { owner_name: row.owner_name }), before: row, changed };
 }
 
 async function remove(q, user, id) {
@@ -133,8 +141,15 @@ async function migrate(q) {
        VALUES ($1, $2, 'standard', NULL, NULL, $3) ON CONFLICT (id) DO NOTHING`,
       [b.id, b.name, b.position]);
   }
+  // Frühere Zuordnung über den Anzeigenamen auf den Anmeldenamen umstellen (auch nach Wiederherstellung alter Sicherungen)
+  const conv = await q.query(
+    `UPDATE dashboards d SET owner = lower(u.username) FROM users u
+      WHERE d.visibility <> 'standard' AND d.owner IS NOT NULL AND u.username IS NOT NULL
+        AND lower(u.name) = lower(d.owner)
+        AND NOT EXISTS (SELECT 1 FROM users x WHERE lower(x.username) = lower(d.owner))`);
+  if (conv.rowCount) console.log(`[db] ${conv.rowCount} Dashboard(s) dem Anmeldenamen des Besitzers zugeordnet`);
   const r = await q.query(
-    `SELECT id, name, dashboard FROM users
+    `SELECT id, name, username, dashboard FROM users
       WHERE dashboard IS NOT NULL AND coalesce(dashboard->>'v', '1') = '1'`);
   let moved = 0;
   for (const u of r.rows) {
@@ -146,7 +161,7 @@ async function migrate(q) {
       await q.query(
         `INSERT INTO dashboards (id, name, visibility, owner, widgets, position, updated_by)
          VALUES ($1, $2, 'private', $3, $4::jsonb, 100, $3)`,
-        [id, label, u.name, JSON.stringify(old[key].slice(0, MAX_WIDGETS))]);
+        [id, label, String(u.username || u.name).toLowerCase(), JSON.stringify(old[key].slice(0, MAX_WIDGETS))]);
       if (key === "widgets") current = id;   // wer sein Dashboard angepasst hatte, sieht es weiter
       moved++;
     }
@@ -155,4 +170,11 @@ async function migrate(q) {
   return moved;
 }
 
-module.exports = { list, get, create, update, remove, migrate, toClient, canEdit, isBuiltin };
+// Anmeldename geändert → Dashboards mitnehmen
+async function renameOwner(q, oldUsername, newUsername) {
+  if (!oldUsername || !newUsername || oldUsername.toLowerCase() === newUsername.toLowerCase()) return 0;
+  const r = await q.query("UPDATE dashboards SET owner = lower($2) WHERE lower(owner) = lower($1)", [oldUsername, newUsername]);
+  return r.rowCount;
+}
+
+module.exports = { list, get, create, update, remove, migrate, renameOwner, toClient, canEdit, isOwner, isBuiltin };

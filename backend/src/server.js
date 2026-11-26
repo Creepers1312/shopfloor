@@ -23,6 +23,7 @@ async function main() {
   const purgeResets = () => db.pool.query("DELETE FROM password_resets WHERE expires_at <= now()").catch(() => {});
   setInterval(() => { sessions.purgeExpired(); audit.purge(); purgeResets(); }, 60 * 60 * 1000).unref();
   backups.startScheduler();
+  require("./monthlyreport").startScheduler();
 
   const server = createApp().listen(config.port, () => {
     console.log(`[api] lauscht auf Port ${config.port} · Registrierung: ${config.allowRegister ? "an" : "aus"} · Demo: ${config.allowDemo ? "an" : "aus"}`);

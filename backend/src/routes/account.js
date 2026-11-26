@@ -4,6 +4,7 @@ const db = require("../db");
 const users = require("../users");
 const sessions = require("../sessions");
 const audit = require("../audit");
+const avatars = require("../avatars");
 const { passwordProblem, fromPlain } = require("../passwords");
 const { HttpError, wrap, requireUser, requireManager, guardAdminAccount, publicUser, passwordMatches } = require("../http");
 
@@ -124,6 +125,54 @@ function register(app) {
     });
     await audit.log(req, "user.email.self", {});
     res.json({ email: r.after.email || "" });
+  }));
+
+  // Profilbild: eigenes hochladen/entfernen; Teamleitung/Administration können fremde entfernen
+  async function changedAvatar(req, row, fn, action) {
+    await db.tx(async (c) => {
+      await db.lockRevision(c);
+      await fn(c);
+      await db.bumpRevision(c, ["users"], req.user.name);   // neue Bild-Version an alle Geräte
+    });
+    await audit.log(req, action, row.name.toLowerCase() === req.user.name.toLowerCase() ? {} : { user: row.name });
+  }
+  app.put("/api/me/avatar", wrap(async (req, res) => {
+    requireUser(req);
+    if (req.user.demo) throw new HttpError(403, "Im Demo-Zugang nicht möglich.");
+    const row = await users.findByName(db.pool, req.user.name);
+    if (!row) throw new HttpError(404, "Konto nicht gefunden.");
+    avatars.parseDataUrl((req.body || {}).image);   // vor der Transaktion prüfen
+    await changedAvatar(req, row, (c) => avatars.set(c, row.id, req.body.image), "user.avatar.self");
+    res.json({ ok: true, avatarV: Date.now() });
+  }));
+  app.delete("/api/me/avatar", wrap(async (req, res) => {
+    requireUser(req);
+    if (req.user.demo) throw new HttpError(403, "Im Demo-Zugang nicht möglich.");
+    const row = await users.findByName(db.pool, req.user.name);
+    if (!row) throw new HttpError(404, "Konto nicht gefunden.");
+    await changedAvatar(req, row, (c) => avatars.remove(c, row.id), "user.avatar.remove");
+    res.json({ ok: true });
+  }));
+  app.delete("/api/users/avatar/:name", wrap(async (req, res) => {
+    requireManager(req);
+    const row = await users.findByName(db.pool, req.params.name);
+    if (!row) throw new HttpError(404, "Konto nicht gefunden.");
+    guardAdminAccount(req, row.perm);
+    await changedAvatar(req, row, (c) => avatars.remove(c, row.id), "user.avatar.remove");
+    res.json({ ok: true });
+  }));
+  // Bild ausliefern (nur angemeldet); der Link enthält die Version, daher lange zwischenspeicherbar
+  app.get("/api/avatar/:username", wrap(async (req, res) => {
+    requireUser(req);
+    const a = await avatars.getByUsername(db.pool, req.params.username);
+    if (!a) throw new HttpError(404, "Kein Profilbild.");
+    res.set({
+      "Content-Type": a.mime,
+      "Cache-Control": "private, max-age=2592000, immutable",
+      "Content-Security-Policy": "default-src 'none'",
+      "X-Content-Type-Options": "nosniff"
+    });
+    res.send(a.data);
   }));
 
   app.get("/api/user/dashboard", wrap(async (req, res) => {

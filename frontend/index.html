@@ -297,6 +297,10 @@ h1 { font-size: 21px; font-weight: 600; margin: 0; letter-spacing: -.01em; text-
 .mini-tile.clickable:hover { transform: translateY(-1px); }
 .mini-tile.crit { border-color: color-mix(in srgb, var(--crit) 55%, var(--line)); background: color-mix(in srgb, var(--crit) 7%, var(--surface)); }
 .mini-tile.crit .mini-value { color: var(--crit-text); }
+.mini-tile.warn { border-color: color-mix(in srgb, var(--warn) 60%, var(--line)); background: color-mix(in srgb, var(--warn) 9%, var(--surface)); }
+.mini-tile.warn .mini-value { color: var(--warn-text); }
+.daily-preview-val.warn { color: var(--warn-text); }
+.daily-preview-val.crit { color: var(--crit-text); }
 
 /* ============ Dashboard: Zeitraum-Auswahl (Tag/Monat/Jahr/Zeitraum) ============ */
 .period-nav-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -1072,11 +1076,6 @@ label .help-q { margin-bottom: -1px; }
 .settings-title { margin: 0; font-size: 16px; font-weight: 600; }
 .settings-sub { margin: -4px 0 0; font-size: 13px; color: var(--muted); max-width: 78ch; }
 a.btn { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
-#mailDialog { width: min(680px, calc(100vw - 32px)); }
-#mailText {
-  font-family: ui-monospace, Consolas, "Courier New", monospace;
-  font-size: 12.5px; line-height: 1.55; min-height: 280px; resize: vertical;
-}
 
 .settings-layout {
   display: grid; grid-template-columns: 256px minmax(0, 1fr);
@@ -1146,6 +1145,16 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .host-port { display: grid; grid-template-columns: 1fr 100px; gap: 10px; }
 .seg-wrap { display: flex; justify-content: flex-end; }
 @media (max-width: 780px) { .seg-wrap, .set-ctl.ctl-right { justify-content: flex-start; } }
+.avatar { overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar.avatar-lg { width: 72px; height: 72px; font-size: 24px; }
+.ac-avatar-row { display: flex; align-items: center; gap: 16px; }
+.ac-avatar-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ac-avatar-actions .mini-hint { flex-basis: 100%; margin: 0; }
+.pw-section { margin-top: 12px; padding: 12px 14px 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.pw-section[hidden] { display: none; }
+#pwChangeBtn { margin-top: 2px; }
+#pwCurrentField { margin-top: 14px; }
 .theme-choice { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 480px) { .theme-choice { grid-template-columns: 1fr; } }
 .theme-choice .theme-opt { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 10px 12px; margin: 0; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 400; text-transform: none; letter-spacing: 0; }
@@ -1250,6 +1259,55 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 }
 .recip-x:hover { color: var(--crit-text); background: color-mix(in srgb, var(--crit) 12%, transparent); }
 .recip-add { display: flex; gap: 8px; }
+.mr-local, .mr-warn { margin: 10px 0 0; padding: 10px 12px; border-radius: 9px; font-size: 13px; }
+.mr-local { background: var(--surface-2); color: var(--ink-2); }
+.mr-warn { background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn-text); font-weight: 600; }
+.mr-when { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mr-when span { font-size: 13px; color: var(--ink-2); }
+.mr-when select, .mr-when input { width: auto; flex: none; }
+.mr-when #mrTime { width: 140px; min-width: 0; }
+.mr-when #mrDay { width: 80px; }
+.mr-copy { margin-top: 8px; }
+.mr-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.mr-actions select { width: auto; }
+.mr-foot { margin-top: 6px; }
+.restore-dialog { width: min(640px, calc(100vw - 32px)); }
+.rs-parts { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 4px; }
+.rs-part { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 400; }
+.rs-part:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.rs-part.disabled { opacity: .55; cursor: not-allowed; }
+.rs-part input { margin-top: 3px; width: auto; flex: none; }
+.rs-part b { display: block; font-size: 14px; color: var(--ink); }
+.rs-part small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+.rs-part .rs-info { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+.rs-range { margin: 4px 0 6px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.rs-range-toggle { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+.rs-range-toggle input { width: auto; margin: 0; }
+.rs-range-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 10px; }
+.rs-range-fields label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; }
+.rs-range-fields input { width: auto; }
+.rs-range-fields .mini-hint { flex-basis: 100%; margin: 0; }
+.rs-pick-link { background: none; border: 0; padding: 0; margin-top: 6px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent-2); cursor: pointer; }
+.rs-picker { margin: 6px 0 2px 34px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.rs-picker[hidden] { display: none; }
+.rs-picker-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.rs-picker-tools input[type="search"] { flex: 1 1 200px; width: auto; padding: 7px 10px; border-radius: 8px; }
+.rs-picker-tools .mini-hint { margin: 0; }
+.rs-picker-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.rs-item { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: 13px; font-weight: 400; cursor: pointer; }
+.rs-item:hover { background: var(--surface); }
+.rs-item input { width: auto; margin: 0; flex: none; }
+.rs-item .rs-item-sub { color: var(--muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+.rs-keep { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; margin-top: 8px; }
+.rs-keep input { width: auto; margin: 0; }
+.rs-plan { margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.rs-plan b { color: var(--ink); }
+.rs-plan ul { margin: 6px 0 0; padding-left: 18px; color: var(--warn-text); }
+.rs-plan .rs-plan-row { color: var(--ink-2); margin-top: 2px; }
+.rs-warn { margin: 8px 0; padding: 10px 12px; border-radius: 9px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn-text); font-size: 13px; font-weight: 600; }
+.mr-preview-dialog { width: min(720px, calc(100vw - 32px)); padding: 0; }
+.mr-preview-body { padding: 0 16px 16px; }
+.mr-preview-body iframe { width: 100%; height: min(75vh, 900px); border: 1px solid var(--line); border-radius: 10px; background: #f3f4f6; }
 .recip-add .btn { flex: none; }
 .mail-log { display: flex; flex-direction: column; padding-bottom: 8px; }
 .ml-row { display: flex; align-items: center; gap: 12px; font-size: 13.5px; padding: 11px 2px; border-bottom: 1px solid var(--line-soft); }
@@ -1353,6 +1411,15 @@ kbd {
 .cd-whys { margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.45; }
 .cd-empty { margin: 0; font-size: 13.5px; color: var(--ink-2); }
 .cd-note { border: 1px solid var(--line); border-radius: 11px; padding: 10px 14px; }
+.cd-list { display: flex; flex-direction: column; gap: 8px; }
+.cd-sec-gap { margin-top: 6px; }
+.cd-finding { border: 1px solid var(--line); border-left: 4px solid var(--crit); border-radius: 10px; padding: 9px 12px; background: var(--surface-2); }
+.cd-finding.plan { border-left-color: var(--muted); }
+.cd-finding .btn { margin-top: 6px; }
+.cd-finding-title { font-weight: 600; font-size: 14px; }
+.cd-finding-reason { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cd-finding-reason b { color: var(--ink); font-weight: 600; }
+.cd-finding-reason.missing { color: var(--warn-text); font-weight: 600; }
 .cd-dev .btn { align-self: flex-start; }
 .cf-text { margin: 0; font-size: 14px; color: var(--ink-2); }
 .bk-actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -2261,6 +2328,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           </div>
         </div>
         <div class="card set-card">
+          <div class="set-card-title">Grenzwerte (Ampel)</div>
+          <div class="set-desc">Färben Dashboard, Tagesbericht, Huddle und TV-Modus: 0 = in Ordnung, bis zum Grenzwert gelb, darüber rot. Über einen Zeitraum zählt der Ausschuss-Anteil an der Gesamtmenge bzw. der Durchschnitt der ungeplanten Ausfälle je erfasstem Tag.</div>
+          <div class="targets-grid">
+            <div><label class="mini-label" for="setScrapPct">Ausschuss-Toleranz % der produzierten Menge</label><input id="setScrapPct" type="number" min="0" max="100" step="0.1" inputmode="decimal"></div>
+            <div><label class="mini-label" for="setOutageH">Ungeplante Ausfälle h je Tag</label><input id="setOutageH" type="number" min="0" max="24" step="0.1" inputmode="decimal"></div>
+          </div>
+        </div>
+        <div class="card set-card">
           <div class="set-card-title">Arbeitssicherheit</div>
           <div class="set-desc">Grundlage für den Zähler „Tage unfallfrei“ im Dashboard — er zählt ab dem hinterlegten Datum.</div>
           <div class="set-row">
@@ -2370,6 +2445,47 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <span class="saved-flash" id="emailSaved" hidden>Gespeichert ✓</span>
           <button class="btn ghost" id="mailRevert" type="button">Verwerfen</button>
           <button class="btn primary" id="mailSave" type="button">Speichern</button>
+        </div>
+        <div class="card set-card" id="mrCard">
+          <div class="set-card-title">Monatsbericht (automatisch)</div>
+          <div class="set-desc">Der Server schickt am eingestellten Tag eine Übersicht des Vormonats an den Verteiler: OEE, First Pass Yield, Termintreue (mit Vormonat), SQIDP-Grünquote, Produktion, Ausfälle, Arbeitssicherheit und Maßnahmen.</div>
+          <p class="mr-local" id="mrLocal" hidden>Der automatische Monatsbericht braucht die Server-Installation (./deploy.sh) — im lokalen Testmodus kann der Browser keine E-Mails selbst versenden.</p>
+          <div id="mrBody">
+            <p class="mr-warn" id="mrMailWarn" hidden>Der E-Mail-Versand des Servers ist noch nicht eingerichtet — oben Absender und SMTP-Server eintragen und speichern.</p>
+            <div class="set-row">
+              <div><div class="set-name">Automatisch versenden</div><div class="set-desc" id="mrAutoText"></div></div>
+              <div class="set-ctl ctl-right"><button class="switch" id="mrSwitch" type="button" role="switch" aria-checked="false" aria-label="Monatsbericht automatisch versenden"></button></div>
+            </div>
+            <div class="set-row">
+              <div><div class="set-name">Versandzeitpunkt</div><div class="set-desc">Tag im Monat (1–28) und Uhrzeit — verschickt wird jeweils der abgeschlossene Vormonat.</div></div>
+              <div class="set-ctl mr-when"><span>am</span><select id="mrDay" class="perm-select" aria-label="Tag im Monat"></select><span>um</span><input id="mrTime" type="time" class="time-input" aria-label="Uhrzeit"></div>
+            </div>
+            <div class="set-row row-top">
+              <div><div class="set-name">Empfänger (<span id="mrRecipCount">0</span>)</div><div class="set-desc">Eigener Verteiler für den Monatsbericht.</div>
+                <button class="btn sm mr-copy" id="mrCopyDaily" type="button">Verteiler des Tagesberichts übernehmen</button></div>
+              <div class="set-ctl">
+                <div class="recip-list" id="mrRecipList"></div>
+                <div class="recip-add">
+                  <input id="mrNewRecipient" type="email" placeholder="name@firma.de" autocomplete="off">
+                  <button class="btn" id="mrAddRecipient" type="button">Hinzufügen</button>
+                </div>
+              </div>
+            </div>
+            <div class="set-row">
+              <div><div class="set-name">Bericht ansehen oder senden</div><div class="set-desc" id="mrStatus">Noch nicht versendet.</div></div>
+              <div class="set-ctl mr-actions">
+                <select id="mrMonth" class="perm-select" aria-label="Monat für Vorschau und Versand"></select>
+                <button class="btn" id="mrPreviewBtn" type="button">Vorschau</button>
+                <button class="btn" id="mrTestBtn" type="button" title="Nur an die eigene E-Mail-Adresse aus „Mein Konto“">Probe an mich</button>
+                <button class="btn" id="mrSendBtn" type="button">Jetzt an Verteiler senden</button>
+              </div>
+            </div>
+            <p class="login-error" id="mrError" hidden></p>
+            <div class="pane-foot mr-foot">
+              <span class="saved-flash" id="mrSaved" hidden>Gespeichert ✓</span>
+              <button class="btn primary" id="mrSave" type="button">Monatsbericht speichern</button>
+            </div>
+          </div>
         </div>
         <div class="card set-card">
           <div class="set-card-title">Letzte Sendungen</div>
@@ -2537,7 +2653,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
     </div>
     <div class="head-actions">
       <button class="btn" id="reportPdfBtn" title="Druckansicht öffnen — dort als PDF speichern">Als PDF exportieren</button>
-      <button class="btn primary" id="reportMailBtn">Per E-Mail senden</button>
     </div>
   </div>
   <div class="report-toolbar" id="reportToolbar">
@@ -2718,6 +2833,19 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="button" class="btn ghost sm" id="pwClose" aria-label="Schließen">✕</button>
     </div>
     <div class="dlg-body">
+      <div class="field" id="acAvatarField">
+        <label>Profilbild</label>
+        <div class="ac-avatar-row">
+          <span class="avatar avatar-lg" id="acAvatar"></span>
+          <div class="ac-avatar-actions">
+            <button type="button" class="btn" id="acAvatarPick">Bild hochladen …</button>
+            <button type="button" class="btn ghost danger" id="acAvatarRemove" hidden>Entfernen</button>
+            <input type="file" id="acAvatarFile" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+            <p class="mini-hint">JPEG, PNG oder WebP. Das Bild wird automatisch quadratisch zugeschnitten und verkleinert.</p>
+            <p class="login-error" id="acAvatarError" hidden></p>
+          </div>
+        </div>
+      </div>
       <div class="field">
         <label>Darstellung</label>
         <div class="theme-choice" role="radiogroup" aria-label="Darstellung">
@@ -2725,7 +2853,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <label class="theme-opt"><input type="radio" name="acTheme" value="light"><span class="theme-swatch light" aria-hidden="true"></span><span><b>Hell</b><small>heller Hintergrund</small></span></label>
           <label class="theme-opt"><input type="radio" name="acTheme" value="dark"><span class="theme-swatch dark" aria-hidden="true"></span><span><b>Dunkel</b><small>dunkler Hintergrund</small></span></label>
         </div>
-        <p class="mini-hint">Gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert.</p>
+        <p class="mini-hint">Wird sofort übernommen und für Ihr Konto auf diesem Gerät gespeichert — kein „Speichern“ nötig.</p>
       </div>
       <div id="pwAccount">
       <div class="login-error" id="pwError" hidden></div>
@@ -2739,19 +2867,22 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
           <input id="acEmail" type="email" autocomplete="email" placeholder="für „Passwort vergessen“">
         </div>
       </div>
-      <div class="field">
-        <label for="pwNew">Neues Passwort <span class="mini-hint">(leer lassen = unverändert)</span></label>
-        <input id="pwNew" type="password" autocomplete="new-password">
+      <button type="button" class="btn" id="pwChangeBtn" aria-expanded="false" aria-controls="pwSection">Passwort ändern …</button>
+      <div class="pw-section" id="pwSection" hidden>
+        <div class="field">
+          <label for="pwNew">Neues Passwort</label>
+          <input id="pwNew" type="password" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label for="pwNew2">Neues Passwort wiederholen</label>
+          <input id="pwNew2" type="password" autocomplete="new-password">
+        </div>
+        <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
       </div>
-      <div class="field">
-        <label for="pwNew2">Neues Passwort wiederholen</label>
-        <input id="pwNew2" type="password" autocomplete="new-password">
+      <div class="field" id="pwCurrentField" hidden>
+        <label for="pwCurrent">Bisheriges Passwort <span class="mini-hint">(zur Bestätigung der Änderung)</span></label>
+        <input id="pwCurrent" type="password" autocomplete="current-password">
       </div>
-      <div class="field">
-        <label for="pwCurrent">Bisheriges Passwort <span class="mini-hint">(zur Bestätigung jeder Änderung)</span></label>
-        <input id="pwCurrent" type="password" required autocomplete="current-password">
-      </div>
-      <p class="mini-hint">Nach einem neuen Passwort werden alle anderen Geräte, auf denen Sie angemeldet sind, abgemeldet.</p>
       </div>
     </div>
     <div class="dlg-foot">
@@ -3139,6 +3270,43 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   <p id="docImgCap"></p>
 </dialog>
 
+<dialog id="restoreDialog" class="restore-dialog" aria-labelledby="rsTitle">
+  <div class="dlg-head">
+    <h2 id="rsTitle">Sicherung wiederherstellen</h2>
+    <button type="button" class="btn ghost sm" id="rsClose" aria-label="Schließen">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p class="cf-text" id="rsSub"></p>
+    <p class="mini-hint" id="rsLoading">Inhalt der Sicherung wird gelesen …</p>
+    <div class="rs-parts" id="rsParts" hidden></div>
+    <div class="rs-range" id="rsRange" hidden>
+      <label class="rs-range-toggle"><input type="checkbox" id="rsRangeOn"> Nur einen Zeitraum der Tageswerte übernehmen</label>
+      <div class="rs-range-fields" id="rsRangeFields" hidden>
+        <label>von <input type="date" id="rsFrom"></label>
+        <label>bis <input type="date" id="rsTo"></label>
+        <p class="mini-hint">Nur die Tage im Zeitraum werden durch den Stand der Sicherung ersetzt — Tageswerte, SQIDP-Status, Begründungen und Huddle-Haken. Alle anderen Tage bleiben, wie sie sind.</p>
+      </div>
+    </div>
+    <p class="rs-warn" id="rsWarn" hidden></p>
+    <div class="rs-plan" id="rsPlan" hidden></div>
+    <p class="mini-hint">Vorher legt der Server automatisch eine Sicherung des aktuellen Stands an — so lässt sich das Zurückspielen rückgängig machen. Der Server prüft das Ergebnis vor dem Speichern; wäre es nicht stimmig, wird nichts geändert.</p>
+    <p class="login-error" id="rsError" hidden></p>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" id="rsCancel">Abbrechen</button>
+    <button type="button" class="btn" id="rsPreview" disabled>Vorschau</button>
+    <button type="button" class="btn primary danger-solid" id="rsOk" disabled>Wiederherstellen</button>
+  </div>
+</dialog>
+
+<dialog id="mrPreviewDialog" class="mr-preview-dialog" aria-labelledby="mrPrevTitle">
+  <div class="dlg-head">
+    <h2 id="mrPrevTitle">Vorschau Monatsbericht</h2>
+    <button type="button" class="btn ghost sm" id="mrPrevClose" aria-label="Schließen">✕</button>
+  </div>
+  <div class="mr-preview-body"><iframe id="mrPrevFrame" title="Vorschau der E-Mail" sandbox=""></iframe></div>
+</dialog>
+
 <dialog id="confirmDialog">
   <div class="dlg-head">
     <h2 id="cfTitle">Bestätigen</h2>
@@ -3206,24 +3374,6 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       <button type="submit" class="btn primary" id="wdSave">Hinzufügen</button>
     </div>
   </form>
-</dialog>
-
-<!-- Dialog: mailDialog -->
-<dialog id="mailDialog">
-  <div class="dlg-head">
-    <h2>Tagesbericht</h2>
-    <button type="button" class="btn ghost sm" id="mailClose" aria-label="Schließen">✕</button>
-  </div>
-  <div class="dlg-body">
-    <p class="cf-text">Bericht prüfen und bei Bedarf anpassen — dann per E-Mail-Programm senden oder kopieren (z. B. für Teams oder das Intranet).</p>
-    <div class="field">
-      <textarea id="mailText" rows="14" spellcheck="false" aria-label="Berichtstext"></textarea>
-    </div>
-  </div>
-  <div class="dlg-foot">
-    <button type="button" class="btn" id="mailCopy">Kopieren</button>
-    <a class="btn primary" id="mailOpen" href="#" target="_blank" rel="noopener">E-Mail-Programm öffnen</a>
-  </div>
 </dialog>
 
 <!-- Dialog: backupDialog -->
@@ -3679,6 +3829,8 @@ window.SFM = (function () {
     huddleTime: "13:00",
     inventoryLimit: 2000, // t — Vorgabe für den täglichen Inventory-Grenzwert
     shiftHours: 24,
+    // Ampel-Grenzwerte: bis zur Grenze gelb, darüber rot (0 = grün/neutral)
+    limits: { scrapPct: 2, outageHours: 1.5 },
     targets: DEFAULT_TARGETS,
     safety: { lastAccident: "", countSince: "", accidents: [] },
     mail: {
@@ -3725,6 +3877,11 @@ window.SFM = (function () {
         v = Number(v);
         return isFinite(v) && v > 0 && v <= 100000 ? Math.round(v * 100) / 100 : DEFAULT_SETTINGS.inventoryLimit;
       })(s.inventoryLimit),
+      limits: (function (l) {
+        l = l && typeof l === "object" ? l : {};
+        var num = function (v, max, dflt) { v = Number(v); return isFinite(v) && v >= 0 && v <= max ? Math.round(v * 100) / 100 : dflt; };
+        return { scrapPct: num(l.scrapPct, 100, DEFAULT_SETTINGS.limits.scrapPct), outageHours: num(l.outageHours, 24, DEFAULT_SETTINGS.limits.outageHours) };
+      })(s.limits),
       targets: {
         oee: clampNum(t.oee, 1, 100, DEFAULT_SETTINGS.targets.oee),
         fpy: clampNum(t.fpy, 1, 100, DEFAULT_SETTINGS.targets.fpy),
@@ -5094,6 +5251,47 @@ window.SFM = (function () {
   function miniTileDef(key) {
     return MINI_TILES.filter(function (m) { return (m.kind === "field" ? m.key : m.kind) === key; })[0] || null;
   }
+  /* ---------- Ampel-Grenzwerte (Stammdaten): Ausschuss-Anteil und ungeplante Ausfälle ----------
+     Ergebnis "ok" (0), "warn" (bis Grenzwert) oder "crit" (darüber); null = keine Daten. */
+  function scrapPctOf(scrap, produced) {
+    if (scrap == null) return null;
+    if (scrap <= 0) return 0;
+    return produced > 0 ? scrap * 100 / produced : null;
+  }
+  function scrapState(scrap, produced) {
+    if (scrap == null) return null;
+    if (scrap <= 0) return "ok";
+    var pct = scrapPctOf(scrap, produced);
+    return pct == null || pct > settings.limits.scrapPct ? "crit" : "warn";
+  }
+  function outageState(hours, days) {
+    if (hours == null) return null;
+    var perDay = hours / Math.max(1, days || 1);
+    if (perDay <= 0) return "ok";
+    return perDay > settings.limits.outageHours ? "crit" : "warn";
+  }
+  // Ampel für eine Kachel (Tag oder Zeitraum); liefert { st, note } oder null
+  function tileLimit(key, rec, b) {
+    if (key !== "ausschuss" && key !== "ausfall") return null;
+    var period = b && dashMode !== "day";
+    if (key === "ausschuss") {
+      var sc = period ? periodSum("ausschuss", b.from, b.to).sum : numOrNull(rec && rec.ausschuss);
+      var pr = period ? periodSum("produziert", b.from, b.to).sum : numOrNull(rec && rec.produziert);
+      var st = scrapState(sc, pr), pct = scrapPctOf(sc, pr);
+      return st ? { st: st, note: (pct != null ? fmtNum(pct, 2) + " % der produzierten Menge" : "Ausschuss ohne produzierte Menge") +
+        " · Toleranz " + fmtNum(settings.limits.scrapPct, 1) + " %" } : null;
+    }
+    var info = period ? periodSum("ausfall", b.from, b.to) : null;
+    var h = period ? info.sum : valueOf("ausfall", rec), days = period ? info.days : 1;
+    var st2 = outageState(h, days);
+    return st2 ? { st: st2, note: (period ? "Ø " + fmtNum(h / Math.max(1, days), 2) + " h je Tag" : fmtNum(h, 1) + " h") +
+      " · Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h je Tag" } : null;
+  }
+  function applyTileLimit(tile, lim) {
+    if (!lim || lim.st === "ok") return;
+    tile.classList.add(lim.st === "crit" ? "crit" : "warn");
+    tile.title = (tile.title ? tile.title + " · " : "") + lim.note;
+  }
   function buildMiniTile(m, ctx) {
     var tile = el("div", "card mini-tile");
     var rec = ctx.rec, si = ctx.si;
@@ -5130,6 +5328,7 @@ window.SFM = (function () {
       } else if (m.agg === "last" && dashMode !== "day" && ctx.iso) {
         tile.title = "Stand vom " + fmtDate(ctx.iso) + " (jüngster erfasster Tag " + dashPeriodNoun() + ")";
       }
+      applyTileLimit(tile, tileLimit(m.key, rec, ctx.b));
       // Inventory über dem Grenzwert (Lagerkapazität) → Kachel rot hervorheben
       if (m.key === "inventory" && rec) {
         var invV = numOrNull(rec.inventory), invMax = numOrNull(rec.inventoryGrenzwert);
@@ -6521,6 +6720,21 @@ window.SFM = (function () {
   }
   // Tagesdetail (nur Lesen): Status, zugehörige Abweichung(en) und Tagesnotiz
   var cellDlg = $("#cellDialog");
+  function cdFinding(x, kind) {
+    var row = el("div", "cd-finding " + kind);
+    row.appendChild(el("div", "cd-finding-title", x.title));
+    var r = el("div", "cd-finding-reason" + (x.reason ? "" : " missing"));
+    if (x.reason) { r.appendChild(el("b", "", "Begründung: ")); r.appendChild(document.createTextNode(x.reason)); }
+    else r.textContent = "Begründung fehlt noch — im Huddle nachtragen";
+    row.appendChild(r);
+    if (x.dev) {
+      var op = el("button", "btn sm", "Öffnen");
+      op.type = "button"; op.title = "Abweichung mit Maßnahme öffnen";
+      op.addEventListener("click", function () { cellDlg.close(); openDialog(x.dev); });
+      row.appendChild(op);
+    }
+    return row;
+  }
   function openCellDetail(catKey, iso, st) {
     var c = catOf(catKey);
     var body = $("#cdBody");
@@ -6533,10 +6747,28 @@ window.SFM = (function () {
     head.appendChild(el("span", "pill " + (st === "ok" ? "ok" : st === "nok" ? "crit" : "neutral"),
       st === "ok" ? "In Ordnung" : st === "nok" ? "Abweichung" : "Offen"));
     body.appendChild(head);
-    var devs = deviationsForIso(iso).filter(function (d) { return d.cat === catKey; });
-    if (st === "ok" && !devs.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde nichts Auffälliges gemeldet."));
-    if (st === "nok" && !devs.length) body.appendChild(el("p", "cd-empty", "Für diese Abweichung ist noch keine Maßnahme erfasst."));
-    if (!st && !devs.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde noch kein Status gesetzt."));
+    // Abweichungen des Tages (aus den Tageswerten erkannt und von Hand erfasst) mit Begründung,
+    // dazu geplante Stillstände — wie im Huddle besprochen
+    var mdl = agendaModel(catKey, iso);
+    var items = mdl.findings.map(function (f) { return { title: f.title, reason: f.reason }; })
+      .concat(mdl.extra.map(function (d) { return { title: d.title || "Abweichung", reason: String(d.desc || "").trim(), dev: d }; }));
+    if (items.length || mdl.notes.length) {
+      var list = el("div", "cd-list");
+      if (items.length) list.appendChild(el("div", "cd-sec-label", items.length === 1 ? "Abweichung" : items.length + " Abweichungen"));
+      items.forEach(function (x) { list.appendChild(cdFinding(x, "bad")); });
+      if (mdl.notes.length) {
+        list.appendChild(el("div", "cd-sec-label cd-sec-gap", "Geplante Stillstände (keine Abweichung)"));
+        mdl.notes.forEach(function (n) { list.appendChild(cdFinding({ title: n.title, reason: n.reason }, "plan")); });
+      }
+      body.appendChild(list);
+    }
+    // Von Hand erfasste Abweichungen stehen schon oben (mit „Öffnen“) — nicht doppelt als Maßnahme zeigen
+    var devs = deviationsForIso(iso).filter(function (d) { return d.cat === catKey && mdl.extra.indexOf(d) < 0; });
+    if (st === "ok" && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde nichts Auffälliges gemeldet."));
+    if (st === "nok" && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diese Abweichung sind keine Details erfasst."));
+    if (!st && !devs.length && !items.length) body.appendChild(el("p", "cd-empty", "Für diesen Tag wurde noch kein Status gesetzt."));
+    if (devs.length) body.appendChild(el("div", "cd-sec-label cd-sec-gap", devs.length === 1 ? "Maßnahme" : "Maßnahmen"));
+    else if (mdl.findings.length) body.appendChild(el("p", "cd-empty", "Zu den erkannten Abweichungen ist noch keine Maßnahme erfasst."));
     devs.forEach(function (d) {
       var box = el("div", "cd-dev");
       box.style.borderLeftColor = catColor(catKey);
@@ -8265,7 +8497,12 @@ window.SFM = (function () {
       lbl.appendChild(document.createTextNode(p[0]));
       lbl.appendChild(helpQ(p[2]));
       item.appendChild(lbl);
-      item.appendChild(el("div", "daily-preview-val", p[1] == null ? "–" : fmtNum(p[1], 1) + " " + (p[3] || "%")));
+      var pv = el("div", "daily-preview-val", p[1] == null ? "–" : fmtNum(p[1], 1) + " " + (p[3] || "%"));
+      if (p[0] === "Ungeplante Produktionsausfälle") {
+        var ost = outageState(p[1], 1);
+        if (ost && ost !== "ok") { pv.classList.add(ost); pv.title = "Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h je Tag"; }
+      }
+      item.appendChild(pv);
       box.appendChild(item);
     });
   }
@@ -8713,13 +8950,17 @@ window.SFM = (function () {
         plan != null ? "Plan " + fmtNum(plan, 1) + " t" + (pct != null ? " · " + fmtNum(pct, 0) + " %" : "") : "kein Plan erfasst",
         pct == null ? "" : tvState(pct >= 98, pct >= 90), pct));
       var aus = numOrNull(rec.ausschuss), na = numOrNull(rec.nacharbeit) || 0;
+      var ast = scrapState(aus, prod), apct = scrapPctOf(aus, prod);
       var ausCard = tvNum("Ausschuss", aus == null ? "–" : fmtNum(aus, 2) + " t",
-        "Nacharbeit " + fmtNum(na, 2) + " t", aus == null ? "" : tvState(!aus, false));
+        (apct != null ? fmtNum(apct, 1) + " % · Toleranz " + fmtNum(settings.limits.scrapPct, 1) + " % · " : "") + "Nacharbeit " + fmtNum(na, 2) + " t",
+        ast == null ? "" : ast === "crit" ? "bad" : ast);
       if (na > 0) ausCard.querySelector(".tv-card-sub").classList.add("warn");
       nums.appendChild(ausCard);
       var u = outageTotal(rec, "U"), g = outageTotal(rec, "G");
+      var ust = outageState(u, 1);
       nums.appendChild(tvNum("Ungeplanter Stillstand", u == null ? "–" : fmtNum(u, 1) + " h",
-        "Geplant " + (g == null ? "–" : fmtNum(g, 1) + " h"), u == null ? "" : tvState(!u, u <= 1)));
+        "Grenzwert " + fmtNum(settings.limits.outageHours, 1) + " h · Geplant " + (g == null ? "–" : fmtNum(g, 1) + " h"),
+        ust == null ? "" : ust === "crit" ? "bad" : ust));
       var due = numOrNull(rec.auftraegeFaellig), ok = numOrNull(rec.auftraegePuenktlich);
       nums.appendChild(tvNum("Pünktlich geliefert", due == null || ok == null ? "–" : fmtNum(ok, 0) + " / " + fmtNum(due, 0),
         "Aufträge pünktlich / fällig" + (due ? " · " + fmtNum(ok * 100 / due, 0) + " %" : ""), due == null || ok == null ? "" : tvState(ok >= due, false)));
@@ -9333,21 +9574,222 @@ window.SFM = (function () {
       btn.textContent = "Jetzt sichern";
     });
   }
-  function restoreBackup(file) {
-    appConfirm("Sicherung wiederherstellen?",
-      "Der gesamte Inhalt der Datenbank wird durch den Stand aus " + file + " ersetzt. "
-      + "Alle seither erfassten Einträge gehen verloren. Andere geöffnete Boards laden den Stand danach automatisch neu.",
-      "Wiederherstellen", true, function () {
-        SFM.api("/api/backups/" + encodeURIComponent(file) + "/restore", { method: "POST" }).then(function (r) {
-          if (!r.ok) { appAlert("Wiederherstellung fehlgeschlagen", (r.data && r.data.error) || "Unbekannter Fehler"); return; }
-          return SFM.refresh().then(function () {
-            reloadFromStore();
-            loadBackups();
-            toast("Stand aus " + file + " wiederhergestellt");
-          });
-        });
-      });
+  /* Wiederherstellen mit Auswahl der Teile oder einzelner Datensätze (Server: …/contents, …/restore mit
+     parts, select, from/to, dryRun). Ablauf: auswählen → Vorschau (dryRun, zeigt ersetzt/neu/entfernt und Hinweise)
+     → Wiederherstellen. Jede Änderung der Auswahl verlangt eine neue Vorschau. Standard: CLAUDE.md. */
+  var RS_PARTS = [
+    { key: "daily", title: "Tageswerte & Huddle", pick: "Tage", desc: "Ein Tag kommt immer komplett: Tageskennzahlen, SQIDP-Status, Begründungen, Huddle-Haken und Sicherheitseintrag." },
+    { key: "deviations", title: "Abweichungen & Maßnahmen", pick: "Abweichungen", desc: "Alle Abweichungen mit PDCA-Phase, Verantwortlichen, Terminen und 5-Why — einzeln: vorhandene werden auf den alten Stand gesetzt, gelöschte wieder angelegt." },
+    { key: "settings", title: "Stammdaten & Einstellungen", desc: "Linie, Huddle, Ziele, Grenzwerte, Arbeitssicherheit, Verteiler." },
+    { key: "users", title: "Benutzerkonten", pick: "Konten", desc: "Konten mit Rollen, Passwörtern und Profilbildern — einzeln: über den Anmeldenamen zugeordnet." },
+    { key: "dashboards", title: "Dashboards", pick: "Dashboards", desc: "Eigene, öffentliche und angepasste Standard-Dashboards." }
+  ];
+  var RS_PART_LABEL = { daily: "Tage", deviations: "Abweichungen", settings: "Stammdaten", users: "Konten", dashboards: "Dashboards" };
+  var rsFile = null, rsContents = null, rsPlanned = null, rsPickOn = {}, rsPicked = {};
+  function rsError(msg) { var e = $("#rsError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function rsInfo(key, c) {
+    if (key === "daily") return c.daily.days ? c.daily.days + " Tage mit Werten (" + fmtDate(c.daily.from) + " – " + fmtDate(c.daily.to) + ")" : "keine Tageswerte";
+    if (key === "deviations") return c.deviations.total + " Abweichungen, davon " + c.deviations.open + " offen";
+    if (key === "settings") return c.settings.present ? "Linie „" + (c.settings.lineName || "–") + "“" : "nicht enthalten";
+    if (key === "users") return c.users.total + " Konten (" + c.users.admins + " Administrator" + (c.users.admins === 1 ? "" : "en") + ")" +
+      (c.users.avatars ? " · " + c.users.avatars + (c.users.avatars === 1 ? " Profilbild" : " Profilbilder") : "");
+    if (key === "dashboards") return c.dashboards.total ? c.dashboards.total + " eigene" : "keine eigenen Dashboards";
+    return "";
   }
+  function rsAvailable(key, c) {
+    if (key === "daily") return c.daily.days > 0;
+    if (key === "settings") return c.settings.present;
+    if (key === "users") return c.users.total > 0;
+    if (key === "dashboards") return c.dashboards.total > 0;
+    return c.deviations.total > 0;
+  }
+  // Einträge für die Einzelauswahl: [Kennung, Text, Zusatz]
+  function rsItems(key, c) {
+    if (key === "daily") return c.daily.list.slice().reverse().map(function (iso) {
+      var d = parseIso(iso); return [iso, WD_SHORT[new Date(d.y, d.m, d.d).getDay()] + " " + fmtDate(iso), ""];
+    });
+    if (key === "deviations") return c.deviations.list.slice().reverse().map(function (x) {
+      return [x.id, "[" + letterOf(x.cat) + "] " + x.title, [x.owner, phaseName(x.phase), x.day ? fmtDate(x.day) : ""].filter(Boolean).join(" · ")];
+    });
+    if (key === "users") return c.users.list.map(function (u) { return [u.username, u.name, "@" + u.username + " · " + permName(u.perm) + (u.disabled ? " · gesperrt" : "")]; });
+    if (key === "dashboards") return c.dashboards.list.map(function (x) { return [x.id, x.name, (x.visibility === "public" ? "öffentlich" : "privat") + " · " + x.owner]; });
+    return [];
+  }
+  function rsSelected() {
+    return [].slice.call($("#rsParts").querySelectorAll(".rs-part > input:checked")).map(function (x) { return x.value; });
+  }
+  function rsBody() {
+    var parts = rsSelected(), body = { parts: parts, select: {} };
+    if (parts.indexOf("daily") >= 0 && $("#rsRangeOn").checked) { body.from = $("#rsFrom").value; body.to = $("#rsTo").value; }
+    parts.forEach(function (k) { if (rsPickOn[k]) body.select[k === "daily" ? "days" : k] = Object.keys(rsPicked[k] || {}); });
+    if (parts.indexOf("users") >= 0 && rsPickOn.users) body.select.keepPasswords = $("#rsKeepPw").checked;
+    return body;
+  }
+  function rsInvalidate() {
+    rsPlanned = null;
+    $("#rsPlan").hidden = true;
+    rsUpdate();
+  }
+  function rsUpdate() {
+    var sel = rsSelected(), daily = sel.indexOf("daily") >= 0;
+    $("#rsRange").hidden = !daily;
+    $("#rsRangeFields").hidden = !$("#rsRangeOn").checked;
+    RS_PARTS.forEach(function (p) {
+      var on = sel.indexOf(p.key) >= 0, link = $("#rsLink-" + p.key), pk = $("#rsPick-" + p.key);
+      if (link) { link.hidden = !on; link.textContent = rsPickOn[p.key] ? "Alle " + p.pick + " übernehmen" : "Einzeln auswählen …"; }
+      if (pk) pk.hidden = !(on && rsPickOn[p.key]);
+      var cnt = $("#rsCnt-" + p.key);
+      if (cnt) cnt.textContent = Object.keys(rsPicked[p.key] || {}).length + " ausgewählt";
+    });
+    var warn = [];
+    if (sel.indexOf("users") >= 0 && !rsPickOn.users) warn.push("Alle Benutzerkonten werden durch den Stand der Sicherung ersetzt — auch Passwörter; neuere Konten gehen verloren.");
+    if (daily && !$("#rsRangeOn").checked && !rsPickOn.daily) warn.push("Alle Tageswerte werden ersetzt — seit der Sicherung erfasste Tage gehen verloren.");
+    if (sel.indexOf("deviations") >= 0 && !rsPickOn.deviations) warn.push("Alle Abweichungen werden ersetzt — seither angelegte oder geänderte gehen verloren.");
+    $("#rsWarn").hidden = !warn.length;
+    $("#rsWarn").textContent = warn.join(" ");
+    var empty = sel.some(function (k) { return rsPickOn[k] && !Object.keys(rsPicked[k] || {}).length && !(k === "daily" && $("#rsRangeOn").checked); });
+    $("#rsPreview").disabled = !sel.length || empty;
+    $("#rsOk").disabled = !rsPlanned;
+    $("#rsOk").textContent = rsPlanned ? "Jetzt wiederherstellen" : "Wiederherstellen (erst Vorschau)";
+  }
+  function rsBuildPicker(p, c) {
+    var box = el("div", "rs-picker");
+    box.id = "rsPick-" + p.key; box.hidden = true;
+    var tools = el("div", "rs-picker-tools");
+    var q = document.createElement("input");
+    q.type = "search"; q.placeholder = p.pick + " suchen …"; q.setAttribute("aria-label", p.pick + " suchen");
+    tools.appendChild(q);
+    var cnt = el("span", "mini-hint", "0 ausgewählt"); cnt.id = "rsCnt-" + p.key;
+    tools.appendChild(cnt);
+    box.appendChild(tools);
+    var list = el("div", "rs-picker-list");
+    rsItems(p.key, c).forEach(function (it) {
+      var lbl = el("label", "rs-item");
+      var inp = document.createElement("input");
+      inp.type = "checkbox"; inp.value = it[0];
+      inp.addEventListener("change", function () {
+        rsPicked[p.key] = rsPicked[p.key] || {};
+        if (this.checked) rsPicked[p.key][it[0]] = true; else delete rsPicked[p.key][it[0]];
+        rsInvalidate();
+      });
+      lbl.appendChild(inp);
+      lbl.appendChild(el("span", "", it[1]));
+      if (it[2]) lbl.appendChild(el("span", "rs-item-sub", it[2]));
+      lbl.dataset.search = (it[1] + " " + it[2] + " " + it[0]).toLowerCase();
+      list.appendChild(lbl);
+    });
+    q.addEventListener("input", function () {
+      var v = this.value.trim().toLowerCase();
+      list.querySelectorAll(".rs-item").forEach(function (l) { l.hidden = v && l.dataset.search.indexOf(v) < 0; });
+    });
+    box.appendChild(list);
+    if (p.key === "users") {
+      var keep = el("label", "rs-keep");
+      var kc = document.createElement("input"); kc.type = "checkbox"; kc.id = "rsKeepPw"; kc.checked = true;
+      kc.addEventListener("change", rsInvalidate);
+      keep.appendChild(kc);
+      keep.appendChild(document.createTextNode("Bei vorhandenen Konten das heutige Passwort behalten"));
+      box.appendChild(keep);
+    }
+    return box;
+  }
+  function restoreBackup(file) {
+    rsFile = file; rsContents = null; rsPlanned = null; rsPickOn = {}; rsPicked = {};
+    $("#rsSub").textContent = "Sicherung " + file + " — wählen Sie, was zurückgespielt werden soll. Nicht gewählte Teile und Einträge bleiben unverändert.";
+    $("#rsLoading").hidden = false; $("#rsParts").hidden = true; $("#rsRange").hidden = true; $("#rsWarn").hidden = true; $("#rsPlan").hidden = true;
+    $("#rsRangeOn").checked = false; $("#rsOk").disabled = true; $("#rsPreview").disabled = true; rsError(null);
+    $("#restoreDialog").showModal();
+    SFM.api("/api/backups/" + encodeURIComponent(file) + "/contents").then(function (r) {
+      $("#rsLoading").hidden = true;
+      if (!r.ok) { rsError((r.data && r.data.error) || "Die Sicherung konnte nicht gelesen werden."); return; }
+      var c = rsContents = r.data.contents;
+      var box = $("#rsParts");
+      box.innerHTML = "";
+      RS_PARTS.forEach(function (p) {
+        var ok = rsAvailable(p.key, c);
+        var lbl = el("label", "rs-part" + (ok ? "" : " disabled"));
+        var inp = document.createElement("input");
+        inp.type = "checkbox"; inp.value = p.key; inp.disabled = !ok;
+        inp.addEventListener("change", rsInvalidate);
+        lbl.appendChild(inp);
+        var t = el("span", "");
+        t.appendChild(el("b", "", p.title));
+        t.appendChild(el("small", "", p.desc));
+        t.appendChild(el("span", "rs-info", (ok ? "In der Sicherung: " : "Nicht verfügbar: ") + rsInfo(p.key, c)));
+        if (p.pick && ok) {
+          var link = el("button", "rs-pick-link", "Einzeln auswählen …");
+          link.type = "button"; link.id = "rsLink-" + p.key; link.hidden = true;
+          link.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            rsPickOn[p.key] = !rsPickOn[p.key];
+            rsInvalidate();
+          });
+          t.appendChild(el("br"));
+          t.appendChild(link);
+        }
+        lbl.appendChild(t);
+        box.appendChild(lbl);
+        if (p.pick && ok) box.appendChild(rsBuildPicker(p, c));
+      });
+      box.hidden = false;
+      if (c.daily.days) {
+        $("#rsFrom").min = $("#rsTo").min = c.daily.from; $("#rsFrom").max = $("#rsTo").max = c.daily.to;
+        $("#rsFrom").value = c.daily.to; $("#rsTo").value = c.daily.to;
+      }
+      rsUpdate();
+    }).catch(function () { $("#rsLoading").hidden = true; rsError("Server nicht erreichbar."); });
+  }
+  ["#rsRangeOn", "#rsFrom", "#rsTo"].forEach(function (id) { $(id).addEventListener("change", rsInvalidate); });
+  $("#rsClose").addEventListener("click", function () { $("#restoreDialog").close(); });
+  $("#rsCancel").addEventListener("click", function () { $("#restoreDialog").close(); });
+  function rsShowPlan(plan) {
+    var box = $("#rsPlan");
+    box.innerHTML = "";
+    box.appendChild(el("b", "", "Vorschau: " + plan.replaced + " ersetzt · " + plan.added + " neu · " + plan.removed + " entfernt · " + plan.unchanged + " unverändert"));
+    Object.keys(plan.details).forEach(function (k) {
+      var d = plan.details[k], rec = (plan.records[k] || []).slice(0, 6);
+      box.appendChild(el("div", "rs-plan-row", RS_PART_LABEL[k] + ": " + d.replaced + " ersetzt, " + d.added + " neu, " + d.removed + " entfernt, " + d.unchanged + " unverändert" +
+        (rec.length ? " — " + rec.map(function (x) { return isIsoDate(x) ? fmtDate(x) : x; }).join(", ") + ((plan.records[k] || []).length > 6 ? " …" : "") : "")));
+    });
+    if (plan.warnings.length) {
+      var ul = el("ul");
+      plan.warnings.slice(0, 12).forEach(function (w) { ul.appendChild(el("li", "", w)); });
+      box.appendChild(ul);
+    }
+    box.hidden = false;
+  }
+  function isIsoDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v)); }
+  $("#rsPreview").addEventListener("click", function () {
+    var body = rsBody();
+    if (body.from && (!body.to || body.from > body.to)) { rsError("Bitte einen gültigen Zeitraum wählen („von“ vor „bis“)."); return; }
+    body.dryRun = true;
+    var btn = this; btn.disabled = true; rsError(null);
+    SFM.api("/api/backups/" + encodeURIComponent(rsFile) + "/restore", { method: "POST", body: body }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) { rsError((r.data && r.data.error) || "Vorschau nicht möglich."); return; }
+      rsPlanned = JSON.stringify(rsBody());
+      rsShowPlan(r.data.result.plan);
+      rsUpdate();
+    }).catch(function () { btn.disabled = false; rsError("Server nicht erreichbar."); });
+  });
+  $("#rsOk").addEventListener("click", function () {
+    var body = rsBody();
+    if (!rsPlanned || rsPlanned !== JSON.stringify(body)) { rsInvalidate(); rsError("Die Auswahl hat sich geändert — bitte zuerst die Vorschau erneut anzeigen."); return; }
+    var file = rsFile, btn = this;
+    btn.disabled = true; btn.textContent = "Wird wiederhergestellt …"; rsError(null);
+    SFM.api("/api/backups/" + encodeURIComponent(file) + "/restore", { method: "POST", body: body }).then(function (r) {
+      if (!r.ok) { rsError((r.data && r.data.error) || "Wiederherstellung fehlgeschlagen."); rsInvalidate(); return; }
+      $("#restoreDialog").close();
+      var res = r.data.result || {};
+      return SFM.refresh().then(function () {
+        reloadFromStore();
+        loadBackups();
+        if (typeof loadDashList === "function") loadDashList();
+        toast(res.full ? "Stand aus " + file + " vollständig wiederhergestellt"
+          : "Aus " + file + " wiederhergestellt: " + res.plan.replaced + " ersetzt, " + res.plan.added + " neu, " + res.plan.removed + " entfernt");
+      });
+    }).catch(function () { rsError("Server nicht erreichbar."); rsInvalidate(); });
+  });
   function deleteBackup(file) {
     appConfirm("Sicherung löschen?", file + " wird auf dem Server endgültig gelöscht."
       + (backupSmb.enabled ? " Eine Kopie auf der Freigabe bleibt erhalten." : ""), "Löschen", true, function () {
@@ -9522,7 +9964,7 @@ window.SFM = (function () {
       chip.tabIndex = 0;
       chip.setAttribute("role", "button");
       chip.title = "Datenbank & Sicherung öffnen";
-      $("#mailPaneSub").textContent = "Mailserver und Absender nutzt der Server für „Passwort vergessen“ und Test-E-Mails. Den Tagesbericht versenden Sie weiterhin über Ihr E-Mail-Programm; Verteiler und Betreff gelten dafür.";
+      $("#mailPaneSub").textContent = "Mailserver und Absender nutzt der Server für „Passwort vergessen“, Test-E-Mails und den Monatsbericht.";
       $("#testMailBtn").textContent = "Test-E-Mail senden";
       $("#testMailBtn").closest(".set-row").querySelector(".set-desc").textContent = "Der Server sendet eine Test-E-Mail an den Verteiler (ohne Verteiler an Ihre eigene Adresse).";
       chip.hidden = true;
@@ -9567,7 +10009,7 @@ window.SFM = (function () {
     "user.create": "Konto angelegt", "user.password": "Passwort neu gesetzt (Administration)",
     "user.password.self": "Eigenes Passwort geändert", "user.password.self.failed": "Passwortänderung abgelehnt",
     "users.update": "Benutzerliste geändert", "document.save": "Gespeichert",
-    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert",
+    "user.update": "Konto bearbeitet", "user.email.self": "Eigene E-Mail geändert", "user.avatar.self": "Profilbild geändert", "user.avatar.remove": "Profilbild entfernt", "report.monthly.send": "Monatsbericht gesendet", "report.monthly.config": "Monatsbericht eingestellt",
     "user.reset.mail": "Passwort-Link per E-Mail verschickt", "user.reset.requested": "Passwort-Anfrage an die Administration",
     "user.reset.unknown": "Passwort vergessen: unbekanntes Konto", "user.reset.blocked": "Passwort vergessen: zu viele Anfragen",
     "user.reset.dismissed": "Passwort-Anfrage verworfen", "user.password.reset": "Passwort über E-Mail-Link neu gesetzt",
@@ -9704,7 +10146,7 @@ window.SFM = (function () {
       if (settingsPane === "db") { renderDbStatus(); loadBackups(); }
       if (settingsPane === "audit") loadAudit(false);
       if (settingsPane === "users") loadResetRequests();
-      if (settingsPane === "mail") loadServerMail();
+      if (settingsPane === "mail") { loadServerMail(); loadMonthlyReport(); }
     });
   });
   $("#settingsSearch").addEventListener("input", function () {
@@ -9735,6 +10177,115 @@ window.SFM = (function () {
       ? "Vorgemerkt für täglich " + settings.mail.sendTime + " Uhr — aktiv, sobald eine Server-Anbindung den Versand übernimmt. Der Browser selbst kann nicht automatisch senden."
       : "Deaktiviert — der Bericht wird nur manuell versendet.";
   }
+  /* ---------- Monatsbericht (nur am Server; Einstellungen und Versand macht der Server) ---------- */
+  var mr = null, mrMonthOpts = [];
+  function mrError(msg) { var e = $("#mrError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function mrMonthLabel(ym) { var p = ym.split("-"); return MONTH_NAMES[+p[1] - 1] + " " + p[0]; }
+  function loadMonthlyReport() {
+    var server = SFM.isServer() && can("manageUsers");
+    $("#mrLocal").hidden = server;
+    $("#mrBody").hidden = !server;
+    if (!server) return;
+    SFM.api("/api/reports/monthly").then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Monatsbericht konnte nicht geladen werden."); return; }
+      mr = r.data.config;
+      mr.mailReady = r.data.mailReady;
+      // Monatsauswahl: Vormonat und die elf davor
+      var p = r.data.previous.split("-"), y = +p[0], m = +p[1] - 1;
+      mrMonthOpts = [];
+      for (var i = 0; i < 12; i++) { mrMonthOpts.push(y + "-" + String(m + 1).padStart(2, "0")); m--; if (m < 0) { m = 11; y--; } }
+      renderMonthlyReport();
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  }
+  function renderMonthlyReport() {
+    if (!mr) return;
+    mrError(null);
+    $("#mrMailWarn").hidden = !!mr.mailReady;
+    $("#mrSwitch").setAttribute("aria-checked", mr.enabled ? "true" : "false");
+    var daySel = $("#mrDay");
+    if (!daySel.options.length) for (var d = 1; d <= 28; d++) { var o = document.createElement("option"); o.value = d; o.textContent = d + "."; daySel.appendChild(o); }
+    daySel.value = String(mr.day);
+    $("#mrTime").value = mr.time;
+    $("#mrAutoText").textContent = mr.enabled
+      ? "An — am " + mr.day + ". jedes Monats um " + mr.time + " Uhr geht der Bericht des Vormonats an " + mr.recipients.length + (mr.recipients.length === 1 ? " Empfänger." : " Empfänger.")
+      : "Aus — der Bericht wird nur auf Knopfdruck versendet.";
+    var list = $("#mrRecipList");
+    list.innerHTML = "";
+    $("#mrRecipCount").textContent = String(mr.recipients.length);
+    if (!mr.recipients.length) list.appendChild(el("div", "empty-hint", "Noch keine Empfänger."));
+    mr.recipients.forEach(function (mail, i) {
+      var row = el("div", "recip-item");
+      row.appendChild(el("span", "", mail));
+      var x = el("button", "recip-x", "✕");
+      x.type = "button"; x.title = "Entfernen"; x.setAttribute("aria-label", mail + " entfernen");
+      x.addEventListener("click", function () { mr.recipients.splice(i, 1); renderMonthlyReport(); });
+      row.appendChild(x);
+      list.appendChild(row);
+    });
+    var ms = $("#mrMonth"), keep = ms.value;
+    ms.innerHTML = "";
+    mrMonthOpts.forEach(function (ym) { var o = document.createElement("option"); o.value = ym; o.textContent = mrMonthLabel(ym); ms.appendChild(o); });
+    if (keep && mrMonthOpts.indexOf(keep) >= 0) ms.value = keep;
+    var l = mr.last;
+    $("#mrStatus").textContent = !l ? "Noch nicht an den Verteiler versendet."
+      : (l.ok ? "Zuletzt versendet: " : "Letzter Versuch fehlgeschlagen: ") + mrMonthLabel(l.month) + " am " + fmtStamp(l.at) +
+        (l.ok ? " an " + l.to + " Empfänger" + (l.auto ? " (automatisch)" : "") : " — " + (l.error || "unbekannter Fehler"));
+  }
+  $("#mrSwitch").addEventListener("click", function () { if (!mr) return; mr.enabled = !mr.enabled; renderMonthlyReport(); });
+  $("#mrDay").addEventListener("change", function () { if (mr) { mr.day = +this.value; renderMonthlyReport(); } });
+  $("#mrTime").addEventListener("change", function () { if (mr && /^\d\d:\d\d$/.test(this.value)) { mr.time = this.value; renderMonthlyReport(); } });
+  function mrAdd() {
+    var v = $("#mrNewRecipient").value.trim().toLowerCase();
+    if (!v) return;
+    if (!EMAIL_RE.test(v)) { mrError("Bitte eine gültige E-Mail-Adresse eingeben."); return; }
+    if (mr.recipients.indexOf(v) < 0) mr.recipients.push(v);
+    $("#mrNewRecipient").value = "";
+    renderMonthlyReport();
+  }
+  $("#mrAddRecipient").addEventListener("click", mrAdd);
+  $("#mrNewRecipient").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); mrAdd(); } });
+  $("#mrCopyDaily").addEventListener("click", function () {
+    if (!mr) return;
+    var added = 0;
+    (settings.mail.recipients || []).forEach(function (x) { x = String(x).toLowerCase(); if (mr.recipients.indexOf(x) < 0) { mr.recipients.push(x); added++; } });
+    renderMonthlyReport();
+    toast(added ? added + " Empfänger übernommen — noch speichern" : "Keine neuen Empfänger im Verteiler des Tagesberichts");
+  });
+  $("#mrSave").addEventListener("click", function () {
+    if (!mr) return;
+    SFM.api("/api/reports/monthly", { method: "PUT", body: { enabled: mr.enabled, day: mr.day, time: mr.time, recipients: mr.recipients } }).then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Nicht gespeichert."); return; }
+      var ready = mr.mailReady; mr = r.data.config; mr.mailReady = ready;
+      renderMonthlyReport(); flash("mrSaved"); toast("Monatsbericht gespeichert");
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  });
+  $("#mrPreviewBtn").addEventListener("click", function () {
+    var ym = $("#mrMonth").value;
+    SFM.api("/api/reports/monthly/preview?month=" + encodeURIComponent(ym)).then(function (r) {
+      if (!r.ok) { mrError((r.data && r.data.error) || "Vorschau nicht möglich."); return; }
+      $("#mrPrevTitle").textContent = r.data.subject;
+      $("#mrPrevFrame").srcdoc = r.data.html;
+      $("#mrPreviewDialog").showModal();
+    }).catch(function () { mrError("Server nicht erreichbar."); });
+  });
+  $("#mrPrevClose").addEventListener("click", function () { $("#mrPreviewDialog").close(); });
+  function mrSend(test) {
+    var ym = $("#mrMonth").value;
+    var btn = test ? $("#mrTestBtn") : $("#mrSendBtn");
+    btn.disabled = true; mrError(null);
+    SFM.api("/api/reports/monthly/send", { method: "POST", body: { month: ym, test: !!test } }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) { mrError((r.data && r.data.error) || "Nicht versendet."); if (!test) loadMonthlyReport(); return; }
+      toast(test ? "Probe für " + mrMonthLabel(ym) + " an Ihre Adresse gesendet" : "Monatsbericht " + mrMonthLabel(ym) + " an " + r.data.last.to + " Empfänger gesendet");
+      if (!test) loadMonthlyReport();
+    }).catch(function () { btn.disabled = false; mrError("Server nicht erreichbar."); });
+  }
+  $("#mrTestBtn").addEventListener("click", function () { mrSend(true); });
+  $("#mrSendBtn").addEventListener("click", function () {
+    if (!mr || !mr.recipients.length) { mrError("Bitte zuerst Empfänger eintragen und speichern."); return; }
+    appConfirm("Monatsbericht senden?", "Den Bericht für " + mrMonthLabel($("#mrMonth").value) + " jetzt an " + mr.recipients.length +
+      " Empfänger senden? (Es gilt der zuletzt gespeicherte Verteiler.)", "Senden", false, function () { mrSend(false); });
+  });
   function renderRecipients() {
     var list = $("#recipList");
     list.innerHTML = "";
@@ -9820,6 +10371,8 @@ window.SFM = (function () {
     $("#setFpy").value = settings.targets.fpy;
     $("#setOtd").value = settings.targets.otd;
     $("#setInvLimit").value = settings.inventoryLimit;
+    $("#setScrapPct").value = settings.limits.scrapPct;
+    $("#setOutageH").value = settings.limits.outageHours;
     // Arbeitssicherheit — Zukunft im Datumsfeld sperren
     var maxIso = isoOf(new Date(Y, M, TODAY_D));
     $("#setAccident").max = maxIso; $("#setSafeStart").max = maxIso;
@@ -9915,6 +10468,9 @@ window.SFM = (function () {
     settings.targets.otd = clampNum($("#setOtd").value, 1, 100, settings.targets.otd);
     var invIn = Number($("#setInvLimit").value);
     if (isFinite(invIn) && invIn > 0 && invIn <= 100000) settings.inventoryLimit = Math.round(invIn * 100) / 100;
+    var scIn = Number($("#setScrapPct").value), ouIn = Number($("#setOutageH").value);
+    if ($("#setScrapPct").value !== "" && isFinite(scIn) && scIn >= 0 && scIn <= 100) settings.limits.scrapPct = Math.round(scIn * 100) / 100;
+    if ($("#setOutageH").value !== "" && isFinite(ouIn) && ouIn >= 0 && ouIn <= 24) settings.limits.outageHours = Math.round(ouIn * 100) / 100;
     var accIn = $("#setAccident").value, startIn = $("#setSafeStart").value;
     var dropped = (accIn && !pastDateStr(accIn)) || (startIn && !pastDateStr(startIn));
     settings.safety.lastAccident = pastDateStr(accIn);
@@ -10038,7 +10594,7 @@ window.SFM = (function () {
           ["Mit E-Mail-Adresse", "Ist eine E-Mail hinterlegt und der Mailserver eingerichtet, kommt ein Link. Er gilt 60 Minuten und nur einmal."],
           ["Ohne E-Mail-Adresse", "Die Anfrage erscheint bei der Administration in der Benutzerverwaltung; dort wird ein neues Passwort gesetzt und persönlich mitgeteilt."]
         ] },
-        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert. Außerdem lassen sich E-Mail-Adresse und Passwort ändern, jeweils mit dem aktuellen Passwort bestätigt. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
+        { h: "Mein Konto", p: "Ein Klick auf den eigenen Namen oben rechts öffnet „Mein Konto“. Unter <b>Profilbild</b> lässt sich mit „Bild hochladen …“ ein Foto wählen (JPEG, PNG oder WebP) — es wird automatisch quadratisch zugeschnitten und erscheint oben rechts und in der Benutzerverwaltung; „Entfernen“ zeigt wieder die Initialen. Unter <b>Darstellung</b> wählen Sie Automatisch (wie das Gerät), Hell oder Dunkel — das gilt sofort und wird für Ihr Konto auf diesem Gerät gespeichert; danach das Fenster einfach schließen. Die E-Mail-Adresse lässt sich direkt ändern; für ein neues Passwort auf <b>„Passwort ändern …“</b> klicken. Nur bei diesen beiden Änderungen fragt das Fenster nach dem bisherigen Passwort. Nach einer Passwortänderung werden alle anderen Geräte abgemeldet." },
         { h: "Abmelden", p: "Über das Pfeil-Symbol neben dem Namen. Nach 12 Stunden ohne Bedienung (einstellbar) meldet das Board automatisch ab — außer im TV-Modus. Eine Anmeldung gilt höchstens 14 Tage." }
       ],
       tip: "Das Board sollte nur über HTTPS geöffnet werden (Schloss-Symbol in der Adresszeile) — sonst gehen Passwörter ungeschützt über das Netz." },
@@ -10048,7 +10604,7 @@ window.SFM = (function () {
       sections: [
         { h: "Werkzeuge in der Kopfzeile", img: "kopfzeile", cap: "Rechts: Datum, Konto, Abmelden, TV-Modus, Touch-Modus", list: [
           "<b>Datum</b> — ein Klick öffnet direkt den Huddle von heute.",
-          "<b>Name</b> — „Mein Konto“ (Darstellung hell/dunkel, E-Mail, Passwort).",
+          "<b>Name</b> — „Mein Konto“ (Profilbild, Darstellung hell/dunkel, E-Mail, Passwort).",
           "<b>Pfeil</b> — Abmelden.",
           "<b>Monitor</b> — TV-Modus für den Hallenmonitor.",
           "<b>Zeiger</b> — Touch-Modus mit größeren Bedienelementen für Touch-Terminals.",
@@ -10179,12 +10735,11 @@ window.SFM = (function () {
       intro: "Der Tagesbericht fasst einen Tag zusammen: Kennzahlen mit Zielen, alle Tageswerte, Abweichungen mit Begründung, SQIDP-Status und offene Maßnahmen.",
       sections: [
         { h: "Bericht ansehen", img: "tagesbericht", cap: "Tagesbericht des Vortags", steps: [
-          ["Tag wählen", "Mit ◀ ▶ oder dem Datumsfeld; „Heute“ springt zurück. Bericht, E-Mail und PDF beziehen sich immer auf den gewählten Tag."],
-          ["Per E-Mail senden", "Öffnet den Bericht als E-Mail im eigenen E-Mail-Programm, an den Verteiler aus „E-Mail-Versand“. Alternativ lässt sich der Text kopieren, z. B. für Teams."],
+          ["Tag wählen", "Mit ◀ ▶ oder dem Datumsfeld; „Heute“ springt zurück. Bericht und PDF beziehen sich immer auf den gewählten Tag."],
           ["Als PDF exportieren", "Öffnet die Druckansicht — dort „Als PDF speichern“ wählen."]
         ] }
       ],
-      tip: "Fehlt bei einer Abweichung die Begründung, steht im Bericht „FEHLT“ — ein guter Anlass, den Agenda-Punkt im Huddle noch einmal zu öffnen." },
+      tip: "Fehlt bei einer Abweichung die Begründung, steht im Bericht „FEHLT“ — ein guter Anlass, den Agenda-Punkt im Huddle noch einmal zu öffnen. Eine Übersicht über den ganzen Monat verschickt der Server automatisch als Monatsbericht (siehe „E-Mail-Versand & Monatsbericht“)." },
 
     /* ===== Auswertung ===== */
     { id: "dashboard", group: "Auswertung", title: "Dashboard & Zeiträume",
@@ -10194,7 +10749,7 @@ window.SFM = (function () {
           "<b>Monatsbilanz SQIDP</b> — Grünquote je Kategorie: Anteil grüner Tage an den bewerteten Tagen.",
           "<b>OEE</b> mit Verfügbarkeit, Leistung und Qualität, <b>First Pass Yield</b> und <b>Termintreue</b> mit Ziellinie und Vergleich zum Vorzeitraum.",
           "<b>Kacheln</b> — Tage unfallfrei, offene Maßnahmen, Ausfälle, Mengen, Inventory und weitere Werte.",
-          "Farben: grün = Ziel erreicht, gelb/orange = knapp darunter, rot = deutlich darunter. Die Ziele stehen in den Stammdaten."
+          "Farben: grün = Ziel erreicht, gelb/orange = knapp darunter, rot = deutlich darunter. Die Kacheln Ausschuss und Ungeplante Produktionsausfälle werden gelb bis zum Grenzwert und rot darüber. Ziele und Grenzwerte stehen in den Stammdaten."
         ] },
         { h: "Zeitraum wählen", steps: [
           ["Tag, Arbeitswoche, Monat, Jahr, Zeitraum", "Oben umschalten und mit ◀ ▶ blättern. „Aktueller Monat“ und „Aktuelle Arbeitswoche“ springen zurück ins Heute."],
@@ -10258,7 +10813,7 @@ window.SFM = (function () {
           "Oben die Monatsbilanz je Kategorie mit Grünquote."
         ] },
         { h: "Details zu einem Tag", img: "board-tag", cap: "Klick auf eine Zelle", small: true,
-          p: "Ein Klick auf eine Zelle zeigt Status, Abweichung mit Maßnahme und Tagesnotiz. Das Board selbst ist nur lesend — den Status setzt der Huddle. Mit ◀ ▶ (oder den Pfeiltasten) durch die Monate blättern; „Drucken“ und „CSV-Export“ stehen oben rechts." }
+          p: "Ein Klick auf eine Zelle zeigt den Status und alle Abweichungen des Tages in dieser Kategorie mit ihrer Begründung (fehlt sie, steht „Begründung fehlt noch“), geplante Stillstände mit Begründung, die zugehörigen Maßnahmen und die Tagesnotiz. Das Board selbst ist nur lesend — den Status setzt der Huddle. Mit ◀ ▶ (oder den Pfeiltasten) durch die Monate blättern; „Drucken“ und „CSV-Export“ stehen oben rechts." }
       ],
       tip: "Eine rote Zelle ohne Maßnahme ist nicht automatisch ein Problem — nicht jede Abweichung braucht eine Maßnahme. Wiederholt sich dieselbe Ursache, sollte eine angelegt werden." },
 
@@ -10366,6 +10921,7 @@ window.SFM = (function () {
           "<b>Huddle-Dauer</b> (5–60 min) und <b>Huddle-Uhrzeit</b> — für Timer und TV-Modus.",
           "<b>Geplante Produktionszeit</b> — Schichtlänge pro Tag in Stunden, Grundlage der Verfügbarkeit.",
           "<b>Kennzahlen-Ziele</b> — OEE, First Pass Yield, Termintreue (färben Dashboard, TV-Modus und Bericht) und der Inventory-Grenzwert als Vorgabe für die tägliche Erfassung.",
+          "<b>Grenzwerte (Ampel)</b> — Ausschuss-Toleranz in % der produzierten Menge (Standard 2 %) und ungeplante Ausfälle in Stunden je Tag (Standard 1,5 h). 0 ist in Ordnung, bis zum Grenzwert wird gelb markiert, darüber rot — im Dashboard, im Tagesbericht, im Kennzahlen-Fenster des Huddles und im TV-Modus. Über einen Zeitraum zählt der Ausschuss-Anteil an der Gesamtmenge bzw. der Durchschnitt der ungeplanten Ausfälle je erfasstem Tag.",
           "<b>Arbeitssicherheit</b> — Datum des letzten meldepflichtigen Unfalls bzw. Zählbeginn für „Tage unfallfrei“."
         ] }
       ],
@@ -10379,22 +10935,31 @@ window.SFM = (function () {
           ["Bearbeiten", "Name, E-Mail, Rolle und Berechtigung ändern."],
           ["Passwort", "Neues Passwort setzen — das Konto wird dabei auf allen Geräten abgemeldet."],
           ["Sperren / Entfernen", "Gesperrte Konten verlieren sofort alle Sitzungen. Beim Entfernen verschwinden auch die privaten Dashboards des Kontos."],
-          ["Offene Passwort-Anfragen", "Wer „Passwort vergessen“ gewählt hat, aber keinen Link bekommen konnte, steht oben in der Liste."]
+          ["Offene Passwort-Anfragen", "Wer „Passwort vergessen“ gewählt hat, aber keinen Link bekommen konnte, steht oben in der Liste."],
+          ["Profilbilder", "Jede Person lädt ihr Bild selbst unter „Mein Konto“ hoch. Ein unpassendes Bild entfernt die Teamleitung oder Administration mit „Bild entfernen“ (Bilder von Administrator-Konten nur die Administration)."]
         ] }
       ],
       tip: "Die Teamleitung kann keine Administrator-Konten anlegen oder ändern." },
 
-    { id: "email", group: "Verwaltung", title: "E-Mail-Versand",
-      intro: "Hier stehen Absender, Mailserver und Verteiler. Der Server nutzt den Mailserver für „Passwort vergessen“ und Test-E-Mails; den Tagesbericht verschicken Sie über Ihr eigenes E-Mail-Programm an den Verteiler.",
+    { id: "email", group: "Verwaltung", title: "E-Mail-Versand & Monatsbericht",
+      intro: "Hier stehen Absender, Mailserver, ein Verteiler und der automatische Monatsbericht. Der Server nutzt den Mailserver für „Passwort vergessen“, Test-E-Mails und den Monatsbericht.",
+      flow: ["Mailserver einrichten", "Verteiler eintragen", "Vorschau / Probe", "Automatik einschalten", "Bericht kommt monatlich"],
       sections: [
-        { h: "Einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
+        { h: "Mailserver einrichten", img: "email", cap: "Einstellungen → E-Mail-Versand", steps: [
           ["Absender", "Absendername, Absenderadresse und Antwortadresse."],
           ["SMTP-Server", "Server, Port und Verschlüsselung (üblich: STARTTLS auf Port 587), Benutzer und Passwort. Das Passwort wird verschlüsselt gespeichert und nie wieder angezeigt — Feld leer lassen, um es zu behalten."],
           ["Verbindung testen", "Prüft Server, Anmeldung und Verschlüsselung direkt."],
-          ["Verteiler", "Empfänger des Tagesberichts und die Betreff-Vorlage ({linie} und {datum} werden ersetzt)."]
-        ] }
+          ["Verteiler", "Empfänger für Test-E-Mails; „Verteiler des Tagesberichts übernehmen“ kopiert sie in den Monatsbericht."]
+        ] },
+        { h: "Monatsbericht (automatisch)", p: "Am eingestellten Tag schickt der Server eine Übersicht des abgeschlossenen Vormonats an einen eigenen Verteiler — auch wenn niemand das Board geöffnet hat.", list: [
+          "<b>Inhalt:</b> OEE, First Pass Yield und Termintreue mit Ziel und Vergleich zum Vormonat, SQIDP-Grünquote je Kategorie, Produktion (Mengen, Ausschuss-Anteil, Nacharbeit, Inventory), Produktionsausfälle je Art, Arbeitssicherheit und Maßnahmen (angelegt, offen, überfällig) — mit Ampelfarben nach Zielen und Grenzwerten.",
+          "<b>Versandzeitpunkt:</b> Tag im Monat (1–28) und Uhrzeit, z. B. am 1. um 07:00 Uhr für den Vormonat. Schlägt der Versand fehl, versucht es der Server stündlich erneut.",
+          "<b>Empfänger:</b> eigener Verteiler; „Verteiler des Tagesberichts übernehmen“ kopiert die Adressen von oben.",
+          "<b>Vorschau</b> zeigt den Bericht für einen gewählten Monat, <b>Probe an mich</b> schickt ihn nur an die eigene Adresse aus „Mein Konto“, <b>Jetzt an Verteiler senden</b> verschickt ihn sofort.",
+          "Unter dem Knopf steht, wann der Bericht zuletzt verschickt wurde — oder warum es nicht geklappt hat."
+        ], note: "„Monatsbericht speichern“ übernimmt Schalter, Zeitpunkt und Empfänger. Der Monatsbericht braucht die Server-Installation; im lokalen Testmodus steht hier nur ein Hinweis." }
       ],
-      tip: "Nur die Administration sieht diesen Bereich." },
+      tip: "Nur die Administration sieht diesen Bereich. Versand und Einstellungen stehen im Sicherheitsprotokoll." },
 
     { id: "sicherung", group: "Verwaltung", title: "Datenbank & Sicherung",
       intro: "Am Server liegen alle Daten in einer PostgreSQL-Datenbank — alle Geräte sehen denselben Stand. Der Server sichert sie selbstständig.",
@@ -10403,7 +10968,9 @@ window.SFM = (function () {
           ["Status", "Oben stehen Speicherort, Programm- und Datenbankversion, Sicherungswerkzeug und der Abgleich mit der Freigabe."],
           ["Automatisch sichern", "„Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Dafür muss nur der Server laufen, nicht der Browser."],
           ["Jetzt sichern / Herunterladen", "Legt sofort eine Sicherung an bzw. speichert eine Sicherungsdatei (.dump) auf diesem Computer."],
-          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — nach Rückfrage wird der Inhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."]
+          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — ein Fenster zeigt, was die Sicherung enthält, und Sie kreuzen an, was zurückgespielt wird: Tageswerte & Huddle, Abweichungen & Maßnahmen, Stammdaten & Einstellungen, Benutzerkonten, Dashboards. Nicht gewählte Teile bleiben unverändert; alle offenen Boards laden danach neu."],
+          ["Einzelne Einträge", "Bei Tagen, Abweichungen, Konten und Dashboards führt „Einzeln auswählen …“ zu einer durchsuchbaren Liste — z. B. nur den 10.11. oder nur eine versehentlich gelöschte Maßnahme zurückholen. Ein Tag kommt immer komplett (Werte, SQIDP-Status, Begründungen, Huddle-Haken). Vorhandene Einträge werden auf den alten Stand gesetzt, gelöschte wieder angelegt; bei vorhandenen Konten bleibt auf Wunsch das heutige Passwort."],
+          ["Vorschau und Prüfung", "„Vorschau“ zeigt vorher, was ersetzt, neu angelegt oder entfernt wird, und weist auf Zusammenhänge hin (z. B. eine Maßnahme, deren Tag nicht mit ausgewählt ist). Erst danach lässt sich wiederherstellen. Der Server prüft das Ergebnis vor dem Speichern — wäre es nicht stimmig (z. B. Namenskonflikt bei einem Konto, Dashboard ohne Besitzer), wird nichts geändert. Vorher sichert er automatisch den aktuellen Stand."]
         ] },
         { h: "Kopie auf SMB-Freigabe", steps: [
           ["Einrichten", "Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern."],
@@ -10573,92 +11140,10 @@ window.SFM = (function () {
   $("#docSelect").addEventListener("change", function () { showDoc(+this.value); });
   renderDoc();
 
-  /* ---------- Tagesbericht (E-Mail) ---------- */
-  function buildDailyReport() {
-    var lines = [];
-    var rp = parseIso(reportIso);
-    lines.push("Shopfloor-Tagesbericht — " + settings.lineName + ", " + rp.d + ". " + MONTH_NAMES[rp.m] + " " + rp.y);
-    lines.push("");
-    lines.push("SQIDP-Status " + (reportIso === TODAY_ISO ? "heute" : "am " + fmtDate(reportIso)) + ":");
-    CATS.forEach(function (c) {
-      var as = agendaStateOf(c.key, reportIso);
-      lines.push("  " + letterOf(c.key) + " " + c.name + ": " + (as.st === "ok" ? "in Ordnung" : as.st === "nok" ? "ABWEICHUNG (" + as.count + ")" : "offen"));
-    });
-    lines.push("");
-    var dayList = dayDeviationList(reportIso);
-    lines.push("Abweichungen des Tages mit Begründung (" + dayList.length + "):");
-    if (!dayList.length) lines.push("  keine");
-    dayList.forEach(function (x) {
-      lines.push("  [" + letterOf(x.cat) + "] " + x.title);
-      lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
-    });
-    lines.push("");
-    var planList = dayPlannedList(reportIso);
-    if (planList.length) {
-      lines.push("Geplante Stillstände mit Begründung (" + planList.length + "):");
-      planList.forEach(function (x) {
-        lines.push("  [" + letterOf(x.cat) + "] " + x.title);
-        lines.push("      Begründung: " + (x.reason ? x.reason.replace(/\s*\n\s*/g, " ") : "FEHLT"));
-      });
-      lines.push("");
-    }
-    var data = boardDataFor(rp.y, rp.m);
-    var rpDays = new Date(rp.y, rp.m + 1, 0).getDate();
-    var quotes = CATS.map(function (c) {
-      var ok = 0, nok = 0, col = data[c.key] || {};
-      for (var d = 1; d <= rpDays; d++) {
-        if (col[d] === "ok") ok++; else if (col[d] === "nok") nok++;
-      }
-      var rated = ok + nok;
-      return letterOf(c.key) + " " + (rated ? Math.round(ok * 100 / rated) + " %" : "–");
-    });
-    lines.push("Grünquote " + MONTH_NAMES[rp.m] + ": " + quotes.join(" · "));
-    lines.push("");
-    var repDIso = dailyRecord(reportIso) ? reportIso : null, repDRec = repDIso ? dailyRecord(repDIso) : null;
-    lines.push("Tages-Kennzahlen (" + fmtDate(reportIso) + "):");
-    if (!repDRec) {
-      lines.push("  für diesen Tag keine Tageskennzahlen erfasst");
-    } else {
-      DAILY_FIELD_TILES.forEach(function (f) {
-        var v = valueOf(f.key, repDRec);
-        lines.push("  " + f.label + ": " + (v == null ? "–" : fmtNum(v, f.digits) + " " + f.unit));
-      });
-    }
-    var msi = safetyInfo();
-    if (msi.days !== null) {
-      lines.push("Arbeitssicherheit: " + msi.days + (msi.days === 1 ? " Tag" : " Tage") + " unfallfrei" +
-        (msi.base === "accident" ? " (letzter meldepflichtiger Unfall " + fmtDate(msi.iso) + ")" : " (Zählbeginn " + fmtDate(msi.iso) + ")") +
-        ", Sicherheitsabweichungen im Monat: " + msi.devs +
-        " · Unfälle " + Y + ": " + msi.reportable + " meldepflichtig, " + msi.nonReportable + " nicht meldepflichtig");
-    }
-    lines.push("");
-    var open = state.deviations.filter(function (d) { return d.phase !== "done"; });
-    lines.push("Offene Abweichungen (" + open.length + "):");
-    if (!open.length) lines.push("  keine — alle Maßnahmen abgeschlossen");
-    open.slice(0, 12).forEach(function (d) {
-      lines.push("  [" + letterOf(d.cat) + "] " + d.title +
-        (d.owner ? " — " + d.owner : "") +
-        (d.due ? ", fällig " + fmtDate(d.due) : "") +
-        (isOverdue(d) ? " (ÜBERFÄLLIG)" : ""));
-    });
-    if (open.length > 12) lines.push("  … und " + (open.length - 12) + " weitere");
-    return lines.join("\n");
-  }
+  /* ---------- Tagesbericht: PDF; Betreff-Vorlage für die Test-E-Mail des Verteilers ---------- */
   function mailSubject() {
-    var dateStr = fmtDate(reportIso);
-    return settings.mail.subject.replace(/\{linie\}/g, settings.lineName).replace(/\{datum\}/g, dateStr);
+    return settings.mail.subject.replace(/\{linie\}/g, settings.lineName).replace(/\{datum\}/g, fmtDate(TODAY_ISO));
   }
-  function mailHref() {
-    return "mailto:" + encodeURIComponent(settings.mail.recipients.join(",")).replace(/%2C/gi, ",") +
-      "?subject=" + encodeURIComponent(mailSubject()) +
-      "&body=" + encodeURIComponent($("#mailText").value);
-  }
-  function openMailReport() {
-    $("#mailText").value = buildDailyReport();
-    $("#mailOpen").href = mailHref();
-    $("#mailDialog").showModal();
-  }
-  $("#reportMailBtn").addEventListener("click", openMailReport);
   $("#reportPdfBtn").addEventListener("click", function () { window.print(); });
 
   /* ---------- Tagesbericht-Ansicht ---------- */
@@ -10755,6 +11240,7 @@ window.SFM = (function () {
         var invMaxRep = numOrNull(dRec.inventoryGrenzwert);
         if (v != null && invMaxRep != null && v > invMaxRep) tile.classList.add("crit");
       }
+      if (dRec) applyTileLimit(tile, tileLimit(f.key, dRec, null));
       tile.appendChild(el("div", "mini-value", v == null ? "–" : fmtNum(v, f.digits) + " " + f.unit));
       tile.appendChild(el("div", "mini-label", f.label));
       dGrid.appendChild(tile);
@@ -10865,26 +11351,6 @@ window.SFM = (function () {
   $("#reportNext").addEventListener("click", function () { shiftReportDay(1); });
   $("#reportToday").addEventListener("click", function () { setReportDay(TODAY_ISO); });
   $("#reportDate").addEventListener("change", function () { setReportDay($("#reportDate").value); });
-  $("#mailClose").addEventListener("click", function () { $("#mailDialog").close(); });
-  $("#mailOpen").addEventListener("click", function () {
-    this.href = mailHref();
-    logMail("Tagesbericht — E-Mail-Programm geöffnet (" + settings.mail.recipients.length + " Empfänger)");
-  });
-  $("#mailCopy").addEventListener("click", function () {
-    var ta = $("#mailText");
-    ta.focus(); ta.select();
-    var done = false;
-    try { done = document.execCommand("copy"); } catch (e) {}
-    if (done) { toast("Bericht in die Zwischenablage kopiert"); logMail("Tagesbericht kopiert"); return; }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(ta.value).then(
-        function () { toast("Bericht in die Zwischenablage kopiert"); },
-        function () { toast("Kopieren nicht möglich — Text bitte manuell markieren"); }
-      );
-      return;
-    }
-    toast("Kopieren nicht möglich — Text bitte manuell markieren");
-  });
 
   /* ---------- Tastaturkürzel (PC) ---------- */
   var VIEW_KEYS = { "1": "dashboard", "2": "board", "3": "actions", "4": "huddle", "5": "report", "6": "settings" };
@@ -10984,6 +11450,71 @@ window.SFM = (function () {
     }
     return Promise.resolve("plain:" + txt);
   }
+  /* ---------- Profilbilder ----------
+     Server: Bild unter /api/avatar/<Anmeldename>?v=<Version> (Version = avatarV in der Benutzerliste).
+     Lokaler Modus: Data-URL im Browser (sfm-avatars-v1). */
+  var AVATAR_KEY = "sfm-avatars-v1";
+  function localAvatars() { try { return JSON.parse(LS.getItem(AVATAR_KEY) || "{}") || {}; } catch (e) { return {}; } }
+  function userRecord(name) {
+    var key = String(name || "").toLowerCase();
+    return loadUsers().filter(function (x) { return String(x.name).toLowerCase() === key; })[0] || null;
+  }
+  // Nach eigenem Hochladen/Entfernen sofort anzeigen, bis die Benutzerliste vom Server nachgeladen ist
+  // (die Liste selbst nicht ändern — sonst würde sie gespeichert, was nur Teamleitung/Administration dürfen)
+  var avatarOverride = {};
+  function avatarUrl(u) {
+    if (!u) return null;
+    if (SFM.isServer()) {
+      var k = String(u.name).toLowerCase(), v = k in avatarOverride ? avatarOverride[k] : u.avatarV;
+      return v && u.username ? "/api/avatar/" + encodeURIComponent(u.username) + "?v=" + v : null;
+    }
+    return localAvatars()[String(u.name).toLowerCase()] || null;
+  }
+  // Kreis mit Bild oder — ohne Bild bzw. wenn es nicht lädt — mit den Initialen
+  function fillAvatar(node, u, name) {
+    node.innerHTML = "";
+    var url = avatarUrl(u);
+    var label = initials(name || (u && u.name) || "?");
+    if (!url) { node.textContent = label; return node; }
+    var img = document.createElement("img");
+    img.alt = "";
+    img.addEventListener("error", function () { node.textContent = label; });
+    img.src = url;
+    node.appendChild(img);
+    return node;
+  }
+  // Bild im Browser quadratisch zuschneiden und auf 256 × 256 verkleinern (spart Speicher, keine Metadaten)
+  function shrinkAvatar(file) {
+    return new Promise(function (resolve, reject) {
+      if (!/^image\//.test(file.type)) { reject(new Error("Bitte eine Bilddatei wählen.")); return; }
+      if (file.size > 15 * 1024 * 1024) { reject(new Error("Die Datei ist zu groß (höchstens 15 MB).")); return; }
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var side = Math.min(img.naturalWidth, img.naturalHeight);
+        if (!side) { reject(new Error("Das Bild konnte nicht gelesen werden.")); return; }
+        var size = Math.min(256, side), c = document.createElement("canvas");
+        c.width = size; c.height = size;
+        var g = c.getContext("2d");
+        g.fillStyle = "#ffffff"; g.fillRect(0, 0, size, size);   // durchsichtige Bereiche weiß statt schwarz
+        g.drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
+        var out = c.toDataURL("image/webp", 0.85);
+        if (out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/jpeg", 0.85);
+        resolve(out);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Das Bild konnte nicht gelesen werden.")); };
+      img.src = url;
+    });
+  }
+  function renderOwnAvatar() {
+    if (!currentUser) return;
+    var u = userRecord(currentUser.name);
+    fillAvatar($("#userAvatar"), u, currentUser.name);
+    if ($("#acAvatar")) {
+      fillAvatar($("#acAvatar"), u, currentUser.name);
+      $("#acAvatarRemove").hidden = !avatarUrl(u);
+    }
+  }
   function initials(name) {
     var p = name.trim().split(/\s+/);
     return (p[0].charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : "")).toUpperCase();
@@ -11033,6 +11564,7 @@ window.SFM = (function () {
       try { LS.setItem(SESSION_KEY, JSON.stringify(currentUser)); } catch (e) {}
     }
     $("#userAvatar").textContent = initials(u.name);
+    renderOwnAvatar();
     $("#userName").textContent = u.name;
     $("#userRole").textContent = u.role + " · " + permName(currentUser.perm);
     $("#userChip").hidden = false;
@@ -11322,29 +11854,99 @@ window.SFM = (function () {
     if (!currentUser) return;
     var acc = SFM.isServer() && !currentUser.demo;
     pwDlg.querySelector('input[name="acTheme"][value="' + themeGet() + '"]').checked = true;
+    $("#acAvatarField").hidden = !!currentUser.demo;
+    avatarError(null);
+    renderOwnAvatar();
     $("#pwAccount").hidden = !acc;
-    $("#pwSave").hidden = !acc;
-    $("#pwCancel").textContent = acc ? "Abbrechen" : "Schließen";
-    $("#pwCurrent").required = acc;
+    myEmail = "";
+    $("#pwSection").hidden = true;
+    $("#pwChangeBtn").hidden = false;
+    $("#pwChangeBtn").setAttribute("aria-expanded", "false");
+    pwRefresh();
     if (!acc) { showPwError(null); pwDlg.showModal(); return; }
     $("#pwCurrent").value = ""; $("#pwNew").value = ""; $("#pwNew2").value = "";
     $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
     $("#acLogin").value = currentUser.username || ""; $("#acEmail").value = "";
     showPwError(null);
+    pwRefresh();
     pwDlg.showModal();
     SFM.api("/api/me").then(function (r) {
       if (!r.ok) return;
       myEmail = r.data.email || "";
       $("#acLogin").value = (r.data.user && r.data.user.username) || "";
       $("#acEmail").value = myEmail;
+      pwRefresh();
     }).catch(function () {});
-    $("#acEmail").focus();
   }
+  // „Speichern“ und das bisherige Passwort erscheinen nur, wenn E-Mail oder Passwort geändert werden
+  function pwRefresh() {
+    var acc = SFM.isServer() && currentUser && !currentUser.demo;
+    var emailChanged = acc && $("#acEmail").value.trim().toLowerCase() !== myEmail.toLowerCase();
+    var pwOpen = acc && !$("#pwSection").hidden;
+    var need = emailChanged || pwOpen;
+    $("#pwCurrentField").hidden = !need;
+    $("#pwCurrent").required = need;
+    $("#pwSave").hidden = !need;
+    $("#pwCancel").textContent = need ? "Abbrechen" : "Schließen";
+  }
+  $("#acEmail").addEventListener("input", pwRefresh);
+  function setOwnAvatarV(v) { avatarOverride[currentUser.name.toLowerCase()] = v || null; }
+  function avatarChanged(msg) {
+    renderOwnAvatar();
+    if ($("#view-settings").classList.contains("active")) renderUsers();
+    toast(msg);
+  }
+  function avatarError(msg) { var e = $("#acAvatarError"); e.hidden = !msg; e.textContent = msg || ""; }
+  $("#acAvatarPick").addEventListener("click", function () { $("#acAvatarFile").value = ""; $("#acAvatarFile").click(); });
+  $("#acAvatarFile").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f || !currentUser) return;
+    avatarError(null);
+    shrinkAvatar(f).then(function (dataUrl) {
+      if (!SFM.isServer()) {
+        var m = localAvatars();
+        m[currentUser.name.toLowerCase()] = dataUrl;
+        try { LS.setItem(AVATAR_KEY, JSON.stringify(m)); } catch (e) { avatarError("Kein Platz im Browser-Speicher für das Bild."); return; }
+        avatarChanged("Profilbild gespeichert");
+        return;
+      }
+      return SFM.api("/api/me/avatar", { method: "PUT", body: { image: dataUrl } }).then(function (r) {
+        if (!r.ok) { avatarError((r.data && r.data.error) || "Das Bild wurde nicht gespeichert."); return; }
+        setOwnAvatarV(r.data.avatarV || Date.now());
+        avatarChanged("Profilbild gespeichert");
+      });
+    }).catch(function (err) { avatarError(err && err.message ? err.message : "Das Bild wurde nicht gespeichert."); });
+  });
+  $("#acAvatarRemove").addEventListener("click", function () {
+    if (!SFM.isServer()) {
+      var m = localAvatars();
+      delete m[currentUser.name.toLowerCase()];
+      try { LS.setItem(AVATAR_KEY, JSON.stringify(m)); } catch (e) {}
+      avatarChanged("Profilbild entfernt");
+      return;
+    }
+    SFM.api("/api/me/avatar", { method: "DELETE" }).then(function (r) {
+      if (!r.ok) { avatarError((r.data && r.data.error) || "Nicht entfernt."); return; }
+      setOwnAvatarV(null);
+      avatarChanged("Profilbild entfernt");
+    }).catch(function () { avatarError("Der Server hat nicht geantwortet."); });
+  });
+  $("#pwChangeBtn").addEventListener("click", function () {
+    $("#pwSection").hidden = false;
+    this.hidden = true;
+    this.setAttribute("aria-expanded", "true");
+    pwRefresh();
+    $("#pwNew").placeholder = "Mindestens " + pwMin() + " Zeichen";
+    $("#pwNew").focus();
+  });
   $("#pwForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var cur = $("#pwCurrent").value, nw = $("#pwNew").value, email = $("#acEmail").value.trim();
     var emailChanged = email.toLowerCase() !== myEmail.toLowerCase();
-    if (!emailChanged && !nw) { showPwError("Es gibt nichts zu speichern."); return; }
+    if (!emailChanged && !nw) {
+      if ($("#pwSection").hidden) { pwDlg.close(); return; }
+      showPwError("Bitte ein neues Passwort eingeben."); return;
+    }
     if (emailChanged && email && !EMAIL_RE.test(email)) { showPwError("Bitte eine gültige E-Mail-Adresse angeben oder das Feld leer lassen."); return; }
     if (nw) {
       var prob = pwProblem(nw, currentUser && currentUser.name);
@@ -11434,7 +12036,7 @@ window.SFM = (function () {
     }
     users.forEach(function (u) {
       var row = el("div", "user-row2" + (u.disabled ? " inactive" : ""));
-      row.appendChild(el("span", "avatar", initials(u.name)));
+      row.appendChild(fillAvatar(el("span", "avatar"), u, u.name));
       var idBox = el("div", "u-id");
       idBox.appendChild(el("div", "u-name", u.name + (isSelf(u.name) ? " (Sie)" : "")));
       idBox.appendChild(el("div", "u-role", [u.role, u.username ? "@" + u.username : "", u.email || ""].filter(Boolean).join(" · ")));
@@ -11486,6 +12088,20 @@ window.SFM = (function () {
       ed.title = "Anmeldename, E-Mail und Rolle ändern";
       ed.addEventListener("click", function () { openUserDialog("edit", u.name); });
       actions.appendChild(ed);
+      if (SFM.isServer() && avatarUrl(u) && !isSelf(u.name)) {
+        var rmAv = el("button", "btn sm", "Bild entfernen");
+        rmAv.title = "Profilbild dieses Kontos entfernen";
+        rmAv.addEventListener("click", function () {
+          appConfirm("Profilbild entfernen", "Das Profilbild von „" + u.name + "“ entfernen?", "Entfernen", true, function () {
+            SFM.api("/api/users/avatar/" + encodeURIComponent(u.name), { method: "DELETE" }).then(function (r) {
+              if (!r.ok) { appAlert("Nicht entfernt", (r.data && r.data.error) || "Bitte erneut versuchen."); return; }
+              avatarOverride[u.name.toLowerCase()] = null;
+              renderUsers(); toast("Profilbild von „" + u.name + "“ entfernt");
+            }).catch(function () { appAlert("Nicht entfernt", "Der Server hat nicht geantwortet."); });
+          });
+        });
+        actions.appendChild(rmAv);
+      }
       var pw = el("button", "btn sm", "Passwort");
       pw.title = "Passwort zurücksetzen";
       pw.addEventListener("click", function () { openUserDialog("password", u.name); });

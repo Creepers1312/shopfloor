@@ -196,6 +196,9 @@ Ohne HTTPS funktioniert das Board im LAN ebenfalls. Passwörter gehen dann aber 
   Datenbank (Schlüssel `APP_SECRET`) und wird nie wieder angezeigt.
 - Die `SMTP_*`-Werte aus der `.env` sind nur Startwerte: Sie gelten, solange in der Oberfläche nichts gespeichert ist,
   und werden beim ersten Speichern übernommen. Prüfen von der Kommandozeile: `./deploy.sh mail-test adresse@firma.de`.
+- **Monatsbericht:** ebenfalls unter *Einstellungen → E-Mail-Versand*. Der API-Container verschickt am eingestellten
+  Tag (1–28) zur eingestellten Uhrzeit (Zeitzone `TZ`, Standard Europe/Berlin) eine Übersicht des Vormonats an den
+  eigenen Verteiler; fehlgeschlagene Versuche werden stündlich wiederholt. Für den Link „Board öffnen“ `PUBLIC_URL` setzen.
 
 ### Testdaten
 
@@ -218,11 +221,17 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Täglich automatisch zur eingestellten Uhrzeit, alte automatische Sicherungen werden nach `BACKUP_KEEP` entfernt.
 - Von Hand in der Oberfläche unter *Einstellungen → Datenbank & Sicherung* oder per `./deploy.sh backup`.
 - Vor jedem `./deploy.sh` und vor jeder Wiederherstellung wird der aktuelle Stand automatisch gesichert.
-- Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents`, `users` und `dashboards`).
+- Dateien: `backups/shopfloor_<datum>_<auto|manual>.dump` (PostgreSQL-Custom-Format, Tabellen `documents`, `users`, `dashboards` und `user_avatars`).
   Für den Ernstfall zusätzlich auf ein NAS kopieren (siehe unten) und die Wiederherstellung einmal ausprobieren.
 - Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
 - **Herunterladen:** In der Liste *Vorhandene Sicherungen* lädt „Herunterladen“ die `.dump`-Datei direkt im Browser
   (nur Administratoren, wird protokolliert).
+- **Wiederherstellen mit Auswahl:** „Wiederherstellen“ in der Liste zeigt den Inhalt der Sicherung; zurückgespielt
+  werden nur die angekreuzten Teile — Tageswerte & Huddle (optional nur ein Zeitraum), Abweichungen & Maßnahmen,
+  Stammdaten & Einstellungen, Benutzerkonten (mit Passwörtern und Profilbildern), Dashboards — oder über
+  „Einzeln auswählen …“ einzelne Tage, Abweichungen, Konten und Dashboards. Eine Vorschau zeigt vorher die
+  Änderungen; der Server prüft das Ergebnis und ändert bei Konflikten nichts. Alles angekreuzt ohne Einzelauswahl
+  entspricht der vollständigen Wiederherstellung. Die Regeln stehen in `CLAUDE.md` („Wiederherstellung & Datenkonsistenz“).
 - **Zurückspielen aus einer Datei:** Eine `.dump`-Datei in den Sicherungsordner kopieren — sie erscheint in der Liste
   („im Sicherungsordner gefunden“) und lässt sich wiederherstellen.
 
