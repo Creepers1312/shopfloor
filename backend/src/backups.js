@@ -457,7 +457,7 @@ async function validateResult(c, state, parts) {
   }
   if (parts.includes("dashboards") || parts.includes("users")) {
     const r = await c.query(`SELECT name FROM dashboards d WHERE visibility = 'private'
-      AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.name) = lower(d.owner))`);
+      AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.username) = lower(d.owner) OR lower(u.name) = lower(d.owner))`);
     if (r.rows.length && parts.includes("dashboards")) problems.push(`Private Dashboards ohne Besitzer: ${r.rows.map((x) => x.name).join(", ")}`);
   }
   if (problems.length) throw new HttpError(409, "Wiederherstellung abgebrochen — das Ergebnis wäre nicht stimmig: " + problems.join("; "));
@@ -588,8 +588,9 @@ async function restoreParts(filename, opts = {}, by) {
   const bDash = ((d.tables.dashboards && d.tables.dashboards.rows) || []);
   if (parts.includes("dashboards")) {
     const curDash = (await db.pool.query("SELECT id, name, owner, visibility FROM dashboards")).rows;
-    const ownerOk = (b) => b.visibility !== "private" || curUsers.some((u) => lc(u.name) === lc(b.owner)) ||
-      (parts.includes("users") && bUsers.some((u) => lc(u.name) === lc(b.owner)) && (!pick.users || sel.users.some((un) => bUsers.some((u) => lc(u.username) === lc(un) && lc(u.name) === lc(b.owner)))));
+    const owns = (u, b) => lc(u.username) === lc(b.owner) || lc(u.name) === lc(b.owner);   // alte Sicherungen: Anzeigename
+    const ownerOk = (b) => b.visibility !== "private" || curUsers.some((u) => owns(u, b)) ||
+      (parts.includes("users") && bUsers.some((u) => owns(u, b)) && (!pick.users || sel.users.some((un) => bUsers.some((u) => lc(u.username) === lc(un) && owns(u, b)))));
     const ids = pick.dashboards ? sel.dashboards : [...new Set(bDash.map((x) => x.id).concat(curDash.map((x) => x.id)))];
     ids.forEach((id) => {
       const b = bDash.find((x) => x.id === id), a = curDash.find((x) => x.id === id);
@@ -646,8 +647,9 @@ async function restoreParts(filename, opts = {}, by) {
           await replaceTable(c, "user_avatars", d.tables.user_avatars);
           // wie beim Löschen eines Kontos: private Dashboards nicht mehr vorhandener Konten entfernen
           if (!parts.includes("dashboards")) {
+            await require("./dashboards").migrate(c);   // alte Zuordnung über Anzeigenamen umstellen
             await c.query(`DELETE FROM dashboards d WHERE visibility = 'private'
-              AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.name) = lower(d.owner))`);
+              AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(u.username) = lower(d.owner))`);
           }
         }
         await c.query("SELECT setval(pg_get_serial_sequence('users', 'id'), GREATEST((SELECT COALESCE(MAX(id), 0) FROM users), 1))");

@@ -139,6 +139,7 @@ async function updateProfile(q, name, fields) {
   try {
     const r = await q.query("UPDATE users SET username = $2, email = $3, role = $4 WHERE id = $1 RETURNING *",
       [row.id, next.username, next.email, next.role]);
+    await require("./dashboards").renameOwner(q, row.username, next.username);   // eigene Dashboards mitnehmen
     return { before: row, after: r.rows[0] };
   } catch (err) { throw uniqueError(err); }
 }
@@ -228,14 +229,15 @@ async function syncFromClient(q, list, actorPerm = "admin") {
 
   const removed = existing.rows.filter((r) => !seen.has(r.key)).map((r) => r.id);
   if (removed.length) {
-    const del = await q.query("DELETE FROM users WHERE id = ANY($1::int[]) RETURNING name", [removed]);
+    const del = await q.query("DELETE FROM users WHERE id = ANY($1::int[]) RETURNING name, username", [removed]);
     await q.query("DELETE FROM user_avatars WHERE user_id = ANY($1::int[])", [removed]);
     const names = del.rows.map((r) => r.name.toLowerCase());
     await q.query("DELETE FROM sessions WHERE lower(user_name) = ANY($1::text[])", [names]);
     await q.query("DELETE FROM password_resets WHERE lower(user_name) = ANY($1::text[])", [names]);
     await q.query("DELETE FROM reset_requests WHERE lower(user_name) = ANY($1::text[])", [names]);
     // Private Dashboards gehen mit dem Konto; öffentliche bleiben (die Administration kann sie löschen)
-    await q.query("DELETE FROM dashboards WHERE visibility = 'private' AND lower(owner) = ANY($1::text[])", [names]);
+    await q.query("DELETE FROM dashboards WHERE visibility = 'private' AND lower(owner) = ANY($1::text[])",
+      [del.rows.map((r) => String(r.username || r.name).toLowerCase())]);
     changes.removed = del.rows.map((r) => r.name);
   }
   // Gesperrte Konten verlieren sofort alle Sitzungen und offenen Reset-Links

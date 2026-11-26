@@ -41,6 +41,10 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Tagesbericht: Knopf „Per E-Mail senden“ (Bericht als Text im eigenen E-Mail-Programm) — für den Versand gibt es
   den automatischen Monatsbericht; der Tagesbericht bleibt als Ansicht und PDF.
 
+### Behoben
+- Eigene Dashboards hängen jetzt am Anmeldenamen statt am Anzeigenamen; ändert sich der Anmeldename, ziehen die
+  Dashboards automatisch mit. Vorhandene Dashboards werden beim Update automatisch umgestellt.
+
 ## [1.5.0] – 2026-11-25
 
 ### Neu

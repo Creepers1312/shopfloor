@@ -37,7 +37,7 @@ function register(app) {
   app.delete("/api/dashboards/:id", wrap(async (req, res) => {
     requireAccount(req);
     const row = await dashboards.remove(db.pool, req.user, req.params.id);
-    if (row.visibility === "public" || String(row.owner).toLowerCase() !== req.user.name.toLowerCase()) {
+    if (row.visibility === "public" || !dashboards.isOwner(row, req.user)) {
       await audit.log(req, "dashboard.delete", { name: row.name, owner: row.owner, visibility: row.visibility });
     }
     res.json({ ok: true });

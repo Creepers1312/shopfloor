@@ -83,7 +83,9 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   Neu im Menü `#dashMenuBtn`/`#dashMenu` in der Kopfzeile des Dashboards; Anpassen-Leiste `#dashEditTools`), Widgets im
   12-Spalten-Raster. Sichtbarkeit `standard` (eingebaut: `standard`, `detail` = „Detaillierte Auswertung“; ändern nur
   manager/admin, `widgets: null` = ausgeliefertes Layout aus `DASH_BUILTIN`), `public` (alle sehen, ändern/löschen
-  nur Ersteller + admin), `private` (nur Besitzer). Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
+  nur Ersteller + admin), `private` (nur Besitzer). **Besitzer `owner` = Anmeldename (klein)**, nicht der Anzeigename;
+  Änderung des Anmeldenamens zieht die Dashboards mit (`dashboards.renameOwner` in `users.updateProfile`), die Anzeige
+  liefert `owner` (Name per Join) und `ownerUser`; `migrate` stellt alte Zuordnungen über den Namen um. Server: Tabelle `dashboards`, `dashboards.js` (Regeln, Migration
   alter `users.dashboard`-Layouts → private Dashboards), `routes/dashboards.js`; `/api/user/dashboard` speichert nur
   das zuletzt gewählte (`{v:2,current}`). Lokal: `sfm-dashboards-v1`. `sanitizeWidgets` prüft gespeicherte Layouts,
   `DW_MIN` Mindestgrößen. Inhalte passen sich der Fläche an
@@ -136,7 +138,7 @@ Teil-Wiederherstellung in `backups.js`). Neue Datenfelder oder Tabellen müssen 
    fehlt → neu anlegen. Nicht gewählte Datensätze bleiben unverändert. Zähler werden nur erhöht, nie zurückgesetzt
    (`state.seq` > höchste Abweichungsnummer, Sequenz von `users.id`).
 3. **Verknüpfungen melden:** Abweichung ↔ Tag über `created` (ersatzweise `due`); privates Dashboard ↔ Besitzer
-   (Name). Geänderte, nicht mit gewählte Gegenstücke → Hinweis in der Vorschau; fehlender Besitzer → Abbruch.
+   (Anmeldename; alte Sicherungen mit Anzeigename werden nach der Übernahme per `dashboards.migrate` umgestellt). Geänderte, nicht mit gewählte Gegenstücke → Hinweis in der Vorschau; fehlender Besitzer → Abbruch.
 4. **Konflikte brechen ab, statt zu überschreiben:** Name oder E-Mail eines Kontos wird heute von einem anderen
    Konto benutzt; kein aktiver Administrator mit Passwort mehr; privates Dashboard ohne Besitzer → HTTP 409 mit
    verständlicher Meldung, **nichts** wird geändert.
