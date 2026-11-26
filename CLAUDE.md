@@ -116,6 +116,12 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   `periodRatio`, `outageTotal` …) — Formeländerungen dort hier mitziehen. Zeitplan alle 5 min, Versand am Tag/Uhrzeit
   für den Vormonat, merkt sich `last` (Probe an eigene Adresse zählt nicht). UI-Karte `#mrCard` im Bereich E-Mail.
 
+- **Teil-Wiederherstellung:** `backups.inspect`/`restoreParts` lesen die Sicherung mit `pg_restore --data-only --file=-`
+  (COPY-Text, `parseCopyText`) und übernehmen nur gewählte Teile (`PARTS`: daily [optional Zeitraum, `mergeDaily`],
+  deviations, settings, users [+ user_avatars, Sequenz, Sitzungen], dashboards). Alle Teile ohne Zeitraum →
+  vollständiges `restore` (pg_restore --clean). API: `GET /api/backups/:file/contents`, `POST …/restore` mit `parts`.
+  UI: `#restoreDialog`. Neue Teile des state-Dokuments hier zuordnen.
+
 ## Betrieb
 - `./deploy.sh` installiert/aktualisiert (Sicherung → `git pull` → bauen → starten); `./deploy.sh config`
   ändert die `.env` (einzige Quelle der Einstellungen; Umgebungsvariablen nur als Eingabe beim ersten Lauf).

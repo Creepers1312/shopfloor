@@ -144,12 +144,26 @@ function register(app) {
     res.download(file, req.params.file);
   }));
 
+  // Inhalt einer Sicherung (für die Auswahl beim Wiederherstellen)
+  app.get("/api/backups/:file/contents", wrap(async (req, res) => {
+    requireAdmin(req);
+    res.json({ contents: await backups.inspect(req.params.file) });
+  }));
+
+  // Wiederherstellen: ohne Angabe alles; mit „parts“ nur die gewählten Teile (Tageswerte optional mit Zeitraum)
   app.post("/api/backups/:file/restore", wrap(async (req, res) => {
     requireAdmin(req);
-    await backups.restore(req.params.file, req.user.name);
-    await audit.log(req, "backup.restore", { file: req.params.file });
+    const body = req.body || {};
+    let result;
+    if (Array.isArray(body.parts)) {
+      result = await backups.restoreParts(req.params.file, { parts: body.parts, from: body.from, to: body.to }, req.user.name);
+    } else {
+      await backups.restore(req.params.file, req.user.name);
+      result = { full: true, parts: backups.PARTS };
+    }
+    await audit.log(req, "backup.restore", { file: req.params.file, parts: result.full ? "alles" : result.parts, from: result.from || undefined, to: result.to || undefined });
     backups.syncSmb().catch(() => {});   // Sicherung „vor Wiederherstellung“ auf die Freigabe
-    res.json({ ok: true, revision: await db.getRevision() });
+    res.json({ ok: true, result, revision: await db.getRevision() });
   }));
 
   app.delete("/api/backups/:file", wrap(async (req, res) => {

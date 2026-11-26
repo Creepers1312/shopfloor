@@ -10,6 +10,10 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 ## [Unveröffentlicht]
 
 ### Neu
+- **Wiederherstellung mit Auswahl:** Beim Zurückspielen einer Sicherung zeigt ein Fenster, was sie enthält, und Sie
+  wählen die Teile: Tageswerte & Huddle (wahlweise nur ein Zeitraum, z. B. ein einzelner Tag), Abweichungen &
+  Maßnahmen, Stammdaten & Einstellungen, Benutzerkonten (mit Passwörtern und Profilbildern) und Dashboards. Nicht
+  gewählte Teile bleiben unverändert; vorher wird wie bisher automatisch der aktuelle Stand gesichert.
 - **Monatsbericht per E-Mail (automatisch):** Unter Einstellungen → E-Mail-Versand lässt sich ein Monatsbericht
   einrichten. Der Server schickt am eingestellten Tag (1–28, mit Uhrzeit) eine Übersicht des Vormonats an einen
   eigenen Verteiler: OEE, First Pass Yield, Termintreue mit Vormonatsvergleich, SQIDP-Grünquote, Produktion,

@@ -226,6 +226,10 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
 - Die Sicherungen enthalten die Passwort-Hashes. Ordner und Dateien sind deshalb nur für den Besitzer lesbar (`700`/`600`).
 - **Herunterladen:** In der Liste *Vorhandene Sicherungen* lädt „Herunterladen“ die `.dump`-Datei direkt im Browser
   (nur Administratoren, wird protokolliert).
+- **Wiederherstellen mit Auswahl:** „Wiederherstellen“ in der Liste zeigt den Inhalt der Sicherung; zurückgespielt
+  werden nur die angekreuzten Teile — Tageswerte & Huddle (optional nur ein Zeitraum), Abweichungen & Maßnahmen,
+  Stammdaten & Einstellungen, Benutzerkonten (mit Passwörtern und Profilbildern), Dashboards. Alles angekreuzt
+  ohne Zeitraum entspricht der vollständigen Wiederherstellung.
 - **Zurückspielen aus einer Datei:** Eine `.dump`-Datei in den Sicherungsordner kopieren — sie erscheint in der Liste
   („im Sicherungsordner gefunden“) und lässt sich wiederherstellen.
 

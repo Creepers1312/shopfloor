@@ -1271,6 +1271,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .mr-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .mr-actions select { width: auto; }
 .mr-foot { margin-top: 6px; }
+.restore-dialog { width: min(640px, calc(100vw - 32px)); }
+.rs-parts { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 4px; }
+.rs-part { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font-weight: 400; }
+.rs-part:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.rs-part.disabled { opacity: .55; cursor: not-allowed; }
+.rs-part input { margin-top: 3px; width: auto; flex: none; }
+.rs-part b { display: block; font-size: 14px; color: var(--ink); }
+.rs-part small { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; line-height: 1.45; }
+.rs-part .rs-info { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; }
+.rs-range { margin: 4px 0 6px; padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.rs-range-toggle { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13.5px; cursor: pointer; }
+.rs-range-toggle input { width: auto; margin: 0; }
+.rs-range-fields { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 10px; }
+.rs-range-fields label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; }
+.rs-range-fields input { width: auto; }
+.rs-range-fields .mini-hint { flex-basis: 100%; margin: 0; }
+.rs-warn { margin: 8px 0; padding: 10px 12px; border-radius: 9px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn-text); font-size: 13px; font-weight: 600; }
 .mr-preview-dialog { width: min(720px, calc(100vw - 32px)); padding: 0; }
 .mr-preview-body { padding: 0 16px 16px; }
 .mr-preview-body iframe { width: 100%; height: min(75vh, 900px); border: 1px solid var(--line); border-radius: 10px; background: #f3f4f6; }
@@ -3234,6 +3251,33 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 <dialog id="docImgDialog" class="doc-img-dialog" aria-label="Bild vergrößert">
   <img id="docImgBig" alt="">
   <p id="docImgCap"></p>
+</dialog>
+
+<dialog id="restoreDialog" class="restore-dialog" aria-labelledby="rsTitle">
+  <div class="dlg-head">
+    <h2 id="rsTitle">Sicherung wiederherstellen</h2>
+    <button type="button" class="btn ghost sm" id="rsClose" aria-label="Schließen">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p class="cf-text" id="rsSub"></p>
+    <p class="mini-hint" id="rsLoading">Inhalt der Sicherung wird gelesen …</p>
+    <div class="rs-parts" id="rsParts" hidden></div>
+    <div class="rs-range" id="rsRange" hidden>
+      <label class="rs-range-toggle"><input type="checkbox" id="rsRangeOn"> Nur einen Zeitraum der Tageswerte übernehmen</label>
+      <div class="rs-range-fields" id="rsRangeFields" hidden>
+        <label>von <input type="date" id="rsFrom"></label>
+        <label>bis <input type="date" id="rsTo"></label>
+        <p class="mini-hint">Nur die Tage im Zeitraum werden durch den Stand der Sicherung ersetzt — Tageswerte, SQIDP-Status, Begründungen und Huddle-Haken. Alle anderen Tage bleiben, wie sie sind.</p>
+      </div>
+    </div>
+    <p class="rs-warn" id="rsWarn" hidden></p>
+    <p class="mini-hint">Vorher legt der Server automatisch eine Sicherung des aktuellen Stands an — so lässt sich das Zurückspielen rückgängig machen.</p>
+    <p class="login-error" id="rsError" hidden></p>
+  </div>
+  <div class="dlg-foot">
+    <button type="button" class="btn" id="rsCancel">Abbrechen</button>
+    <button type="button" class="btn primary danger-solid" id="rsOk" disabled>Ausgewählte Teile wiederherstellen</button>
+  </div>
 </dialog>
 
 <dialog id="mrPreviewDialog" class="mr-preview-dialog" aria-labelledby="mrPrevTitle">
@@ -9511,21 +9555,106 @@ window.SFM = (function () {
       btn.textContent = "Jetzt sichern";
     });
   }
-  function restoreBackup(file) {
-    appConfirm("Sicherung wiederherstellen?",
-      "Der gesamte Inhalt der Datenbank wird durch den Stand aus " + file + " ersetzt. "
-      + "Alle seither erfassten Einträge gehen verloren. Andere geöffnete Boards laden den Stand danach automatisch neu.",
-      "Wiederherstellen", true, function () {
-        SFM.api("/api/backups/" + encodeURIComponent(file) + "/restore", { method: "POST" }).then(function (r) {
-          if (!r.ok) { appAlert("Wiederherstellung fehlgeschlagen", (r.data && r.data.error) || "Unbekannter Fehler"); return; }
-          return SFM.refresh().then(function () {
-            reloadFromStore();
-            loadBackups();
-            toast("Stand aus " + file + " wiederhergestellt");
-          });
-        });
-      });
+  /* Wiederherstellen mit Auswahl der Teile (Server: /api/backups/<Datei>/contents und …/restore mit parts) */
+  var RS_PARTS = [
+    { key: "daily", title: "Tageswerte & Huddle", desc: "Tageskennzahlen, SQIDP-Status, Begründungen, Huddle-Haken und Sicherheitseinträge — wahlweise nur für einen Zeitraum." },
+    { key: "deviations", title: "Abweichungen & Maßnahmen", desc: "Alle Abweichungen mit PDCA-Phase, Verantwortlichen, Terminen und 5-Why." },
+    { key: "settings", title: "Stammdaten & Einstellungen", desc: "Linie, Huddle, Ziele, Grenzwerte, Arbeitssicherheit, Verteiler des Tagesberichts." },
+    { key: "users", title: "Benutzerkonten", desc: "Konten mit Rollen, Passwörtern und Profilbildern. Wer in der Sicherung nicht vorkommt, wird abgemeldet." },
+    { key: "dashboards", title: "Dashboards", desc: "Eigene, öffentliche und angepasste Standard-Dashboards." }
+  ];
+  var rsFile = null, rsContents = null;
+  function rsError(msg) { var e = $("#rsError"); e.hidden = !msg; e.textContent = msg || ""; }
+  function rsInfo(key, c) {
+    if (key === "daily") return c.daily.days ? c.daily.days + " Tage mit Werten (" + fmtDate(c.daily.from) + " – " + fmtDate(c.daily.to) + ")" : "keine Tageswerte";
+    if (key === "deviations") return c.deviations.total + " Abweichungen, davon " + c.deviations.open + " offen";
+    if (key === "settings") return c.settings.present ? "Linie „" + (c.settings.lineName || "–") + "“" : "nicht enthalten";
+    if (key === "users") return c.users.total + " Konten (" + c.users.admins + " Administrator" + (c.users.admins === 1 ? "" : "en") + ")" + (c.users.avatars ? " · " + c.users.avatars + (c.users.avatars === 1 ? " Profilbild" : " Profilbilder") : "") +
+      (c.users.names.length ? ": " + c.users.names.slice(0, 6).join(", ") + (c.users.names.length > 6 ? " …" : "") : "");
+    if (key === "dashboards") return c.dashboards.total ? c.dashboards.total + " eigene: " + c.dashboards.names.slice(0, 5).join(", ") + (c.dashboards.total > 5 ? " …" : "") : "keine eigenen Dashboards";
+    return "";
   }
+  function rsAvailable(key, c) {
+    if (key === "daily") return c.daily.days > 0;
+    if (key === "settings") return c.settings.present;
+    if (key === "users") return c.users.admins > 0;
+    return true;
+  }
+  function rsSelected() {
+    return [].slice.call($("#rsParts").querySelectorAll("input:checked")).map(function (x) { return x.value; });
+  }
+  function rsUpdate() {
+    var sel = rsSelected(), daily = sel.indexOf("daily") >= 0;
+    $("#rsRange").hidden = !daily;
+    $("#rsRangeFields").hidden = !$("#rsRangeOn").checked;
+    var warn = [];
+    if (sel.indexOf("users") >= 0) warn.push("Benutzerkonten werden komplett durch den Stand der Sicherung ersetzt — auch Passwörter. Neuere Konten gehen verloren.");
+    if (daily && !$("#rsRangeOn").checked) warn.push("Alle Tageswerte werden ersetzt — seit der Sicherung erfasste Tage gehen verloren.");
+    if (sel.indexOf("deviations") >= 0) warn.push("Seit der Sicherung angelegte oder geänderte Abweichungen gehen verloren.");
+    $("#rsWarn").hidden = !warn.length;
+    $("#rsWarn").textContent = warn.join(" ");
+    $("#rsOk").disabled = !sel.length;
+    $("#rsOk").textContent = sel.length === RS_PARTS.length && !(daily && $("#rsRangeOn").checked) ? "Alles wiederherstellen" : "Ausgewählte Teile wiederherstellen";
+  }
+  function restoreBackup(file) {
+    rsFile = file; rsContents = null;
+    $("#rsSub").textContent = "Sicherung " + file + " — wählen Sie, was zurückgespielt werden soll. Nicht gewählte Teile bleiben unverändert.";
+    $("#rsLoading").hidden = false; $("#rsParts").hidden = true; $("#rsRange").hidden = true; $("#rsWarn").hidden = true;
+    $("#rsRangeOn").checked = false; $("#rsOk").disabled = true; rsError(null);
+    $("#restoreDialog").showModal();
+    SFM.api("/api/backups/" + encodeURIComponent(file) + "/contents").then(function (r) {
+      $("#rsLoading").hidden = true;
+      if (!r.ok) { rsError((r.data && r.data.error) || "Die Sicherung konnte nicht gelesen werden."); return; }
+      var c = rsContents = r.data.contents;
+      var box = $("#rsParts");
+      box.innerHTML = "";
+      RS_PARTS.forEach(function (p) {
+        var ok = rsAvailable(p.key, c);
+        var lbl = el("label", "rs-part" + (ok ? "" : " disabled"));
+        var inp = document.createElement("input");
+        inp.type = "checkbox"; inp.value = p.key; inp.disabled = !ok;
+        inp.addEventListener("change", rsUpdate);
+        lbl.appendChild(inp);
+        var t = el("span", "");
+        t.appendChild(el("b", "", p.title));
+        t.appendChild(el("small", "", p.desc));
+        t.appendChild(el("span", "rs-info", (ok ? "In der Sicherung: " : "Nicht verfügbar: ") + rsInfo(p.key, c)));
+        lbl.appendChild(t);
+        box.appendChild(lbl);
+      });
+      box.hidden = false;
+      if (c.daily.days) {
+        $("#rsFrom").min = $("#rsTo").min = c.daily.from; $("#rsFrom").max = $("#rsTo").max = c.daily.to;
+        $("#rsFrom").value = c.daily.to; $("#rsTo").value = c.daily.to;
+      }
+      rsUpdate();
+    }).catch(function () { $("#rsLoading").hidden = true; rsError("Server nicht erreichbar."); });
+  }
+  $("#rsRangeOn").addEventListener("change", rsUpdate);
+  $("#rsClose").addEventListener("click", function () { $("#restoreDialog").close(); });
+  $("#rsCancel").addEventListener("click", function () { $("#restoreDialog").close(); });
+  $("#rsOk").addEventListener("click", function () {
+    var parts = rsSelected();
+    if (!parts.length || !rsFile) return;
+    var body = { parts: parts };
+    if (parts.indexOf("daily") >= 0 && $("#rsRangeOn").checked) {
+      body.from = $("#rsFrom").value; body.to = $("#rsTo").value;
+      if (!body.from || !body.to || body.from > body.to) { rsError("Bitte einen gültigen Zeitraum wählen („von“ vor „bis“)."); return; }
+    }
+    var names = RS_PARTS.filter(function (p) { return parts.indexOf(p.key) >= 0; }).map(function (p) { return p.title; });
+    var file = rsFile, btn = this;
+    btn.disabled = true; btn.textContent = "Wird wiederhergestellt …"; rsError(null);
+    SFM.api("/api/backups/" + encodeURIComponent(file) + "/restore", { method: "POST", body: body }).then(function (r) {
+      if (!r.ok) { rsError((r.data && r.data.error) || "Wiederherstellung fehlgeschlagen."); rsUpdate(); return; }
+      $("#restoreDialog").close();
+      return SFM.refresh().then(function () {
+        reloadFromStore();
+        loadBackups();
+        if (typeof loadDashList === "function") loadDashList();
+        toast("Aus " + file + " wiederhergestellt: " + names.join(", ") + (body.from ? " (" + fmtDate(body.from) + " – " + fmtDate(body.to) + ")" : ""));
+      });
+    }).catch(function () { rsError("Server nicht erreichbar."); rsUpdate(); });
+  });
   function deleteBackup(file) {
     appConfirm("Sicherung löschen?", file + " wird auf dem Server endgültig gelöscht."
       + (backupSmb.enabled ? " Eine Kopie auf der Freigabe bleibt erhalten." : ""), "Löschen", true, function () {
@@ -10704,7 +10833,7 @@ window.SFM = (function () {
           ["Status", "Oben stehen Speicherort, Programm- und Datenbankversion, Sicherungswerkzeug und der Abgleich mit der Freigabe."],
           ["Automatisch sichern", "„Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Dafür muss nur der Server laufen, nicht der Browser."],
           ["Jetzt sichern / Herunterladen", "Legt sofort eine Sicherung an bzw. speichert eine Sicherungsdatei (.dump) auf diesem Computer."],
-          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — nach Rückfrage wird der Inhalt durch diesen Stand ersetzt und alle offenen Boards laden neu."]
+          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — ein Fenster zeigt, was die Sicherung enthält, und Sie kreuzen an, was zurückgespielt wird: Tageswerte & Huddle (wahlweise nur ein Zeitraum, z. B. ein einzelner Tag), Abweichungen & Maßnahmen, Stammdaten & Einstellungen, Benutzerkonten, Dashboards. Nicht gewählte Teile bleiben unverändert; alle offenen Boards laden danach neu. Vorher sichert der Server automatisch den aktuellen Stand."]
         ] },
         { h: "Kopie auf SMB-Freigabe", steps: [
           ["Einrichten", "Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern."],

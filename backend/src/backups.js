@@ -269,7 +269,199 @@ function startScheduler() {
   setTimeout(() => { syncSmb().catch(() => {}); }, 20 * 1000).unref();
 }
 
+/* ---------- Teilweise Wiederherstellung ----------
+   Die Sicherung wird mit pg_restore als Text (COPY-Blöcke) gelesen und in Objekte zerlegt; danach werden nur
+   die gewählten Teile in einer Transaktion übernommen. Teile:
+     daily       Tageswerte & Huddle (state: dailyData, boards, huddleLog, reasons, safetyLog) — optional Zeitraum
+     deviations  Abweichungen & Maßnahmen (state: deviations, seq)
+     settings    Stammdaten & Einstellungen (Dokument settings)
+     users       Benutzerkonten inkl. Passwörtern und Profilbildern (Tabellen users, user_avatars)
+     dashboards  Dashboards (Tabelle dashboards) */
+const PARTS = ["daily", "deviations", "settings", "users", "dashboards"];
+const DAILY_KEYS = ["dailyData", "boards", "huddleLog", "reasons", "safetyLog"];
+
+// Ein Feld im Textformat von COPY entschlüsseln (\N = NULL, Backslash-Folgen)
+function copyField(v) {
+  if (v === "\\N") return null;
+  if (v.indexOf("\\") < 0) return v;
+  return v.replace(/\\(?:([0-7]{1,3})|x([0-9A-Fa-f]{1,2})|(.))/g, (m, oct, hex, ch) => {
+    if (oct) return String.fromCharCode(parseInt(oct, 8));
+    if (hex) return String.fromCharCode(parseInt(hex, 16));
+    return { b: "\b", f: "\f", n: "\n", r: "\r", t: "\t", v: "\v" }[ch] || ch;
+  });
+}
+function parseCopyText(sql) {
+  const tables = {};
+  const lines = sql.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^COPY (?:public\.)?"?(\w+)"? \(([^)]*)\) FROM stdin;$/.exec(lines[i]);
+    if (!m) continue;
+    const cols = m[2].split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+    const rows = [];
+    for (i++; i < lines.length && lines[i] !== "\\."; i++) {
+      const vals = lines[i].split("\t").map(copyField);
+      const row = {};
+      cols.forEach((c, k) => { row[c] = vals[k] === undefined ? null : vals[k]; });
+      rows.push(row);
+    }
+    tables[m[1]] = { cols, rows };
+  }
+  return tables;
+}
+async function readDump(filename) {
+  const { row, file, exists } = await resolveFile(filename);
+  if (!row.ok || !exists) throw new HttpError(400, "Diese Sicherung ist unvollständig oder die Datei fehlt.");
+  const r = await run("pg_restore", ["--data-only", "--file=-", file]);
+  if (r.code !== 0) throw new HttpError(500, "Sicherung konnte nicht gelesen werden: " + (r.err || "").trim().slice(0, 200));
+  const t = parseCopyText(r.out);
+  const doc = (name) => {
+    const d = ((t.documents && t.documents.rows) || []).find((x) => x.name === name);
+    if (!d || d.value == null) return null;
+    try { return JSON.parse(d.value); } catch (e) { return null; }
+  };
+  return { row, tables: t, state: doc("state"), settings: doc("settings") };
+}
+
+const isIso = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ""));
+// Inhalt einer Sicherung für das Auswahlfenster
+async function inspect(filename) {
+  const d = await readDump(filename);
+  const st = d.state || {};
+  const days = Object.keys(st.dailyData || {}).filter(isIso).sort();
+  const devs = Array.isArray(st.deviations) ? st.deviations : [];
+  const users = (d.tables.users && d.tables.users.rows) || [];
+  const dash = ((d.tables.dashboards && d.tables.dashboards.rows) || []).filter((x) => x.visibility !== "standard");
+  return {
+    filename, createdAt: d.row.created_at, kind: d.row.kind, note: d.row.note,
+    daily: { days: days.length, from: days[0] || null, to: days[days.length - 1] || null },
+    deviations: { total: devs.length, open: devs.filter((x) => x && x.phase !== "done").length },
+    settings: { present: !!d.settings, lineName: (d.settings && d.settings.lineName) || "" },
+    users: { total: users.length, admins: users.filter((u) => u.perm === "admin" && u.disabled !== "t").length,
+      names: users.slice(0, 50).map((u) => u.name), avatars: ((d.tables.user_avatars && d.tables.user_avatars.rows) || []).length },
+    dashboards: { total: dash.length, names: dash.slice(0, 50).map((x) => x.name) }
+  };
+}
+
+// Tageswerte eines Zeitraums aus der Sicherung übernehmen (alles andere bleibt)
+function mergeDaily(cur, bak, from, to) {
+  const inRange = (iso) => isIso(iso) && (!from || iso >= from) && (!to || iso <= to);
+  ["dailyData", "huddleLog", "safetyLog"].forEach((k) => {
+    const c = cur[k] && typeof cur[k] === "object" ? cur[k] : {};
+    const b = bak[k] && typeof bak[k] === "object" ? bak[k] : {};
+    Object.keys(c).forEach((iso) => { if (inRange(iso)) delete c[iso]; });
+    Object.keys(b).forEach((iso) => { if (inRange(iso)) c[iso] = b[iso]; });
+    cur[k] = c;
+  });
+  const cr = cur.reasons && typeof cur.reasons === "object" ? cur.reasons : {};
+  const br = bak.reasons && typeof bak.reasons === "object" ? bak.reasons : {};
+  Object.keys(cr).forEach((k) => { if (inRange(k.split("|")[0])) delete cr[k]; });
+  Object.keys(br).forEach((k) => { if (inRange(k.split("|")[0])) cr[k] = br[k]; });
+  cur.reasons = cr;
+  // SQIDP-Board: boards["J-M"][Kategorie][Tag]
+  const cb = cur.boards && typeof cur.boards === "object" ? cur.boards : {};
+  const bb = bak.boards && typeof bak.boards === "object" ? bak.boards : {};
+  new Set(Object.keys(cb).concat(Object.keys(bb))).forEach((mk) => {
+    const m = /^(\d{4})-(\d{1,2})$/.exec(mk);
+    if (!m) return;
+    const y = +m[1], mo = +m[2];
+    const curM = cb[mk] || {}, bakM = bb[mk] || {};
+    new Set(Object.keys(curM).concat(Object.keys(bakM))).forEach((cat) => {
+      const cc = Object.assign({}, curM[cat] || {}), bc = bakM[cat] || {};
+      for (let d = 1; d <= 31; d++) {
+        const iso = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        if (!inRange(iso)) continue;
+        if (bc[d] != null) cc[d] = bc[d]; else delete cc[d];
+      }
+      curM[cat] = cc;
+    });
+    cb[mk] = curM;
+  });
+  cur.boards = cb;
+  return cur;
+}
+
+// Zeilen einer Tabelle aus der Sicherung einsetzen (nur Spalten, die es heute gibt)
+async function replaceTable(c, table, dumpTable) {
+  await c.query(`DELETE FROM ${table}`);
+  if (!dumpTable || !dumpTable.rows.length) return 0;
+  const cur = await c.query("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1", [table]);
+  const have = new Set(cur.rows.map((r) => r.column_name));
+  const cols = dumpTable.cols.filter((x) => have.has(x));
+  for (const row of dumpTable.rows) {
+    const vals = cols.map((x) => row[x]);
+    await c.query(`INSERT INTO ${table} (${cols.map((x) => `"${x}"`).join(", ")}) VALUES (${cols.map((_, i) => "$" + (i + 1)).join(", ")})`, vals);
+  }
+  return dumpTable.rows.length;
+}
+
+async function restoreParts(filename, { parts, from, to } = {}, by) {
+  parts = Array.isArray(parts) ? [...new Set(parts)].filter((p) => PARTS.includes(p)) : [];
+  if (!parts.length) throw new HttpError(400, "Bitte mindestens einen Teil zum Wiederherstellen wählen.");
+  if ((from && !isIso(from)) || (to && !isIso(to)) || (from && to && from > to)) throw new HttpError(400, "Ungültiger Zeitraum.");
+  const ranged = parts.includes("daily") && (from || to);
+  // Alles ohne Zeitraum: vollständige Wiederherstellung wie bisher (inkl. Tabellenaufbau)
+  if (parts.length === PARTS.length && !ranged) { await restore(filename, by); return { full: true, parts }; }
+
+  const d = await readDump(filename);
+  if ((parts.includes("daily") || parts.includes("deviations")) && !d.state) throw new HttpError(400, "Die Sicherung enthält keine Board-Daten.");
+  if (parts.includes("settings") && !d.settings) throw new HttpError(400, "Die Sicherung enthält keine Stammdaten.");
+  if (parts.includes("users")) {
+    const users = (d.tables.users && d.tables.users.rows) || [];
+    if (!users.some((u) => u.perm === "admin" && u.disabled !== "t" && u.pw_hash)) {
+      throw new HttpError(400, "Die Benutzerkonten der Sicherung enthalten keinen aktiven Administrator — nicht übernommen.");
+    }
+  }
+  // Vorher den aktuellen Stand sichern — so lässt sich jede Wiederherstellung rückgängig machen
+  const pre = await create("manual", `vor Teil-Wiederherstellung von ${filename}`);
+  if (!pre.ok) throw new HttpError(500, "Sicherung des aktuellen Stands fehlgeschlagen — Wiederherstellung abgebrochen.");
+  if (busy) throw new HttpError(409, "Es läuft bereits eine Sicherung oder Wiederherstellung.");
+  busy = true;
+  try {
+    const changed = [];
+    await db.tx(async (c) => {
+      await db.lockRevision(c);
+      if (parts.includes("daily") || parts.includes("deviations")) {
+        const r = await c.query("SELECT value FROM documents WHERE name = 'state'");
+        const cur = (r.rows[0] && r.rows[0].value) || {};
+        const bak = d.state;
+        if (parts.includes("daily")) {
+          if (ranged) mergeDaily(cur, bak, from || null, to || null);
+          else DAILY_KEYS.forEach((k) => { cur[k] = bak[k] !== undefined ? bak[k] : {}; });
+        }
+        if (parts.includes("deviations")) {
+          cur.deviations = Array.isArray(bak.deviations) ? bak.deviations : [];
+          cur.seq = Math.max(Number(cur.seq) || 1, Number(bak.seq) || 1);
+        }
+        await c.query("UPDATE documents SET value = $1::jsonb, updated_at = now(), updated_by = $2 WHERE name = 'state'", [JSON.stringify(cur), by || null]);
+        changed.push("state");
+      }
+      if (parts.includes("settings")) {
+        await c.query("UPDATE documents SET value = $1::jsonb, updated_at = now(), updated_by = $2 WHERE name = 'settings'", [JSON.stringify(d.settings), by || null]);
+        changed.push("settings");
+      }
+      if (parts.includes("users")) {
+        await replaceTable(c, "users", d.tables.users);
+        await replaceTable(c, "user_avatars", d.tables.user_avatars);
+        await c.query("SELECT setval(pg_get_serial_sequence('users', 'id'), GREATEST((SELECT COALESCE(MAX(id), 0) FROM users), 1))");
+        // Wer in der Sicherung nicht (mehr) vorkommt oder gesperrt ist, wird abgemeldet
+        await c.query(`DELETE FROM sessions s WHERE NOT s.demo AND NOT EXISTS
+          (SELECT 1 FROM users u WHERE lower(u.name) = lower(s.user_name) AND NOT u.disabled)`);
+        changed.push("users");
+      }
+      if (parts.includes("dashboards")) {
+        await replaceTable(c, "dashboards", d.tables.dashboards);
+        await require("./dashboards").migrate(c);   // fehlende Standard-Dashboards ergänzen
+      }
+      if (changed.length) await db.bumpRevision(c, changed, by || "Wiederherstellung");
+    });
+    console.log(`[backup] Teile aus ${filename} wiederhergestellt: ${parts.join(", ")}${ranged ? ` (${from || "…"} bis ${to || "…"})` : ""}`);
+    return { full: false, parts, from: from || null, to: to || null };
+  } finally {
+    busy = false;
+  }
+}
+
 module.exports = {
-  checkTools, tool: () => toolInfo, getConfig, setConfig, list, create, remove, restore, prune,
+  checkTools, tool: () => toolInfo, getConfig, setConfig, list, create, remove, restore, prune, inspect, restoreParts, parseCopyText, PARTS,
   resolveFile, startScheduler, smbStatus, syncSmb
 };
