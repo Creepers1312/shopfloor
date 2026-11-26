@@ -9,6 +9,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 
 ## [Unveröffentlicht]
 
+## [1.6.0] – 2026-11-26
+
 ### Neu
 - **Wiederherstellung mit Auswahl und einzelnen Datensätzen:** Beim Zurückspielen einer Sicherung zeigt ein Fenster,
   was sie enthält. Sie wählen ganze Teile (Tageswerte & Huddle, Abweichungen & Maßnahmen, Stammdaten, Benutzerkonten,
@@ -190,7 +192,8 @@ als `SCRIPT_VERSION` in `deploy.sh`.
 - Erste Version des Shopfloor Boards (SQIDP-Board, Dashboard, Maßnahmen, Huddle, Tagesbericht) und
   Docker-Compose-Stack mit API, PostgreSQL und Deploy-Skript.
 
-[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.5.0...HEAD
+[Unveröffentlicht]: https://github.com/Creepers1312/shopfloor/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/Creepers1312/shopfloor/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/Creepers1312/shopfloor/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/Creepers1312/shopfloor/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/Creepers1312/shopfloor/compare/v1.2.0...v1.3.0
