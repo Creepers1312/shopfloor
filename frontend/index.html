@@ -1287,6 +1287,23 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; justif
 .rs-range-fields label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 400; }
 .rs-range-fields input { width: auto; }
 .rs-range-fields .mini-hint { flex-basis: 100%; margin: 0; }
+.rs-pick-link { background: none; border: 0; padding: 0; margin-top: 6px; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--accent-2); cursor: pointer; }
+.rs-picker { margin: 6px 0 2px 34px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2); }
+.rs-picker[hidden] { display: none; }
+.rs-picker-tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.rs-picker-tools input[type="search"] { flex: 1 1 200px; width: auto; padding: 7px 10px; border-radius: 8px; }
+.rs-picker-tools .mini-hint { margin: 0; }
+.rs-picker-list { max-height: 220px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.rs-item { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 6px; font-size: 13px; font-weight: 400; cursor: pointer; }
+.rs-item:hover { background: var(--surface); }
+.rs-item input { width: auto; margin: 0; flex: none; }
+.rs-item .rs-item-sub { color: var(--muted); font-size: 12px; margin-left: auto; white-space: nowrap; }
+.rs-keep { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 400; margin-top: 8px; }
+.rs-keep input { width: auto; margin: 0; }
+.rs-plan { margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.rs-plan b { color: var(--ink); }
+.rs-plan ul { margin: 6px 0 0; padding-left: 18px; color: var(--warn-text); }
+.rs-plan .rs-plan-row { color: var(--ink-2); margin-top: 2px; }
 .rs-warn { margin: 8px 0; padding: 10px 12px; border-radius: 9px; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn-text); font-size: 13px; font-weight: 600; }
 .mr-preview-dialog { width: min(720px, calc(100vw - 32px)); padding: 0; }
 .mr-preview-body { padding: 0 16px 16px; }
@@ -3271,12 +3288,14 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
       </div>
     </div>
     <p class="rs-warn" id="rsWarn" hidden></p>
-    <p class="mini-hint">Vorher legt der Server automatisch eine Sicherung des aktuellen Stands an — so lässt sich das Zurückspielen rückgängig machen.</p>
+    <div class="rs-plan" id="rsPlan" hidden></div>
+    <p class="mini-hint">Vorher legt der Server automatisch eine Sicherung des aktuellen Stands an — so lässt sich das Zurückspielen rückgängig machen. Der Server prüft das Ergebnis vor dem Speichern; wäre es nicht stimmig, wird nichts geändert.</p>
     <p class="login-error" id="rsError" hidden></p>
   </div>
   <div class="dlg-foot">
     <button type="button" class="btn" id="rsCancel">Abbrechen</button>
-    <button type="button" class="btn primary danger-solid" id="rsOk" disabled>Ausgewählte Teile wiederherstellen</button>
+    <button type="button" class="btn" id="rsPreview" disabled>Vorschau</button>
+    <button type="button" class="btn primary danger-solid" id="rsOk" disabled>Wiederherstellen</button>
   </div>
 </dialog>
 
@@ -9555,52 +9574,130 @@ window.SFM = (function () {
       btn.textContent = "Jetzt sichern";
     });
   }
-  /* Wiederherstellen mit Auswahl der Teile (Server: /api/backups/<Datei>/contents und …/restore mit parts) */
+  /* Wiederherstellen mit Auswahl der Teile oder einzelner Datensätze (Server: …/contents, …/restore mit
+     parts, select, from/to, dryRun). Ablauf: auswählen → Vorschau (dryRun, zeigt ersetzt/neu/entfernt und Hinweise)
+     → Wiederherstellen. Jede Änderung der Auswahl verlangt eine neue Vorschau. Standard: CLAUDE.md. */
   var RS_PARTS = [
-    { key: "daily", title: "Tageswerte & Huddle", desc: "Tageskennzahlen, SQIDP-Status, Begründungen, Huddle-Haken und Sicherheitseinträge — wahlweise nur für einen Zeitraum." },
-    { key: "deviations", title: "Abweichungen & Maßnahmen", desc: "Alle Abweichungen mit PDCA-Phase, Verantwortlichen, Terminen und 5-Why." },
-    { key: "settings", title: "Stammdaten & Einstellungen", desc: "Linie, Huddle, Ziele, Grenzwerte, Arbeitssicherheit, Verteiler des Tagesberichts." },
-    { key: "users", title: "Benutzerkonten", desc: "Konten mit Rollen, Passwörtern und Profilbildern. Wer in der Sicherung nicht vorkommt, wird abgemeldet." },
-    { key: "dashboards", title: "Dashboards", desc: "Eigene, öffentliche und angepasste Standard-Dashboards." }
+    { key: "daily", title: "Tageswerte & Huddle", pick: "Tage", desc: "Ein Tag kommt immer komplett: Tageskennzahlen, SQIDP-Status, Begründungen, Huddle-Haken und Sicherheitseintrag." },
+    { key: "deviations", title: "Abweichungen & Maßnahmen", pick: "Abweichungen", desc: "Alle Abweichungen mit PDCA-Phase, Verantwortlichen, Terminen und 5-Why — einzeln: vorhandene werden auf den alten Stand gesetzt, gelöschte wieder angelegt." },
+    { key: "settings", title: "Stammdaten & Einstellungen", desc: "Linie, Huddle, Ziele, Grenzwerte, Arbeitssicherheit, Verteiler." },
+    { key: "users", title: "Benutzerkonten", pick: "Konten", desc: "Konten mit Rollen, Passwörtern und Profilbildern — einzeln: über den Anmeldenamen zugeordnet." },
+    { key: "dashboards", title: "Dashboards", pick: "Dashboards", desc: "Eigene, öffentliche und angepasste Standard-Dashboards." }
   ];
-  var rsFile = null, rsContents = null;
+  var RS_PART_LABEL = { daily: "Tage", deviations: "Abweichungen", settings: "Stammdaten", users: "Konten", dashboards: "Dashboards" };
+  var rsFile = null, rsContents = null, rsPlanned = null, rsPickOn = {}, rsPicked = {};
   function rsError(msg) { var e = $("#rsError"); e.hidden = !msg; e.textContent = msg || ""; }
   function rsInfo(key, c) {
     if (key === "daily") return c.daily.days ? c.daily.days + " Tage mit Werten (" + fmtDate(c.daily.from) + " – " + fmtDate(c.daily.to) + ")" : "keine Tageswerte";
     if (key === "deviations") return c.deviations.total + " Abweichungen, davon " + c.deviations.open + " offen";
     if (key === "settings") return c.settings.present ? "Linie „" + (c.settings.lineName || "–") + "“" : "nicht enthalten";
-    if (key === "users") return c.users.total + " Konten (" + c.users.admins + " Administrator" + (c.users.admins === 1 ? "" : "en") + ")" + (c.users.avatars ? " · " + c.users.avatars + (c.users.avatars === 1 ? " Profilbild" : " Profilbilder") : "") +
-      (c.users.names.length ? ": " + c.users.names.slice(0, 6).join(", ") + (c.users.names.length > 6 ? " …" : "") : "");
-    if (key === "dashboards") return c.dashboards.total ? c.dashboards.total + " eigene: " + c.dashboards.names.slice(0, 5).join(", ") + (c.dashboards.total > 5 ? " …" : "") : "keine eigenen Dashboards";
+    if (key === "users") return c.users.total + " Konten (" + c.users.admins + " Administrator" + (c.users.admins === 1 ? "" : "en") + ")" +
+      (c.users.avatars ? " · " + c.users.avatars + (c.users.avatars === 1 ? " Profilbild" : " Profilbilder") : "");
+    if (key === "dashboards") return c.dashboards.total ? c.dashboards.total + " eigene" : "keine eigenen Dashboards";
     return "";
   }
   function rsAvailable(key, c) {
     if (key === "daily") return c.daily.days > 0;
     if (key === "settings") return c.settings.present;
-    if (key === "users") return c.users.admins > 0;
-    return true;
+    if (key === "users") return c.users.total > 0;
+    if (key === "dashboards") return c.dashboards.total > 0;
+    return c.deviations.total > 0;
+  }
+  // Einträge für die Einzelauswahl: [Kennung, Text, Zusatz]
+  function rsItems(key, c) {
+    if (key === "daily") return c.daily.list.slice().reverse().map(function (iso) {
+      var d = parseIso(iso); return [iso, WD_SHORT[new Date(d.y, d.m, d.d).getDay()] + " " + fmtDate(iso), ""];
+    });
+    if (key === "deviations") return c.deviations.list.slice().reverse().map(function (x) {
+      return [x.id, "[" + letterOf(x.cat) + "] " + x.title, [x.owner, phaseName(x.phase), x.day ? fmtDate(x.day) : ""].filter(Boolean).join(" · ")];
+    });
+    if (key === "users") return c.users.list.map(function (u) { return [u.username, u.name, "@" + u.username + " · " + permName(u.perm) + (u.disabled ? " · gesperrt" : "")]; });
+    if (key === "dashboards") return c.dashboards.list.map(function (x) { return [x.id, x.name, (x.visibility === "public" ? "öffentlich" : "privat") + " · " + x.owner]; });
+    return [];
   }
   function rsSelected() {
-    return [].slice.call($("#rsParts").querySelectorAll("input:checked")).map(function (x) { return x.value; });
+    return [].slice.call($("#rsParts").querySelectorAll(".rs-part > input:checked")).map(function (x) { return x.value; });
+  }
+  function rsBody() {
+    var parts = rsSelected(), body = { parts: parts, select: {} };
+    if (parts.indexOf("daily") >= 0 && $("#rsRangeOn").checked) { body.from = $("#rsFrom").value; body.to = $("#rsTo").value; }
+    parts.forEach(function (k) { if (rsPickOn[k]) body.select[k === "daily" ? "days" : k] = Object.keys(rsPicked[k] || {}); });
+    if (parts.indexOf("users") >= 0 && rsPickOn.users) body.select.keepPasswords = $("#rsKeepPw").checked;
+    return body;
+  }
+  function rsInvalidate() {
+    rsPlanned = null;
+    $("#rsPlan").hidden = true;
+    rsUpdate();
   }
   function rsUpdate() {
     var sel = rsSelected(), daily = sel.indexOf("daily") >= 0;
     $("#rsRange").hidden = !daily;
     $("#rsRangeFields").hidden = !$("#rsRangeOn").checked;
+    RS_PARTS.forEach(function (p) {
+      var on = sel.indexOf(p.key) >= 0, link = $("#rsLink-" + p.key), pk = $("#rsPick-" + p.key);
+      if (link) { link.hidden = !on; link.textContent = rsPickOn[p.key] ? "Alle " + p.pick + " übernehmen" : "Einzeln auswählen …"; }
+      if (pk) pk.hidden = !(on && rsPickOn[p.key]);
+      var cnt = $("#rsCnt-" + p.key);
+      if (cnt) cnt.textContent = Object.keys(rsPicked[p.key] || {}).length + " ausgewählt";
+    });
     var warn = [];
-    if (sel.indexOf("users") >= 0) warn.push("Benutzerkonten werden komplett durch den Stand der Sicherung ersetzt — auch Passwörter. Neuere Konten gehen verloren.");
-    if (daily && !$("#rsRangeOn").checked) warn.push("Alle Tageswerte werden ersetzt — seit der Sicherung erfasste Tage gehen verloren.");
-    if (sel.indexOf("deviations") >= 0) warn.push("Seit der Sicherung angelegte oder geänderte Abweichungen gehen verloren.");
+    if (sel.indexOf("users") >= 0 && !rsPickOn.users) warn.push("Alle Benutzerkonten werden durch den Stand der Sicherung ersetzt — auch Passwörter; neuere Konten gehen verloren.");
+    if (daily && !$("#rsRangeOn").checked && !rsPickOn.daily) warn.push("Alle Tageswerte werden ersetzt — seit der Sicherung erfasste Tage gehen verloren.");
+    if (sel.indexOf("deviations") >= 0 && !rsPickOn.deviations) warn.push("Alle Abweichungen werden ersetzt — seither angelegte oder geänderte gehen verloren.");
     $("#rsWarn").hidden = !warn.length;
     $("#rsWarn").textContent = warn.join(" ");
-    $("#rsOk").disabled = !sel.length;
-    $("#rsOk").textContent = sel.length === RS_PARTS.length && !(daily && $("#rsRangeOn").checked) ? "Alles wiederherstellen" : "Ausgewählte Teile wiederherstellen";
+    var empty = sel.some(function (k) { return rsPickOn[k] && !Object.keys(rsPicked[k] || {}).length && !(k === "daily" && $("#rsRangeOn").checked); });
+    $("#rsPreview").disabled = !sel.length || empty;
+    $("#rsOk").disabled = !rsPlanned;
+    $("#rsOk").textContent = rsPlanned ? "Jetzt wiederherstellen" : "Wiederherstellen (erst Vorschau)";
+  }
+  function rsBuildPicker(p, c) {
+    var box = el("div", "rs-picker");
+    box.id = "rsPick-" + p.key; box.hidden = true;
+    var tools = el("div", "rs-picker-tools");
+    var q = document.createElement("input");
+    q.type = "search"; q.placeholder = p.pick + " suchen …"; q.setAttribute("aria-label", p.pick + " suchen");
+    tools.appendChild(q);
+    var cnt = el("span", "mini-hint", "0 ausgewählt"); cnt.id = "rsCnt-" + p.key;
+    tools.appendChild(cnt);
+    box.appendChild(tools);
+    var list = el("div", "rs-picker-list");
+    rsItems(p.key, c).forEach(function (it) {
+      var lbl = el("label", "rs-item");
+      var inp = document.createElement("input");
+      inp.type = "checkbox"; inp.value = it[0];
+      inp.addEventListener("change", function () {
+        rsPicked[p.key] = rsPicked[p.key] || {};
+        if (this.checked) rsPicked[p.key][it[0]] = true; else delete rsPicked[p.key][it[0]];
+        rsInvalidate();
+      });
+      lbl.appendChild(inp);
+      lbl.appendChild(el("span", "", it[1]));
+      if (it[2]) lbl.appendChild(el("span", "rs-item-sub", it[2]));
+      lbl.dataset.search = (it[1] + " " + it[2] + " " + it[0]).toLowerCase();
+      list.appendChild(lbl);
+    });
+    q.addEventListener("input", function () {
+      var v = this.value.trim().toLowerCase();
+      list.querySelectorAll(".rs-item").forEach(function (l) { l.hidden = v && l.dataset.search.indexOf(v) < 0; });
+    });
+    box.appendChild(list);
+    if (p.key === "users") {
+      var keep = el("label", "rs-keep");
+      var kc = document.createElement("input"); kc.type = "checkbox"; kc.id = "rsKeepPw"; kc.checked = true;
+      kc.addEventListener("change", rsInvalidate);
+      keep.appendChild(kc);
+      keep.appendChild(document.createTextNode("Bei vorhandenen Konten das heutige Passwort behalten"));
+      box.appendChild(keep);
+    }
+    return box;
   }
   function restoreBackup(file) {
-    rsFile = file; rsContents = null;
-    $("#rsSub").textContent = "Sicherung " + file + " — wählen Sie, was zurückgespielt werden soll. Nicht gewählte Teile bleiben unverändert.";
-    $("#rsLoading").hidden = false; $("#rsParts").hidden = true; $("#rsRange").hidden = true; $("#rsWarn").hidden = true;
-    $("#rsRangeOn").checked = false; $("#rsOk").disabled = true; rsError(null);
+    rsFile = file; rsContents = null; rsPlanned = null; rsPickOn = {}; rsPicked = {};
+    $("#rsSub").textContent = "Sicherung " + file + " — wählen Sie, was zurückgespielt werden soll. Nicht gewählte Teile und Einträge bleiben unverändert.";
+    $("#rsLoading").hidden = false; $("#rsParts").hidden = true; $("#rsRange").hidden = true; $("#rsWarn").hidden = true; $("#rsPlan").hidden = true;
+    $("#rsRangeOn").checked = false; $("#rsOk").disabled = true; $("#rsPreview").disabled = true; rsError(null);
     $("#restoreDialog").showModal();
     SFM.api("/api/backups/" + encodeURIComponent(file) + "/contents").then(function (r) {
       $("#rsLoading").hidden = true;
@@ -9613,14 +9710,26 @@ window.SFM = (function () {
         var lbl = el("label", "rs-part" + (ok ? "" : " disabled"));
         var inp = document.createElement("input");
         inp.type = "checkbox"; inp.value = p.key; inp.disabled = !ok;
-        inp.addEventListener("change", rsUpdate);
+        inp.addEventListener("change", rsInvalidate);
         lbl.appendChild(inp);
         var t = el("span", "");
         t.appendChild(el("b", "", p.title));
         t.appendChild(el("small", "", p.desc));
         t.appendChild(el("span", "rs-info", (ok ? "In der Sicherung: " : "Nicht verfügbar: ") + rsInfo(p.key, c)));
+        if (p.pick && ok) {
+          var link = el("button", "rs-pick-link", "Einzeln auswählen …");
+          link.type = "button"; link.id = "rsLink-" + p.key; link.hidden = true;
+          link.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            rsPickOn[p.key] = !rsPickOn[p.key];
+            rsInvalidate();
+          });
+          t.appendChild(el("br"));
+          t.appendChild(link);
+        }
         lbl.appendChild(t);
         box.appendChild(lbl);
+        if (p.pick && ok) box.appendChild(rsBuildPicker(p, c));
       });
       box.hidden = false;
       if (c.daily.days) {
@@ -9630,30 +9739,56 @@ window.SFM = (function () {
       rsUpdate();
     }).catch(function () { $("#rsLoading").hidden = true; rsError("Server nicht erreichbar."); });
   }
-  $("#rsRangeOn").addEventListener("change", rsUpdate);
+  ["#rsRangeOn", "#rsFrom", "#rsTo"].forEach(function (id) { $(id).addEventListener("change", rsInvalidate); });
   $("#rsClose").addEventListener("click", function () { $("#restoreDialog").close(); });
   $("#rsCancel").addEventListener("click", function () { $("#restoreDialog").close(); });
-  $("#rsOk").addEventListener("click", function () {
-    var parts = rsSelected();
-    if (!parts.length || !rsFile) return;
-    var body = { parts: parts };
-    if (parts.indexOf("daily") >= 0 && $("#rsRangeOn").checked) {
-      body.from = $("#rsFrom").value; body.to = $("#rsTo").value;
-      if (!body.from || !body.to || body.from > body.to) { rsError("Bitte einen gültigen Zeitraum wählen („von“ vor „bis“)."); return; }
+  function rsShowPlan(plan) {
+    var box = $("#rsPlan");
+    box.innerHTML = "";
+    box.appendChild(el("b", "", "Vorschau: " + plan.replaced + " ersetzt · " + plan.added + " neu · " + plan.removed + " entfernt · " + plan.unchanged + " unverändert"));
+    Object.keys(plan.details).forEach(function (k) {
+      var d = plan.details[k], rec = (plan.records[k] || []).slice(0, 6);
+      box.appendChild(el("div", "rs-plan-row", RS_PART_LABEL[k] + ": " + d.replaced + " ersetzt, " + d.added + " neu, " + d.removed + " entfernt, " + d.unchanged + " unverändert" +
+        (rec.length ? " — " + rec.map(function (x) { return isIsoDate(x) ? fmtDate(x) : x; }).join(", ") + ((plan.records[k] || []).length > 6 ? " …" : "") : "")));
+    });
+    if (plan.warnings.length) {
+      var ul = el("ul");
+      plan.warnings.slice(0, 12).forEach(function (w) { ul.appendChild(el("li", "", w)); });
+      box.appendChild(ul);
     }
-    var names = RS_PARTS.filter(function (p) { return parts.indexOf(p.key) >= 0; }).map(function (p) { return p.title; });
+    box.hidden = false;
+  }
+  function isIsoDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v)); }
+  $("#rsPreview").addEventListener("click", function () {
+    var body = rsBody();
+    if (body.from && (!body.to || body.from > body.to)) { rsError("Bitte einen gültigen Zeitraum wählen („von“ vor „bis“)."); return; }
+    body.dryRun = true;
+    var btn = this; btn.disabled = true; rsError(null);
+    SFM.api("/api/backups/" + encodeURIComponent(rsFile) + "/restore", { method: "POST", body: body }).then(function (r) {
+      btn.disabled = false;
+      if (!r.ok) { rsError((r.data && r.data.error) || "Vorschau nicht möglich."); return; }
+      rsPlanned = JSON.stringify(rsBody());
+      rsShowPlan(r.data.result.plan);
+      rsUpdate();
+    }).catch(function () { btn.disabled = false; rsError("Server nicht erreichbar."); });
+  });
+  $("#rsOk").addEventListener("click", function () {
+    var body = rsBody();
+    if (!rsPlanned || rsPlanned !== JSON.stringify(body)) { rsInvalidate(); rsError("Die Auswahl hat sich geändert — bitte zuerst die Vorschau erneut anzeigen."); return; }
     var file = rsFile, btn = this;
     btn.disabled = true; btn.textContent = "Wird wiederhergestellt …"; rsError(null);
     SFM.api("/api/backups/" + encodeURIComponent(file) + "/restore", { method: "POST", body: body }).then(function (r) {
-      if (!r.ok) { rsError((r.data && r.data.error) || "Wiederherstellung fehlgeschlagen."); rsUpdate(); return; }
+      if (!r.ok) { rsError((r.data && r.data.error) || "Wiederherstellung fehlgeschlagen."); rsInvalidate(); return; }
       $("#restoreDialog").close();
+      var res = r.data.result || {};
       return SFM.refresh().then(function () {
         reloadFromStore();
         loadBackups();
         if (typeof loadDashList === "function") loadDashList();
-        toast("Aus " + file + " wiederhergestellt: " + names.join(", ") + (body.from ? " (" + fmtDate(body.from) + " – " + fmtDate(body.to) + ")" : ""));
+        toast(res.full ? "Stand aus " + file + " vollständig wiederhergestellt"
+          : "Aus " + file + " wiederhergestellt: " + res.plan.replaced + " ersetzt, " + res.plan.added + " neu, " + res.plan.removed + " entfernt");
       });
-    }).catch(function () { rsError("Server nicht erreichbar."); rsUpdate(); });
+    }).catch(function () { rsError("Server nicht erreichbar."); rsInvalidate(); });
   });
   function deleteBackup(file) {
     appConfirm("Sicherung löschen?", file + " wird auf dem Server endgültig gelöscht."
@@ -10833,7 +10968,9 @@ window.SFM = (function () {
           ["Status", "Oben stehen Speicherort, Programm- und Datenbankversion, Sicherungswerkzeug und der Abgleich mit der Freigabe."],
           ["Automatisch sichern", "„Täglich sichern“ einschalten, Uhrzeit und Aufbewahrung festlegen, speichern. Dafür muss nur der Server laufen, nicht der Browser."],
           ["Jetzt sichern / Herunterladen", "Legt sofort eine Sicherung an bzw. speichert eine Sicherungsdatei (.dump) auf diesem Computer."],
-          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — ein Fenster zeigt, was die Sicherung enthält, und Sie kreuzen an, was zurückgespielt wird: Tageswerte & Huddle (wahlweise nur ein Zeitraum, z. B. ein einzelner Tag), Abweichungen & Maßnahmen, Stammdaten & Einstellungen, Benutzerkonten, Dashboards. Nicht gewählte Teile bleiben unverändert; alle offenen Boards laden danach neu. Vorher sichert der Server automatisch den aktuellen Stand."]
+          ["Wiederherstellen", "In der Liste auf „Wiederherstellen“ — ein Fenster zeigt, was die Sicherung enthält, und Sie kreuzen an, was zurückgespielt wird: Tageswerte & Huddle, Abweichungen & Maßnahmen, Stammdaten & Einstellungen, Benutzerkonten, Dashboards. Nicht gewählte Teile bleiben unverändert; alle offenen Boards laden danach neu."],
+          ["Einzelne Einträge", "Bei Tagen, Abweichungen, Konten und Dashboards führt „Einzeln auswählen …“ zu einer durchsuchbaren Liste — z. B. nur den 10.11. oder nur eine versehentlich gelöschte Maßnahme zurückholen. Ein Tag kommt immer komplett (Werte, SQIDP-Status, Begründungen, Huddle-Haken). Vorhandene Einträge werden auf den alten Stand gesetzt, gelöschte wieder angelegt; bei vorhandenen Konten bleibt auf Wunsch das heutige Passwort."],
+          ["Vorschau und Prüfung", "„Vorschau“ zeigt vorher, was ersetzt, neu angelegt oder entfernt wird, und weist auf Zusammenhänge hin (z. B. eine Maßnahme, deren Tag nicht mit ausgewählt ist). Erst danach lässt sich wiederherstellen. Der Server prüft das Ergebnis vor dem Speichern — wäre es nicht stimmig (z. B. Namenskonflikt bei einem Konto, Dashboard ohne Besitzer), wird nichts geändert. Vorher sichert er automatisch den aktuellen Stand."]
         ] },
         { h: "Kopie auf SMB-Freigabe", steps: [
           ["Einrichten", "Freigabe (z. B. //nas.firma.local/backup/shopfloor), Benutzer und Passwort eintragen, „Verbindung testen“, einschalten und speichern."],

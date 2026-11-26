@@ -156,12 +156,16 @@ function register(app) {
     const body = req.body || {};
     let result;
     if (Array.isArray(body.parts)) {
-      result = await backups.restoreParts(req.params.file, { parts: body.parts, from: body.from, to: body.to }, req.user.name);
+      result = await backups.restoreParts(req.params.file, { parts: body.parts, from: body.from, to: body.to, select: body.select, dryRun: !!body.dryRun }, req.user.name);
+      if (result.dryRun) return res.json({ ok: true, result });   // nur Vorschau, nichts geändert
     } else {
       await backups.restore(req.params.file, req.user.name);
       result = { full: true, parts: backups.PARTS };
     }
-    await audit.log(req, "backup.restore", { file: req.params.file, parts: result.full ? "alles" : result.parts, from: result.from || undefined, to: result.to || undefined });
+    const rec = result.plan ? result.plan.records : null;
+    await audit.log(req, "backup.restore", { file: req.params.file, parts: result.full ? "alles" : result.parts,
+      from: result.from || undefined, to: result.to || undefined,
+      records: rec ? Object.fromEntries(Object.entries(rec).map(([k, v]) => [k, v.slice(0, 30)])) : undefined });
     backups.syncSmb().catch(() => {});   // Sicherung „vor Wiederherstellung“ auf die Freigabe
     res.json({ ok: true, result, revision: await db.getRevision() });
   }));

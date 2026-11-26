@@ -228,8 +228,10 @@ Linux-Sonderrechte (`cap_drop: ALL`) und mit `no-new-privileges`; das gilt auch 
   (nur Administratoren, wird protokolliert).
 - **Wiederherstellen mit Auswahl:** „Wiederherstellen“ in der Liste zeigt den Inhalt der Sicherung; zurückgespielt
   werden nur die angekreuzten Teile — Tageswerte & Huddle (optional nur ein Zeitraum), Abweichungen & Maßnahmen,
-  Stammdaten & Einstellungen, Benutzerkonten (mit Passwörtern und Profilbildern), Dashboards. Alles angekreuzt
-  ohne Zeitraum entspricht der vollständigen Wiederherstellung.
+  Stammdaten & Einstellungen, Benutzerkonten (mit Passwörtern und Profilbildern), Dashboards — oder über
+  „Einzeln auswählen …“ einzelne Tage, Abweichungen, Konten und Dashboards. Eine Vorschau zeigt vorher die
+  Änderungen; der Server prüft das Ergebnis und ändert bei Konflikten nichts. Alles angekreuzt ohne Einzelauswahl
+  entspricht der vollständigen Wiederherstellung. Die Regeln stehen in `CLAUDE.md` („Wiederherstellung & Datenkonsistenz“).
 - **Zurückspielen aus einer Datei:** Eine `.dump`-Datei in den Sicherungsordner kopieren — sie erscheint in der Liste
   („im Sicherungsordner gefunden“) und lässt sich wiederherstellen.
 

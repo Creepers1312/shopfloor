@@ -116,11 +116,42 @@ deploy/compose.proxy.yml  Betriebsart „proxy“ (Netz eines Reverse Proxys)
   `periodRatio`, `outageTotal` …) — Formeländerungen dort hier mitziehen. Zeitplan alle 5 min, Versand am Tag/Uhrzeit
   für den Vormonat, merkt sich `last` (Probe an eigene Adresse zählt nicht). UI-Karte `#mrCard` im Bereich E-Mail.
 
-- **Teil-Wiederherstellung:** `backups.inspect`/`restoreParts` lesen die Sicherung mit `pg_restore --data-only --file=-`
-  (COPY-Text, `parseCopyText`) und übernehmen nur gewählte Teile (`PARTS`: daily [optional Zeitraum, `mergeDaily`],
-  deviations, settings, users [+ user_avatars, Sequenz, Sitzungen], dashboards). Alle Teile ohne Zeitraum →
-  vollständiges `restore` (pg_restore --clean). API: `GET /api/backups/:file/contents`, `POST …/restore` mit `parts`.
-  UI: `#restoreDialog`. Neue Teile des state-Dokuments hier zuordnen.
+- **Teil-Wiederherstellung:** siehe Standard „Wiederherstellung & Datenkonsistenz“ unten. Code: `backups.inspect`,
+  `backups.restoreParts` (Plan → Prüfung → Transaktion), API `GET /api/backups/:file/contents`,
+  `POST /api/backups/:file/restore` mit `parts`, `select` {days, deviations, users, dashboards, keepPasswords}, `from`/`to`,
+  `dryRun`; UI `#restoreDialog` (Einzelauswahl `rsPick-*`, Vorschau `#rsPreview`, erst danach `#rsOk`).
+
+## Standard: Wiederherstellung & Datenkonsistenz
+Verbindlich für jede Funktion, die Daten aus Sicherungen, Dateien oder anderen Quellen teilweise übernimmt (heute:
+Teil-Wiederherstellung in `backups.js`). Neue Datenfelder oder Tabellen müssen hier einem Teil zugeordnet werden.
+1. **Einheiten statt Einzelfelder.** Zusammengehöriges wird nur gemeinsam übernommen:
+   - **Tag** = `dailyData[iso]` + SQIDP-Zellen `boards["J-M"][Kat][Tag]` + Begründungen `reasons["iso|…"]` +
+     `huddleLog[iso]` + `safetyLog[iso]` (`dayUnit`/`applyDays`).
+   - **Abweichung** = ganzes Objekt aus `state.deviations` (inkl. 5-Why, Phase, `src`).
+   - **Konto** = Zeile `users` + Profilbild `user_avatars` (Passwort-Hash nur auf ausdrücklichen Wunsch).
+   - **Dashboard** = ganze Zeile `dashboards`; **Stammdaten** = ganzes Dokument `settings`.
+   - Berechnete Werte (OEE, FPY, Ampeln, Grünquoten) werden **nie** gespeichert oder übernommen — sie entstehen neu.
+2. **Zuordnung über eindeutige Kennungen:** Abweichung über `id`, Konto über Anmeldenamen (`username`, ohne
+   Groß-/Kleinschreibung), Dashboard über `id`, Tag über das Datum. Vorhanden → auf den Stand der Quelle setzen,
+   fehlt → neu anlegen. Nicht gewählte Datensätze bleiben unverändert. Zähler werden nur erhöht, nie zurückgesetzt
+   (`state.seq` > höchste Abweichungsnummer, Sequenz von `users.id`).
+3. **Verknüpfungen melden:** Abweichung ↔ Tag über `created` (ersatzweise `due`); privates Dashboard ↔ Besitzer
+   (Name). Geänderte, nicht mit gewählte Gegenstücke → Hinweis in der Vorschau; fehlender Besitzer → Abbruch.
+4. **Konflikte brechen ab, statt zu überschreiben:** Name oder E-Mail eines Kontos wird heute von einem anderen
+   Konto benutzt; kein aktiver Administrator mit Passwort mehr; privates Dashboard ohne Besitzer → HTTP 409 mit
+   verständlicher Meldung, **nichts** wird geändert.
+5. **Erst Vorschau, dann Ausführung:** `dryRun` liefert ersetzt/neu/entfernt/unverändert je Teil und Hinweise, ohne
+   zu schreiben und ohne Sicherung. Die Oberfläche erlaubt das Ausführen erst nach einer Vorschau zur **gleichen**
+   Auswahl.
+6. **Alles oder nichts:** Alle Änderungen in **einer** Transaktion mit `lockRevision`; vor dem Speichern prüft
+   `validateResult` das Ergebnis (eindeutige Abweichungsnummern, Zähler, gültige Begründungsschlüssel, Administrator,
+   eindeutige Kontonamen, Dashboard-Besitzer) — ein Verstoß bricht ab (Rollback). Danach `bumpRevision`, damit alle
+   Geräte neu laden; offene Bearbeitungen anderer scheitern an der Revisionsprüfung (409) statt alte Daten zu schreiben.
+7. **Rückweg und Nachweis:** Vor jeder echten Übernahme automatische Sicherung („vor Teil-Wiederherstellung …“);
+   Sicherheitsprotokoll mit Teilen, Zeitraum und den betroffenen Datensätzen (`records`, gekürzt).
+8. **Testpflicht:** Am Test-Server Daten gezielt ändern/löschen, einzelne Datensätze zurückholen und prüfen, dass genau
+   diese stimmen und alles andere unverändert ist; dazu die Abbruchfälle (Namenskonflikt, fehlender Besitzer, leere
+   Auswahl) und „Vorschau ändert nichts“ (Vorlage: Skripte wie apitest10/11 aus der Entwicklung).
 
 ## Betrieb
 - `./deploy.sh` installiert/aktualisiert (Sicherung → `git pull` → bauen → starten); `./deploy.sh config`
